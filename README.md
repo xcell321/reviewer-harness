@@ -58,6 +58,81 @@ GEMINI.md                    ← Gemini CLI
 
 Change the rules in **one** place (`harness.config.json`), and `sync` propagates them to every runtime.
 
+## Quickstart
+
+You can use reviewer-harness in two ways: **Modular Mode** (zero-install: add individual skills to any project, no setup) or **Full Harness Mode** (one master config synced across all 4 runtimes).
+
+### 1. Modular Skills (zero-install via npx)
+
+Copy a single skill straight into your current project — no install, no config needed. The skill lands in `./skills/` as a playbook your AI can follow:
+
+```bash
+# Browse the bundled skills first
+npx github:xcell321/reviewer-harness skills list
+
+# Add individual skills to this project
+npx github:xcell321/reviewer-harness skills add safe-editing
+npx github:xcell321/reviewer-harness skills add no-hallucination
+```
+
+> Prefer a global CLI? Install once with `npm install -g github:xcell321/reviewer-harness` and run `reviewer-harness skills add <name>` anywhere.
+
+### 2. Full Harness Synchronization (4 runtimes)
+
+`init` creates your master config, `validate` checks it (including secret scanning), and `sync` generates the native instruction file for every runtime you enable: `.opencode/instructions.md`, `CLAUDE.md`, `GEMINI.md`, and `.clinerules`.
+
+```bash
+# Using npx (zero-install, recommended)
+npx github:xcell321/reviewer-harness init
+npx github:xcell321/reviewer-harness sync --dry-run   # preview: writes nothing
+npx github:xcell321/reviewer-harness sync             # writes, with .bak backups
+
+# Using pnpm (zero-install)
+pnpm dlx github:xcell321/reviewer-harness init
+
+# Or install globally
+npm install -g github:xcell321/reviewer-harness
+reviewer-harness init
+
+# Direct git clone
+git clone https://github.com/xcell321/reviewer-harness.git
+cd reviewer-harness && node bin/cli.js init --target ../my-project
+```
+
+### 3. Standalone one-liner installers
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/xcell321/reviewer-harness/main/bin/install.sh | bash
+
+# Windows PowerShell
+irm https://raw.githubusercontent.com/xcell321/reviewer-harness/main/bin/install.ps1 | iex
+```
+
+### 4. Running via Docker (zero local Node.js required)
+
+For zero-dependency execution without installing Node.js on your machine:
+
+```bash
+git clone https://github.com/xcell321/reviewer-harness.git
+cd reviewer-harness
+
+# Check status / start the harness in the mounted workspace
+docker compose run --rm reviewer-harness status
+docker compose run --rm reviewer-harness init
+docker compose run --rm reviewer-harness sync
+```
+
+## Sandboxing and security notice
+
+reviewer-harness executes locally and is fully transparent:
+
+- **Zero telemetry, zero network.** The tool reads and writes files in your project only. It sends no code or prompts to external servers, and it never needs an API key.
+- **Non-destructive backups.** Before modifying any existing instruction file, sync creates a `.bak` copy; files that would not change are skipped.
+- **Inspect before applying.** Run `sync --dry-run` to see exactly what would change — it writes nothing.
+- **Secrets are blocked, not leaked.** `validate` (and sync itself) scans the config for API keys and tokens and refuses to sync if one is found.
+- **Prefer a hard sandbox?** Run it in the Docker container above.
+
 ## The Sync Engine (safe by design)
 
 Guardrails that run before any file is written:
@@ -113,9 +188,9 @@ One master definition in the harness, generated into each runtime's format:
   - **debugger** (Tig-ayo) — root-cause debugging, never symptom-patching
 - `commands add review|explain` → `.opencode/commands/` + `.claude/commands/` (type `/review` or `/explain` in your runtime)
 
-## Usage
+## Command reference
 
-Requires Node.js 18+ (no dependencies).
+Requires Node.js 18+ (no dependencies). Every command accepts `--target <dir>` (default: the current directory).
 
 ```bash
 node bin/cli.js init --target ./my-project
@@ -128,17 +203,13 @@ node bin/cli.js agents add reviewer --target ./my-project
 node bin/cli.js commands add review --target ./my-project
 ```
 
-Or, installed globally / via npx from GitHub:
-
-```bash
-npm install -g github:xcell321/reviewer-harness
-reviewer-harness sync
-npx github:xcell321/reviewer-harness status
-```
+Installed globally or via npx (see Quickstart), the same commands run as `reviewer-harness <command>`.
 
 ## File map
 
 - `bin/cli.js` — commands: `status`, `sync`, `init`, `validate`, `memory`, `skills`, `agents`, `commands`
+- `bin/install.sh` / `bin/install.ps1` — one-liner installers (Linux/macOS, Windows)
+- `Dockerfile` / `docker-compose.yml` — run the harness with zero local Node.js
 - `lib/config.js` — loads and validates the structure of the master spec
 - `lib/validate.js` — rule quality checks + secret scanning
 - `lib/sync.js` — THE SYNC ENGINE: validate gate, dry-run, backup, idempotent writes
@@ -157,11 +228,16 @@ npx github:xcell321/reviewer-harness status
 4. ✅ Skills system — `skills add/list/remove`
 5. ✅ Sub-agents and slash commands — `agents add`, `commands add`
 6. ✅ Polish and publish — v1.0.0, LICENSE, publish-ready for GitHub/npx
+7. ✅ v1.1.0 — all-English repo, validate-and-report rule, self-governing repo, modular skills, one-liner installers, Docker
 
 ## Contributing & Security
 
 - Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)
 - Found a security issue? See [SECURITY.md](SECURITY.md)
+
+## Author & credits
+
+Created and maintained by **Edsiel Ursal** ([@xcell321](https://github.com/xcell321)) — designed and built together with **Muse**, Meta's AI assistant, as pair programmer and mentor. Every feature in this repo was planned, coded, tested, and documented in that collaboration: Edsiel directed the vision and made every call; Muse helped write and verify the code.
 
 ## License
 

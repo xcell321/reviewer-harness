@@ -143,11 +143,19 @@ function cmdSkills() {
     }
   } else if (sub === "add" && arg) {
     const r = addSkill(arg, targetDir);
-    console.log(
-      r.alreadyEnabled
-        ? `Skill "${arg}" is already enabled (file refreshed). Run "sync" to apply.`
-        : `Skill "${arg}" installed → ${r.file}\nEnabled in the config. Run "sync" to apply it to the runtimes.`
-    );
+    if (r.noConfig) {
+      console.log(
+        `Skill "${arg}" copied → ${r.file}\n` +
+          `(No harness.config.json here, so it is not enabled in a harness — it is yours as a standalone playbook.\n` +
+          `Run "init" in this project if you want the full harness to sync it to every runtime.)`
+      );
+    } else {
+      console.log(
+        r.alreadyEnabled
+          ? `Skill "${arg}" is already enabled (file refreshed). Run "sync" to apply.`
+          : `Skill "${arg}" installed → ${r.file}\nEnabled in the config. Run "sync" to apply it to the runtimes.`
+      );
+    }
   } else if (sub === "remove" && arg) {
     const r = removeSkill(arg, targetDir);
     console.log(
