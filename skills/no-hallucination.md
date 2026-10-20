@@ -1,14 +1,14 @@
 ---
 name: no-hallucination
-description: Siguroha nga ang matag library, function, ug API tinuod nga nag-exist.
+description: Make sure every library, function, and API actually exists before using it.
 ---
 
 ## Skill: no-hallucination
 
-Kanus-a gamiton: matag pagsulat og bag-ong code o paggamit og library/API.
+When to use: every time you write new code or reach for a library/API.
 
-- Sa dili pa mo-import, i-check ang `package.json` (o lockfile) kung naa ba gyud ang package.
-- Gamita lang ang functions ug APIs nga nakita nimo sa codebase o sa opisyal nga docs.
-- Kung dili sigurado sa ngalan o signature, pangitaa una — ayaw pagtag-an.
-- Kung ang butang wala diay, isulti dayon nga wala — ayaw pag-imbento og kapuli.
-- Human og code, i-verify: mo-run ba gyud kini, o tan-awon lang nga sakto?
+- Before importing, check `package.json` (or the lockfile) that the package is really there.
+- Use only functions and APIs you have seen in the codebase or in the official docs.
+- If you are unsure of a name or signature, look it up first — never guess.
+- If something does not exist, say so immediately — never invent a substitute.
+- After coding, verify: does it actually run, or does it only *look* right?

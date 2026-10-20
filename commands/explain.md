@@ -1,12 +1,12 @@
 ---
 name: explain
-description: Ipasabot ang code o kausaban sa simple nga Bisaya.
+description: Explain code or a change in simple Bisaya (Cebuano).
 ---
 
-Ipasabot sa simple nga Bisaya ang mosunod: $ARGUMENTS
+Explain the following in simple Bisaya (Cebuano): $ARGUMENTS
 
-Mga lagda sa pagpasabot:
-- Usa ka sentence matag idea; likayi ang lawom nga jargon.
-- Kung mogamit og English nga technical term, i-define una sa usa ka sentence.
-- Kung code kini: unsay trabaho niini, unsay input, unsay output, ug asa kini gamiton sa project.
-- Kung kausaban (diff) kini: unsay nausab, asa nga files, ug ngano.
+Rules for the explanation:
+- One sentence per idea; avoid heavy jargon.
+- If you use an English technical term, define it first in one sentence.
+- If it is code: what it does, its inputs, its outputs, and where it is used in the project.
+- If it is a change (diff): what changed, in which files, and why.

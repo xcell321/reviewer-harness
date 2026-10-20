@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // reviewer-harness — CLI: sync engine, guardrail validation, local memory,
-// skills, sub-agents, ug slash commands.
+// skills, sub-agents, and slash commands.
 // Commands: status | sync | init | validate | memory | skills | agents | commands
 
 import { parseArgs } from "node:util";
@@ -28,23 +28,23 @@ const targetDir = values.target;
 const dryRun = values["dry-run"];
 
 function help() {
-  console.log(`reviewer-harness — imong kaugalingong AI harness
+  console.log(`reviewer-harness — your own AI harness
 
 Usage:
-  node bin/cli.js status [--target <dir>]              Ipakita ang config + target files
-  node bin/cli.js sync [--dry-run] [--target <dir>]    I-sync ang rules ngadto sa tanang runtimes
-  node bin/cli.js init [--target <dir>]                Maghimo og harness.config.json sa project
-  node bin/cli.js validate [--target <dir>]            I-check ang config: kalidad + secret scanning
-  node bin/cli.js memory init [--target <dir>]         Sugdi ang local memory (memory/ folder)
-  node bin/cli.js memory index [--target <dir>]        I-rebuild ang INDEX.md + graph.json sa memory
-  node bin/cli.js memory list [--target <dir>]         Ilista ang memory notes + ilang links
-  node bin/cli.js skills list [--target <dir>]         Ilista ang bundled skills (+ enabled ba)
-  node bin/cli.js skills add <name> [--target <dir>]   I-install ug i-enable ang skill sa project
-  node bin/cli.js skills remove <name> [--target <dir>] I-disable ug tangtanga ang skill
-  node bin/cli.js agents list                          Ilista ang bundled sub-agents
-  node bin/cli.js agents add <name> [--target <dir>]   I-install ang sub-agent (OpenCode + Claude)
-  node bin/cli.js commands list                        Ilista ang bundled slash commands
-  node bin/cli.js commands add <name> [--target <dir>] I-install ang slash command (OpenCode + Claude)
+  node bin/cli.js status [--target <dir>]              Show the config + target files
+  node bin/cli.js sync [--dry-run] [--target <dir>]    Sync the rules to every runtime
+  node bin/cli.js init [--target <dir>]                Create harness.config.json in a project
+  node bin/cli.js validate [--target <dir>]            Check the config: quality + secret scanning
+  node bin/cli.js memory init [--target <dir>]         Start the local memory (memory/ folder)
+  node bin/cli.js memory index [--target <dir>]        Rebuild the memory INDEX.md + graph.json
+  node bin/cli.js memory list [--target <dir>]         List memory notes + their links
+  node bin/cli.js skills list [--target <dir>]         List bundled skills (+ which are enabled)
+  node bin/cli.js skills add <name> [--target <dir>]   Install + enable a skill in the project
+  node bin/cli.js skills remove <name> [--target <dir>] Disable + remove a skill
+  node bin/cli.js agents list                          List bundled sub-agents
+  node bin/cli.js agents add <name> [--target <dir>]   Install a sub-agent (OpenCode + Claude)
+  node bin/cli.js commands list                        List bundled slash commands
+  node bin/cli.js commands add <name> [--target <dir>] Install a slash command (OpenCode + Claude)
 `);
 }
 
@@ -55,30 +55,30 @@ function cmdStatus() {
   console.log(`Runtimes:`);
   for (const name of config.runtimes) {
     const adapter = adapters[name];
-    console.log(`  - ${name} → ${adapter ? adapter.targetFile() : "(walay adapter!)"}`);
+    console.log(`  - ${name} → ${adapter ? adapter.targetFile() : "(no adapter!)"}`);
   }
-  console.log(`Skills  : ${config.skills?.length ? config.skills.join(", ") : "(wala)"}`);
+  console.log(`Skills  : ${config.skills?.length ? config.skills.join(", ") : "(none)"}`);
 }
 
 function cmdSync() {
   const results = sync({ targetDir, dryRun });
-  if (dryRun) console.log("(dry-run: walay gisulat)\n");
+  if (dryRun) console.log("(dry-run: nothing was written)\n");
   for (const r of results) {
     if (r.skipped) {
       console.log(`- ${r.runtime}: SKIP — ${r.skipped}`);
     } else if (r.dryRun) {
-      console.log(`- ${r.runtime} → ${r.file}: ${r.changed ? "WOULD WRITE (naay ma-usab)" : "walay ma-usab"}`);
+      console.log(`- ${r.runtime} → ${r.file}: ${r.changed ? "WOULD WRITE (changes pending)" : "no changes"}`);
     } else if (r.unchanged) {
-      console.log(`- ${r.runtime} → ${r.file}: walay na-usab, gi-skip ✓`);
+      console.log(`- ${r.runtime} → ${r.file}: no changes, skipped ✓`);
     } else {
-      console.log(`- ${r.runtime} → ${r.file}: GISULAT ✓${r.backup ? " (naay .bak backup)" : ""}`);
+      console.log(`- ${r.runtime} → ${r.file}: WRITTEN ✓${r.backup ? " (.bak backup made)" : ""}`);
     }
   }
-  // Kung naay local memory ang project, i-refresh ang index apil sa sync —
-  // aron pirmi bag-o ang graph nga basahon sa AI.
+  // If the project has a local memory, refresh its index as part of
+  // sync — so the graph the AI reads is always current.
   if (!dryRun && existsSync(memoryDir(targetDir))) {
     const stats = buildIndex(targetDir);
-    console.log(`- memory: index gi-refresh (${stats.notes} notes, ${stats.edges} links) ✓`);
+    console.log(`- memory: index refreshed (${stats.notes} notes, ${stats.edges} links) ✓`);
   }
 }
 
@@ -87,19 +87,19 @@ function cmdMemory() {
     const r = initMemory(targetDir);
     console.log(
       r.created.length
-        ? `Gibuh at ang local memory: ${r.dir} (${r.created.join(", ")})`
-        : `Naa na ang local memory: ${r.dir} (wala gi-overwrite)`
+        ? `Local memory created: ${r.dir} (${r.created.join(", ")})`
+        : `Local memory already exists: ${r.dir} (nothing overwritten)`
     );
-    console.log(`Index: ${r.notes} notes, ${r.edges} links. Ablihi ang folder sa Obsidian para sa graph view.`);
+    console.log(`Index: ${r.notes} notes, ${r.edges} links. Open the folder in Obsidian for the graph view.`);
   } else if (sub === "index") {
     if (!existsSync(memoryDir(targetDir)))
-      throw new Error(`Walay memory/ sa ${targetDir} — dagana una ang "memory init".`);
+      throw new Error(`No memory/ in ${targetDir} — run "memory init" first.`);
     const stats = buildIndex(targetDir);
-    console.log(`Index gi-rebuild: ${stats.notes} notes, ${stats.edges} links, ${stats.dangling} dangling links.`);
+    console.log(`Index rebuilt: ${stats.notes} notes, ${stats.edges} links, ${stats.dangling} dangling links.`);
   } else if (sub === "list") {
     const notes = readNotes(targetDir);
     if (!notes.length) {
-      console.log(`Walay memory notes sa ${join(targetDir, "memory")} — dagana ang "memory init" una.`);
+      console.log(`No memory notes in ${join(targetDir, "memory")} — run "memory init" first.`);
       return;
     }
     for (const n of notes) {
@@ -112,7 +112,7 @@ function cmdMemory() {
 
 function cmdInit() {
   const { created, file } = initProject(targetDir);
-  console.log(created ? `Gibuh at ang config: ${file}` : `Naa na: ${file} (wala gi-overwrite)`);
+  console.log(created ? `Config created: ${file}` : `Already exists: ${file} (not overwritten)`);
 }
 
 function cmdValidate() {
@@ -122,10 +122,10 @@ function cmdValidate() {
   });
   for (const e of errors) console.log(`✗ ${e}`);
   for (const w of warnings) console.log(`⚠ ${w}`);
-  if (ok && !warnings.length) console.log(`✓ Limpyo ang config — walay problema, walay secrets.`);
-  else if (ok) console.log(`✓ Walay errors (${warnings.length} ka warnings).`);
+  if (ok && !warnings.length) console.log(`✓ Config is clean — no problems, no secrets.`);
+  else if (ok) console.log(`✓ No errors (${warnings.length} warning(s)).`);
   else {
-    console.log(`\n✗ ${errors.length} ka errors — ayoha sa dili pa mo-sync.`);
+    console.log(`\n✗ ${errors.length} error(s) — fix them before syncing.`);
     process.exitCode = 1;
   }
 }
@@ -136,7 +136,7 @@ function cmdSkills() {
     try {
       enabled = loadConfig(targetDir).skills ?? [];
     } catch {
-      /* walay config sa target — bundled ra ang ilista */
+      /* no config in the target — just list the bundled skills */
     }
     for (const s of listBundledSkills()) {
       console.log(`- ${s.name}${enabled.includes(s.name) ? " ✓ enabled" : ""} — ${s.description}`);
@@ -145,15 +145,15 @@ function cmdSkills() {
     const r = addSkill(arg, targetDir);
     console.log(
       r.alreadyEnabled
-        ? `Ang skill "${arg}" enabled na (file gi-refresh). Dagana ang "sync" para ma-aplay.`
-        : `Gi-install ang skill "${arg}" → ${r.file}\nEnabled na sa config. Dagana ang "sync" para ma-aplay sa runtimes.`
+        ? `Skill "${arg}" is already enabled (file refreshed). Run "sync" to apply.`
+        : `Skill "${arg}" installed → ${r.file}\nEnabled in the config. Run "sync" to apply it to the runtimes.`
     );
   } else if (sub === "remove" && arg) {
     const r = removeSkill(arg, targetDir);
     console.log(
       r.wasEnabled
-        ? `Gi-disable ang skill "${arg}"${r.removedFile ? " ug gitangtang ang file" : ""}. Dagana ang "sync" para ma-update ang runtimes.`
-        : `Ang skill "${arg}" wala man enabled.`
+        ? `Skill "${arg}" disabled${r.removedFile ? " and its file removed" : ""}. Run "sync" to update the runtimes.`
+        : `Skill "${arg}" was not enabled.`
     );
   } else {
     console.log(`Usage: skills <list|add <name>|remove <name>> [--target <dir>]`);
@@ -165,7 +165,7 @@ function cmdAgents() {
     for (const a of listBundledAgents()) console.log(`- ${a.name} — ${a.description}`);
   } else if (sub === "add" && arg) {
     const r = addAgent(arg, targetDir);
-    console.log(`Gi-install ang agent "${arg}":`);
+    console.log(`Agent "${arg}" installed:`);
     for (const f of r.written) console.log(`  → ${f}`);
   } else {
     console.log(`Usage: agents <list|add <name>> [--target <dir>]`);
@@ -177,7 +177,7 @@ function cmdCommands() {
     for (const c of listBundledCommands()) console.log(`- /${c.name} — ${c.description}`);
   } else if (sub === "add" && arg) {
     const r = addCommand(arg, targetDir);
-    console.log(`Gi-install ang command "/${arg}":`);
+    console.log(`Command "/${arg}" installed:`);
     for (const f of r.written) console.log(`  → ${f}`);
   } else {
     console.log(`Usage: commands <list|add <name>> [--target <dir>]`);
@@ -197,6 +197,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Sayop:", err.message);
+  console.error("Error:", err.message);
   process.exit(1);
 });

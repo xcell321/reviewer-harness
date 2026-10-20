@@ -1,16 +1,16 @@
 ---
 name: review
-description: I-review ang katapusang kausaban batok sa harness rules ug memory.
+description: Review the latest changes against the harness rules and the memory.
 ---
 
-I-review ang katapusang kausaban niini nga project (git diff, o ang files nga bag-o lang gi-edit).
+Review the latest changes in this project (git diff, or the files most recently edited).
 
-I-check:
-1. Naa bay giusab nga wala gisugo, o file nga gi-rewrite imbis gi-edit lang?
-2. Naa bay import, function, o API nga wala sa codebase o sa package.json (hallucination)?
-3. Nalapas ba ang bisan unsa sa memory/ (mga desisyon o "ayaw hilabti")?
-4. Gi-run ba ang tests/lint human sa kausaban?
+Check:
+1. Was anything changed that was never asked for, or a file rewritten instead of edited?
+2. Is there an import, function, or API that exists nowhere in the codebase or package.json (hallucination)?
+3. Was anything in memory/ violated (decisions, or "do not touch" areas)?
+4. Were the tests/lint run after the change?
 
-Pokos: $ARGUMENTS
+Focus: $ARGUMENTS
 
-I-report isip VIOLATION / WARNING. Kung limpyo, isulti nga limpyo.
+Report as VIOLATION / WARNING. If it is clean, say it is clean.

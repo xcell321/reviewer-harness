@@ -1,6 +1,6 @@
 # Contributing to reviewer-harness
 
-Salamat sa imong interes! (Thanks for your interest!) reviewer-harness is a personal project that grew out of a real frustration — AI assistants breaking working code — and contributions that make the guardrails stronger are very welcome.
+Thanks for your interest! reviewer-harness is a personal project that grew out of a real frustration — AI assistants breaking working code — and contributions that make the guardrails stronger are very welcome.
 
 ## Ways to contribute
 
@@ -62,7 +62,7 @@ No code changes needed — the CLI discovers files in these folders automaticall
 - **Zero dependencies.** The harness must run on a bare Node.js install. Pull requests that add a dependency will be declined — if Node's standard library can do it, use that.
 - **ES modules** (`import`/`export`), matching the existing code.
 - **Safety first:** anything that writes files must respect the existing guardrails — validate before writing, back up before overwriting, never write outside the target directory.
-- Bisaya (Cebuano) comments are welcome — they are part of this project's voice. English is fine too.
+- Comments and documentation are in English — this repo is public and international.
 - Keep it small. A harness people actually read beats a framework nobody finishes configuring.
 
 ## Pull request process

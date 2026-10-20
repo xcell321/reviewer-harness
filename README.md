@@ -35,17 +35,17 @@ AI coding assistants are powerful, but anyone who vibe-codes with them daily run
 
 **reviewer-harness solves this with One Master Config.** You define your rules, your problem statement, and your skills once — in a single `harness.config.json` — and the harness validates them (including scanning for leaked secrets) and syncs them deterministically to every runtime. A local, graph-style memory gives the AI something to read before it codes, and to write to when it learns.
 
-## Ang problema (ngano naa ni nga harness)
+## The problem (why this harness exists)
 
-**Ang AI nga walay guardrails.** Ang modelo dili nimo ma-control — pero ang **mga lagda nga iyang sundon**, kaya nimo. Mao na ang harness. Ang problem statement naa sa `harness.config.json` (ang `problem` field) ug apil sa pag-sync — makita kini sa tanang runtime files, aron ang matag AI mahibalo dili lang sa rules, kundi sa *ngano*.
+**An AI with no guardrails.** You cannot control the model — but you *can* control **the rules it must follow**. That is the harness. The problem statement lives in `harness.config.json` (the `problem` field) and is synced along with everything else — it appears in every runtime file, so every AI knows not just the rules, but *why* they exist.
 
-## Unsa ni?
+## What is this?
 
-Ang harness **dili ang AI model** — kini ang nag-andam sa tanan nga basahon sa AI sa dili pa siya mocode:
+The harness is **not the AI model** — it is what prepares everything the AI reads before it starts coding:
 
 ```
-harness.config.json          ← imong master spec (USA ra ka file)
-        │  validate()        ← kalidad + secret scanning
+harness.config.json          ← your master spec (ONE file)
+        │  validate()        ← quality checks + secret scanning
         ▼
 lib/adapters/*.js            ← adapters: opencode, claude, gemini, cline
         │  renderInstructions()
@@ -56,75 +56,75 @@ GEMINI.md                    ← Gemini CLI
 .clinerules                  ← Cline
 ```
 
-Usba ang rules sa **usa** ka lugar (`harness.config.json`), unya `sync` na'y bahala mo-sync niini ngadto sa tanang runtimes.
+Change the rules in **one** place (`harness.config.json`), and `sync` propagates them to every runtime.
 
-## Ang Sync Engine (luwas gyud!)
+## The Sync Engine (safe by design)
 
-Guardrails sa dili pa isulat ang bisan unsang file:
+Guardrails that run before any file is written:
 
-1. **VALIDATE GATE** — kung bungi ang spec o naay secret, dili mo-sync
-2. **DRY-RUN** — `sync --dry-run`: preview lang, walay isulat
-3. **BACKUP** — kung naay ma-overwrite, himo og `.bak` copy una
-4. **IDEMPOTENT** — kung walay na-usab, ayaw hilabti (pwede daganon balik-balik)
+1. **VALIDATE GATE** — if the spec is broken or contains a secret, sync refuses to run
+2. **DRY-RUN** — `sync --dry-run`: preview only, writes nothing
+3. **BACKUP** — before overwriting an existing file, write a `.bak` copy first
+4. **IDEMPOTENT** — if nothing changed, touch nothing (safe to run repeatedly)
 
 ## Validate + Secret Scanning
 
-`validate` mosusi sa config sa dili pa kini mahimong instructions:
+`validate` inspects the config before it becomes instructions:
 
-- Walay empty nga rules, walay duplicates
-- Secret scanning — API keys / tokens dili dapat ma-sync (ma-leak sa Git!)
-- Ang `sync` mismo dili mopadayon kung naay validation errors
+- No empty rules, no duplicates
+- Secret scanning — API keys and tokens must never be synced (they would leak into Git!)
+- `sync` itself refuses to proceed when validation reports errors
 
 ## Local Memory (graph-style, Obsidian-ready)
 
-Ang AI walay memory — kada session, kalimot siya sa imong project. Ang harness naay `memory/` folder (gi-inspire sa knowledge graph sa Graphify ug sa vault sa Obsidian, pero gaan ug lokal):
+AI models have no memory — every session, they forget your project. The harness keeps a `memory/` folder (inspired by Graphify's knowledge graph and Obsidian's vault, but lightweight and fully local):
 
 ```
 memory/
   project.md     — notes (plain markdown, Obsidian-style)
-  decisions.md   — [[wiki links]] ang magdugtong sa notes
-  INDEX.md       — gi-generate: basahon sa AI pag-una
-  graph.json     — gi-generate: nodes = notes, edges = links
+  decisions.md   — [[wiki links]] connect the notes
+  INDEX.md       — generated: the AI reads this first
+  graph.json     — generated: nodes = notes, edges = links
 ```
 
-Usa sa rules mosugo sa AI: basaha una ang memory, ug isulat ang bag-ong nakat-onan isip note nga naay [[links]]. Ang `sync` mo-refresh sad sa index. Ablihi ang `memory/` sa Obsidian para sa graph view.
+One of the rules orders the AI to read the memory first, and to write what it learns as a note with [[links]]. `sync` also refreshes the index. Open `memory/` in Obsidian to see the graph view.
 
 ## Skills
 
-Reusable nga playbooks, i-enable per project:
+Reusable playbooks, enabled per project:
 
-- `skills list` — tan-awa ang bundled skills
-- `skills add <name>` — i-install sa project ug i-enable sa config
-- `skills remove <name>` — i-disable
+- `skills list` — see the bundled skills
+- `skills add <name>` — install into the project and enable it in the config
+- `skills remove <name>` — disable it
 
-Bundled: `safe-editing`, `no-hallucination`, `debug-first`, `explain-bisaya`. Ang enabled skills mo-render ubos sa rules sa tanang instruction files.
+Bundled: `safe-editing`, `no-hallucination`, `debug-first`, `explain-bisaya`. Enabled skills render below the rules in every instruction file.
 
-## Sub-agents ug Slash Commands
+## Sub-agents and Slash Commands
 
-Usa ka master definition sa harness, i-generate ngadto sa format sa matag runtime:
+One master definition in the harness, generated into each runtime's format:
 
 - `agents add planner|reviewer|debugger` → `.opencode/agents/` + `.claude/agents/`
   - **planner** (Tigplano) — plans before coding
   - **reviewer** (Bantay) — hunts breakage and hallucinated code in diffs
   - **debugger** (Tig-ayo) — root-cause debugging, never symptom-patching
-- `commands add review|explain` → `.opencode/commands/` + `.claude/commands/` (i-type og `/review` o `/explain` sa runtime)
+- `commands add review|explain` → `.opencode/commands/` + `.claude/commands/` (type `/review` or `/explain` in your runtime)
 
-## Pagdagan
+## Usage
 
-Kinahanglan og Node.js 18+ (walay dependencies).
+Requires Node.js 18+ (no dependencies).
 
 ```bash
-node bin/cli.js init --target ./akong-project
-node bin/cli.js validate --target ./akong-project
-node bin/cli.js sync --dry-run --target ./akong-project
-node bin/cli.js sync --target ./akong-project
-node bin/cli.js memory init --target ./akong-project
-node bin/cli.js skills add safe-editing --target ./akong-project
-node bin/cli.js agents add reviewer --target ./akong-project
-node bin/cli.js commands add review --target ./akong-project
+node bin/cli.js init --target ./my-project
+node bin/cli.js validate --target ./my-project
+node bin/cli.js sync --dry-run --target ./my-project
+node bin/cli.js sync --target ./my-project
+node bin/cli.js memory init --target ./my-project
+node bin/cli.js skills add safe-editing --target ./my-project
+node bin/cli.js agents add reviewer --target ./my-project
+node bin/cli.js commands add review --target ./my-project
 ```
 
-O, kung gi-install globally / pinaagi sa npx gikan sa GitHub:
+Or, installed globally / via npx from GitHub:
 
 ```bash
 npm install -g github:xcell321/reviewer-harness
@@ -135,24 +135,24 @@ npx github:xcell321/reviewer-harness status
 ## File map
 
 - `bin/cli.js` — commands: `status`, `sync`, `init`, `validate`, `memory`, `skills`, `agents`, `commands`
-- `lib/config.js` — mobasa + mo-validate sa structure sa master spec
-- `lib/validate.js` — kalidad sa rules + secret scanning
-- `lib/sync.js` — ANG SYNC ENGINE: validate gate, dry-run, backup, idempotent writes
-- `lib/init.js` — maghimo og harness.config.json template sa bag-ong project
+- `lib/config.js` — loads and validates the structure of the master spec
+- `lib/validate.js` — rule quality checks + secret scanning
+- `lib/sync.js` — THE SYNC ENGINE: validate gate, dry-run, backup, idempotent writes
+- `lib/init.js` — creates the harness.config.json template in a new project
 - `lib/memory.js` — local memory: notes vault, graph builder, index generator
-- `lib/skills.js` — skills system: bundled store, install/enable, render sections
-- `lib/agents.js` / `lib/commands.js` — usa ka source → OpenCode + Claude formats
-- `lib/adapters/` — registry + matag runtime adapter (opencode, claude, gemini, cline)
+- `lib/skills.js` — skills system: bundled store, install/enable, section rendering
+- `lib/agents.js` / `lib/commands.js` — one source → OpenCode + Claude formats
+- `lib/adapters/` — registry + one adapter per runtime (opencode, claude, gemini, cline)
 - `skills/` — bundled skills · `agents/` — bundled sub-agents · `commands/` — bundled slash commands
 
-## Ang mga lesson (giunsa ni pagkatukod)
+## How it was built (the lessons)
 
 1. ✅ Scaffold — CLI + master config + adapter pattern
 2. ✅ Sync engine — dry-run, .bak backup, idempotent
 3. ✅ Guardrails — `validate` command + secret scanning + sync gate
 4. ✅ Skills system — `skills add/list/remove`
-5. ✅ Sub-agents ug slash commands — `agents add`, `commands add`
-6. ✅ Polish ug publish — v1.0.0, LICENSE, publish-ready para sa GitHub/npx
+5. ✅ Sub-agents and slash commands — `agents add`, `commands add`
+6. ✅ Polish and publish — v1.0.0, LICENSE, publish-ready for GitHub/npx
 
 ## Contributing & Security
 

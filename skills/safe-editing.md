@@ -1,14 +1,14 @@
 ---
 name: safe-editing
-description: Surgical nga pag-edit — gamay nga diff, walay collateral damage sa code.
+description: Surgical editing — the smallest possible diff, no collateral damage to the code.
 ---
 
 ## Skill: safe-editing
 
-Kanus-a gamiton: matag pag-usab sa existing nga code.
+When to use: every change to existing code.
 
-- Basaha ang tibuok file (o ang nalambigit nga bahin) sa dili pa mousab.
-- Himoa ang **pinakagamay nga diff** nga mosulbad sa task — ayaw pag-apil og wala gisugo.
-- Ayaw pag-usab sa formatting, ordering, o ngalan sa wala nalambigit nga linya.
-- Kung kinahanglan gyud mousab og laing file, isulti ngano sa dili pa buhaton.
-- Human, ipakita ang diff ug ihulagway sa usa ka sentence unsay nausab.
+- Read the whole file (or the relevant part) before changing anything.
+- Make the **smallest diff** that solves the task — never include changes that were not asked for.
+- Do not reformat, reorder, or rename unrelated lines.
+- If another file truly must change too, say why before doing it.
+- Afterwards, show the diff and describe in one sentence what changed.

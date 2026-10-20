@@ -1,13 +1,13 @@
 ---
 name: explain-bisaya
-description: Human sa task, ipasabot ang kausaban sa simple nga Bisaya.
+description: After each task, explain the changes in simple Bisaya (Cebuano).
 ---
 
 ## Skill: explain-bisaya
 
-Kanus-a gamiton: human sa matag task, sa dili pa moingon nga human na.
+When to use: after every task, before declaring it done.
 
-- Ipasabot sa **simple nga Bisaya** unsay nausab, asa nga mga file, ug ngano.
-- Likayi ang lawom nga jargon; kung mogamit og English nga term, i-define sa usa ka sentence.
-- Ilista ang mga file nga nausab ug, kung naa, unsay angay i-check sa user mismo.
-- Kung naay wala nahuman o wala sigurado, isulti nga klaro — ayaw taboni.
+- Explain in **simple Bisaya (Cebuano)** what changed, in which files, and why.
+- Avoid heavy jargon; if you use an English technical term, define it in one sentence.
+- List the files that changed and, if any, what the user should check themselves.
+- If something is unfinished or uncertain, say so plainly — never cover it up.
