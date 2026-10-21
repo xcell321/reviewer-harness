@@ -180,6 +180,8 @@ Bundled: `safe-editing`, `no-hallucination`, `debug-first`, `explain-bisaya`. En
 
 **Every project, instantly:** want the skills in the `/` menu of *every* project, with no per-project setup? Run `reviewer-harness global` once — it installs all bundled skills as slash commands into the global OpenCode (`~/.config/opencode/commands`) and Claude (`~/.claude/commands`) folders. From then on, they are in the `/` menu of any project you open. (Project rules still come from `sync` inside a project.)
 
+**A built-in pairing:** the `/safe-editing` command always carries the `no-hallucination` playbook inside it as a companion section — one call, both disciplines, so the AI that edits can never invent the code it edits with.
+
 ## Sub-agents and Slash Commands
 
 One master definition in the harness, generated into each runtime's format:

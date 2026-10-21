@@ -218,7 +218,7 @@ function cmdGlobal() {
   for (const { runtime, dir } of targets) {
     let written = 0, unchanged = 0, pending = 0;
     for (const skill of skills) {
-      const outcome = writeSafe(join(dir, `${skill.name}.md`), skillCommandContent(skill), dryRun);
+      const outcome = writeSafe(join(dir, `${skill.name}.md`), skillCommandContent(skill, skills), dryRun);
       if (outcome.written) written++;
       else if (outcome.dryRun && outcome.changed) pending++;
       else unchanged++;

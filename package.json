@@ -23,7 +23,7 @@
     "url": "https://github.com/xcell321/reviewer-harness.git"
   },
   "type": "module",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "files": [
     "bin",
     "lib",
