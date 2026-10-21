@@ -176,7 +176,7 @@ Reusable playbooks, enabled per project:
 - `skills add <name>` — install into the project and enable it in the config
 - `skills remove <name>` — disable it
 
-Bundled: `safe-editing`, `no-hallucination`, `debug-first`, `explain-bisaya`. Enabled skills render below the rules in every instruction file.
+Bundled: `safe-editing`, `no-hallucination`, `debug-first`, `explain-bisaya`. Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
 ## Sub-agents and Slash Commands
 

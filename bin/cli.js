@@ -68,7 +68,16 @@ function cmdSync() {
   const results = sync({ targetDir, dryRun });
   if (dryRun) console.log("(dry-run: nothing was written)\n");
   for (const r of results) {
-    if (r.skipped) {
+    if (r.skillCommands) {
+      const written = r.skillCommands.filter((f) => f.written).length;
+      const pending = r.skillCommands.filter((f) => f.dryRun && f.changed).length;
+      const unchanged = r.skillCommands.filter((f) => f.unchanged || (f.dryRun && !f.changed)).length;
+      if (dryRun) {
+        console.log(`- skill commands: ${pending} would be written/updated, ${unchanged} unchanged (they appear in the "/" menu of OpenCode and Claude)`);
+      } else {
+        console.log(`- skill commands: ${written} written ✓, ${unchanged} unchanged (one per skill, in the "/" menu of OpenCode and Claude)`);
+      }
+    } else if (r.skipped) {
       console.log(`- ${r.runtime}: SKIP — ${r.skipped}`);
     } else if (r.dryRun) {
       console.log(`- ${r.runtime} → ${r.file}: ${r.changed ? "WOULD WRITE (changes pending)" : "no changes"}`);
