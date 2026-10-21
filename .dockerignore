@@ -1,0 +1,5 @@
+.git
+demo-project
+node_modules
+*.bak
+*.zip
