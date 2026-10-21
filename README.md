@@ -190,20 +190,37 @@ One master definition in the harness, generated into each runtime's format:
 
 ## Command reference
 
-Requires Node.js 18+ (no dependencies). Every command accepts `--target <dir>` (default: the current directory).
+Requires Node.js 18+ (no dependencies). Run these inside your project — every command works on the current directory unless you add `--target <dir>`.
+
+**Start & everyday**
 
 ```bash
-node bin/cli.js init --target ./my-project
-node bin/cli.js validate --target ./my-project
-node bin/cli.js sync --dry-run --target ./my-project
-node bin/cli.js sync --target ./my-project
-node bin/cli.js memory init --target ./my-project
-node bin/cli.js skills add safe-editing --target ./my-project
-node bin/cli.js agents add reviewer --target ./my-project
-node bin/cli.js commands add review --target ./my-project
+reviewer-harness init            # one-time: create the master config
+reviewer-harness validate        # check the config (quality + secret scan)
+reviewer-harness sync --dry-run  # preview the changes, writes nothing
+reviewer-harness sync            # apply the rules to every runtime
+reviewer-harness status          # show the config + target files
 ```
 
-Installed globally or via npx (see Quickstart), the same commands run as `reviewer-harness <command>`.
+**Skills, agents, commands**
+
+```bash
+reviewer-harness skills list
+reviewer-harness skills add safe-editing
+reviewer-harness skills remove safe-editing
+reviewer-harness agents add reviewer
+reviewer-harness commands add review
+```
+
+**Local memory**
+
+```bash
+reviewer-harness memory init     # start the memory/ vault
+reviewer-harness memory list     # list notes + their links
+reviewer-harness memory index    # rebuild INDEX.md + graph.json
+```
+
+Running from a source checkout instead? The same commands work as `node bin/cli.js <command>`.
 
 ## File map
 

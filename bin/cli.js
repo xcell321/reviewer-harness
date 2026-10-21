@@ -30,21 +30,25 @@ const dryRun = values["dry-run"];
 function help() {
   console.log(`reviewer-harness — your own AI harness
 
-Usage:
-  node bin/cli.js status [--target <dir>]              Show the config + target files
-  node bin/cli.js sync [--dry-run] [--target <dir>]    Sync the rules to every runtime
-  node bin/cli.js init [--target <dir>]                Create harness.config.json in a project
-  node bin/cli.js validate [--target <dir>]            Check the config: quality + secret scanning
-  node bin/cli.js memory init [--target <dir>]         Start the local memory (memory/ folder)
-  node bin/cli.js memory index [--target <dir>]        Rebuild the memory INDEX.md + graph.json
-  node bin/cli.js memory list [--target <dir>]         List memory notes + their links
-  node bin/cli.js skills list [--target <dir>]         List bundled skills (+ which are enabled)
-  node bin/cli.js skills add <name> [--target <dir>]   Install + enable a skill in the project
-  node bin/cli.js skills remove <name> [--target <dir>] Disable + remove a skill
-  node bin/cli.js agents list                          List bundled sub-agents
-  node bin/cli.js agents add <name> [--target <dir>]   Install a sub-agent (OpenCode + Claude)
-  node bin/cli.js commands list                        List bundled slash commands
-  node bin/cli.js commands add <name> [--target <dir>] Install a slash command (OpenCode + Claude)
+Usage (run inside your project):
+  reviewer-harness init                     Create harness.config.json (one-time setup)
+  reviewer-harness validate                 Check the config: quality + secret scanning
+  reviewer-harness sync [--dry-run]         Sync the rules to every runtime (--dry-run = preview only)
+  reviewer-harness status                   Show the config + target files
+
+  reviewer-harness skills list              List bundled skills (+ which are enabled)
+  reviewer-harness skills add <name>        Install + enable a skill in the project
+  reviewer-harness skills remove <name>     Disable + remove a skill
+  reviewer-harness agents list              List bundled sub-agents
+  reviewer-harness agents add <name>        Install a sub-agent (OpenCode + Claude)
+  reviewer-harness commands list            List bundled slash commands
+  reviewer-harness commands add <name>      Install a slash command (OpenCode + Claude)
+
+  reviewer-harness memory init              Start the local memory (memory/ folder)
+  reviewer-harness memory index             Rebuild the memory INDEX.md + graph.json
+  reviewer-harness memory list              List memory notes + their links
+
+Every command accepts --target <dir> (default: the current directory).
 `);
 }
 
