@@ -22,7 +22,7 @@ if ($major -lt 18) {
 }
 
 Write-Host "Installing reviewer-harness globally from GitHub..."
-npm install -g github:xcell321/reviewer-harness
+npm install -g reviewer-harness
 
 Write-Host ""
 Write-Host "Done. Try it in any project:"

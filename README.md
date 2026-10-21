@@ -68,14 +68,14 @@ Copy a single skill straight into your current project — no install, no config
 
 ```bash
 # Browse the bundled skills first
-npx github:xcell321/reviewer-harness skills list
+npx reviewer-harness skills list
 
 # Add individual skills to this project
-npx github:xcell321/reviewer-harness skills add safe-editing
-npx github:xcell321/reviewer-harness skills add no-hallucination
+npx reviewer-harness skills add safe-editing
+npx reviewer-harness skills add no-hallucination
 ```
 
-> Prefer a global CLI? Install once with `npm install -g github:xcell321/reviewer-harness` and run `reviewer-harness skills add <name>` anywhere.
+> Prefer a global CLI? Install once with `npm install -g reviewer-harness` and run `reviewer-harness skills add <name>` anywhere.
 
 ### 2. Full Harness Synchronization (4 runtimes)
 
@@ -83,15 +83,15 @@ npx github:xcell321/reviewer-harness skills add no-hallucination
 
 ```bash
 # Using npx (zero-install, recommended)
-npx github:xcell321/reviewer-harness init
-npx github:xcell321/reviewer-harness sync --dry-run   # preview: writes nothing
-npx github:xcell321/reviewer-harness sync             # writes, with .bak backups
+npx reviewer-harness init
+npx reviewer-harness sync --dry-run   # preview: writes nothing
+npx reviewer-harness sync             # writes, with .bak backups
 
 # Using pnpm (zero-install)
-pnpm dlx github:xcell321/reviewer-harness init
+pnpm dlx reviewer-harness init
 
 # Or install globally
-npm install -g github:xcell321/reviewer-harness
+npm install -g reviewer-harness
 reviewer-harness init
 
 # Direct git clone

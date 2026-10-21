@@ -23,7 +23,7 @@ if [ "$NODE_MAJOR" -lt 18 ]; then
 fi
 
 echo "Installing reviewer-harness globally from GitHub..."
-npm install -g github:xcell321/reviewer-harness
+npm install -g reviewer-harness
 
 echo ""
 echo "Done. Try it in any project:"
