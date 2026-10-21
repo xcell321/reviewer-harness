@@ -178,6 +178,8 @@ Reusable playbooks, enabled per project:
 
 Bundled: `safe-editing`, `no-hallucination`, `debug-first`, `explain-bisaya`. Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
+**Every project, instantly:** want the skills in the `/` menu of *every* project, with no per-project setup? Run `reviewer-harness global` once — it installs all bundled skills as slash commands into the global OpenCode (`~/.config/opencode/commands`) and Claude (`~/.claude/commands`) folders. From then on, they are in the `/` menu of any project you open. (Project rules still come from `sync` inside a project.)
+
 ## Sub-agents and Slash Commands
 
 One master definition in the harness, generated into each runtime's format:

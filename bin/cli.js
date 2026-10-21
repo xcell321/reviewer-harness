@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 // reviewer-harness — CLI: sync engine, guardrail validation, local memory,
 // skills, sub-agents, and slash commands.
-// Commands: status | sync | init | validate | memory | skills | agents | commands
+// Commands: status | sync | init | validate | memory | skills | agents | commands | global
 
 import { parseArgs } from "node:util";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import { loadConfig } from "../lib/config.js";
 import { adapters, supportedRuntimes } from "../lib/adapters/index.js";
-import { sync } from "../lib/sync.js";
+import { sync, writeSafe } from "../lib/sync.js";
 import { initProject } from "../lib/init.js";
 import { initMemory, buildIndex, readNotes, memoryDir } from "../lib/memory.js";
 import { validateConfig } from "../lib/validate.js";
-import { listBundledSkills, addSkill, removeSkill } from "../lib/skills.js";
+import { listBundledSkills, addSkill, removeSkill, loadBundledSkills, skillCommandContent } from "../lib/skills.js";
 import { listBundledAgents, addAgent } from "../lib/agents.js";
 import { listBundledCommands, addCommand } from "../lib/commands.js";
 
@@ -43,6 +44,8 @@ Usage (run inside your project):
   reviewer-harness agents add <name>        Install a sub-agent (OpenCode + Claude)
   reviewer-harness commands list            List bundled slash commands
   reviewer-harness commands add <name>      Install a slash command (OpenCode + Claude)
+
+  reviewer-harness global [--dry-run]       Install EVERY bundled skill as a slash command for ALL projects (global OpenCode + Claude "/" menus)
 
   reviewer-harness memory init              Start the local memory (memory/ folder)
   reviewer-harness memory index             Rebuild the memory INDEX.md + graph.json
@@ -205,6 +208,30 @@ function cmdCommands() {
   }
 }
 
+function cmdGlobal() {
+  const skills = loadBundledSkills();
+  const targets = [
+    { runtime: "OpenCode", dir: join(homedir(), ".config", "opencode", "commands") },
+    { runtime: "Claude", dir: join(homedir(), ".claude", "commands") },
+  ];
+  if (dryRun) console.log("(dry-run: nothing was written)\n");
+  for (const { runtime, dir } of targets) {
+    let written = 0, unchanged = 0, pending = 0;
+    for (const skill of skills) {
+      const outcome = writeSafe(join(dir, `${skill.name}.md`), skillCommandContent(skill), dryRun);
+      if (outcome.written) written++;
+      else if (outcome.dryRun && outcome.changed) pending++;
+      else unchanged++;
+    }
+    if (dryRun) console.log(`- ${runtime} (global): ${pending} would be written/updated, ${unchanged} unchanged → ${dir}`);
+    else console.log(`- ${runtime} (global): ${written} written ✓, ${unchanged} unchanged → ${dir}`);
+  }
+  console.log(
+    `\nDone: ${skills.map((s) => "/" + s.name).join(", ")} are now in the "/" menu of EVERY project.` +
+      `\n(Per-project rules still come from "sync" inside a project.)`
+  );
+}
+
 async function main() {
   if (!command || command === "status") cmdStatus();
   else if (command === "sync") cmdSync();
@@ -214,6 +241,7 @@ async function main() {
   else if (command === "skills") cmdSkills();
   else if (command === "agents") cmdAgents();
   else if (command === "commands") cmdCommands();
+  else if (command === "global") cmdGlobal();
   else help();
 }
 
