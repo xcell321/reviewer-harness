@@ -13,7 +13,7 @@ import { sync, writeSafe } from "../lib/sync.js";
 import { initProject } from "../lib/init.js";
 import { initMemory, buildIndex, readNotes, memoryDir } from "../lib/memory.js";
 import { validateConfig } from "../lib/validate.js";
-import { listBundledSkills, addSkill, removeSkill, loadBundledSkills, skillCommandContent } from "../lib/skills.js";
+import { listBundledSkills, addSkill, removeSkill, loadBundledSkills, skillCommandContent, skillBundleContent } from "../lib/skills.js";
 import { listBundledAgents, addAgent } from "../lib/agents.js";
 import { listBundledCommands, addCommand } from "../lib/commands.js";
 
@@ -45,7 +45,7 @@ Usage (run inside your project):
   reviewer-harness commands list            List bundled slash commands
   reviewer-harness commands add <name>      Install a slash command (OpenCode + Claude)
 
-  reviewer-harness global [--dry-run]       Install EVERY bundled skill as a slash command for ALL projects (global OpenCode + Claude "/" menus)
+  reviewer-harness global [--dry-run]       Install EVERY bundled skill for ALL projects (OpenCode + Claude "/" menus; Freebuff, Copilot CLI, Antigravity skill bundles)
 
   reviewer-harness memory init              Start the local memory (memory/ folder)
   reviewer-harness memory index             Rebuild the memory INDEX.md + graph.json
@@ -62,7 +62,11 @@ function cmdStatus() {
   console.log(`Runtimes:`);
   for (const name of config.runtimes) {
     const adapter = adapters[name];
-    console.log(`  - ${name} → ${adapter ? adapter.targetFile() : "(no adapter!)"}`);
+    const target = !adapter ? "(no adapter!)"
+      : typeof adapter.targetFile === "function" ? adapter.targetFile()
+      : typeof adapter.skillBundleDir === "function" ? `${adapter.skillBundleDir()}/<skill>/SKILL.md`
+      : "(unknown)";
+    console.log(`  - ${name} → ${target}`);
   }
   console.log(`Skills  : ${config.skills?.length ? config.skills.join(", ") : "(none)"}`);
 }
@@ -82,6 +86,17 @@ function cmdSync() {
       }
     } else if (r.skipped) {
       console.log(`- ${r.runtime}: SKIP — ${r.skipped}`);
+    } else if (r.skillBundles) {
+      const files = r.skillBundles;
+      const written = files.filter((f) => f.written).length;
+      const pending = files.filter((f) => f.dryRun && f.changed).length;
+      const unchanged = files.filter((f) => f.unchanged || (f.dryRun && !f.changed)).length;
+      const where = `${r.bundleDir}/<skill>/SKILL.md`;
+      if (dryRun) {
+        console.log(`- ${r.runtime} → ${where}: ${pending} would be written/updated, ${unchanged} unchanged (Agent Skills bundles)`);
+      } else {
+        console.log(`- ${r.runtime} → ${where}: ${written} written ✓, ${unchanged} unchanged`);
+      }
     } else if (r.dryRun) {
       console.log(`- ${r.runtime} → ${r.file}: ${r.changed ? "WOULD WRITE (changes pending)" : "no changes"}`);
     } else if (r.unchanged) {
@@ -213,21 +228,31 @@ function cmdGlobal() {
   const targets = [
     { runtime: "OpenCode", dir: join(homedir(), ".config", "opencode", "commands") },
     { runtime: "Claude", dir: join(homedir(), ".claude", "commands") },
+    // Skill-bundle runtimes (Agent Skills open standard: <skill>/SKILL.md)
+    { runtime: "Freebuff", dir: join(homedir(), ".agents", "skills"), bundle: true },
+    { runtime: "Copilot CLI", dir: join(homedir(), ".copilot", "skills"), bundle: true },
+    { runtime: "Antigravity", dir: join(homedir(), ".gemini", "config", "skills"), bundle: true },
   ];
   if (dryRun) console.log("(dry-run: nothing was written)\n");
-  for (const { runtime, dir } of targets) {
+  for (const { runtime, dir, bundle } of targets) {
     let written = 0, unchanged = 0, pending = 0;
     for (const skill of skills) {
-      const outcome = writeSafe(join(dir, `${skill.name}.md`), skillCommandContent(skill, skills), dryRun);
+      const rel = bundle ? join(skill.name, "SKILL.md") : `${skill.name}.md`;
+      const content = bundle
+        ? skillBundleContent(skill, skills)
+        : skillCommandContent(skill, skills);
+      const outcome = writeSafe(join(dir, rel), content, dryRun);
       if (outcome.written) written++;
       else if (outcome.dryRun && outcome.changed) pending++;
       else unchanged++;
     }
-    if (dryRun) console.log(`- ${runtime} (global): ${pending} would be written/updated, ${unchanged} unchanged → ${dir}`);
-    else console.log(`- ${runtime} (global): ${written} written ✓, ${unchanged} unchanged → ${dir}`);
+    const where = bundle ? `${dir} (<skill>/SKILL.md)` : dir;
+    if (dryRun) console.log(`- ${runtime} (global): ${pending} would be written/updated, ${unchanged} unchanged → ${where}`);
+    else console.log(`- ${runtime} (global): ${written} written ✓, ${unchanged} unchanged → ${where}`);
   }
   console.log(
-    `\nDone: ${skills.map((s) => "/" + s.name).join(", ")} are now in the "/" menu of EVERY project.` +
+    `\nDone: ${skills.map((s) => "/" + s.name).join(", ")} are now available in EVERY project.` +
+      `\n(OpenCode + Claude: "/" menu commands. Freebuff, Copilot CLI, Antigravity: Agent Skills bundles.)` +
       `\n(Per-project rules still come from "sync" inside a project.)`
   );
 }
