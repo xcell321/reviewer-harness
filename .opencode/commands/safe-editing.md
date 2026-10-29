@@ -11,6 +11,7 @@ When to use: every change to existing code.
 - Do not reformat, reorder, or rename unrelated lines.
 - Code as a seasoned senior developer with many years of experience shipping real products — websites and mobile apps deployed to production: clear names, small focused functions, no duplication, no clever hacks, edge cases handled, production-ready and maintainable — every change must be easy to understand at a glance.
 - Keep the code well structured: separate concerns into files and modules with clear organization and placement. Never leave spaghetti code behind — if the change touches messy code, refactor that part (and only that part) so the result stays clean.
+- Never hardcode: values that can change — URLs, endpoints, file paths, credentials, API keys, user-specific data, magic numbers — must come from config, environment variables, parameters, or named constants, never buried as literals in code. Secrets must never be hardcoded, ever.
 - If another file truly must change too, say why before doing it.
 - Afterwards, show the diff and describe in one sentence what changed.
 
