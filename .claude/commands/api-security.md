@@ -35,4 +35,11 @@ Apply these 12 rules to every endpoint. If a rule doesn't apply, say why.
 - [ ] No secrets in URLs or logs
 - [ ] Auth endpoints are rate-limited
 
+### Learn more (official sources)
+- OWASP API Security Top 10: https://owasp.org/API-Security/
+- OWASP Cheat Sheet Series (API Security): https://cheatsheetseries.owasp.org/
+- OWASP Web Security Testing Guide: https://github.com/OWASP/wstg
+- Practice on a vulnerable API: https://github.com/OWASP/crAPI
+- Prevent committing secrets: https://github.com/awslabs/git-secrets
+
 Apply this playbook to the following: $ARGUMENTS
