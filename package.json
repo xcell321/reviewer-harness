@@ -3,7 +3,7 @@
   "bin": {
     "reviewer-harness": "./bin/cli.js"
   },
-  "description": "Your own AI harness — one master config that syncs guardrail rules, skills, and a local memory to Claude, OpenCode, Gemini, Cline, Freebuff, Copilot CLI, and Antigravity. No API key, no dependencies.",
+  "description": "Your own AI harness \u2014 one master config that syncs guardrail rules, skills, and a local memory to Claude, OpenCode, Gemini, Cline, Freebuff, Copilot CLI, and Antigravity. No API key, no dependencies.",
   "engines": {
     "node": ">=18"
   },
@@ -26,7 +26,7 @@
     "url": "https://github.com/xcell321/reviewer-harness.git"
   },
   "type": "module",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "files": [
     "bin",
     "lib",
