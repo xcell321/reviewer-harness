@@ -185,3 +185,109 @@ When to use: the user wants to understand how a feature works inside an app, bin
 - Rebuild as original code: explain the behavior from the evidence, then write the user's own implementation — never deliver decompiled or extracted code as the result. Validate the rebuild by running or testing it before calling it done.
 - Close an opened native session with `close_binary` when the investigation is complete (export an Evidence bundle first if the ledger must survive it). Report what was answered, what is partial, and what remains unknown — never describe a broad investigation as complete while required questions remain open.
 - Stay current: `rea update` for a global install (updates only the owning npm/Bun global; Bun needs 1.2.17+; metadata probes time out after 10 seconds; source checkouts and package-runner copies update through their own mechanism), or `npx rea-agents@latest setup` to refresh a package-runner registration, then restart the agent. Uninstall with `rea uninstall` (add `--purge-data` only when REA cache/state should also go).
+
+## Skill: api-security
+
+When to use: building or reviewing any API — REST, GraphQL, or internal endpoints.
+
+Apply these 12 rules to every endpoint. If a rule doesn't apply, say why.
+
+### Authentication & Access
+1. **Authenticate every call.** No anonymous backdoors. Every endpoint requires a valid credential — no "internal" or "debug" routes left open.
+2. **Check object access.** Verify the caller owns the resource: *your* ID, not anyone's ID. Never trust an ID from the request without checking ownership.
+3. **Use least-privilege keys.** Read-only keys where possible. Separate keys per environment. Never reuse an admin key for a client.
+
+### Input & Transport
+4. **Validate input.** Reject what you didn't expect. Whitelist shapes with a schema (e.g. Zod); never trust raw request bodies, query params, or headers.
+5. **HTTPS only.** No plain-text tokens, ever. Redirect HTTP to HTTPS. Set Secure cookies.
+6. **No secrets in URLs.** URLs end up in logs, browser history, and referrer headers. Put tokens in headers, never in query strings or paths.
+
+### Tokens & Sessions
+7. **Short-lived tokens.** Leaks expire fast. Access tokens in minutes, refresh tokens in days — never permanent. Rotate on sensitive actions.
+8. **Rate limit.** Slow down brute force. Throttle auth endpoints aggressively (e.g. 5 attempts/minute); throttle the rest by reasonable use.
+
+### Observability & Hygiene
+9. **Log auth failures.** Spot attacks early. Log failed logins, invalid tokens, and permission denials with IP and timestamp — but never log the secret itself.
+10. **Version your API.** Retire old weak endpoints. Keep `/v1`, `/v2` explicit; deprecate with a sunset date, don't silently change behavior.
+11. **Limit response data.** Send only what's needed. Don't return full user objects, internal IDs, or stack traces to clients. Filter fields per role.
+12. **Inventory endpoints.** You can't guard what you forgot. Keep a list of every route; audit it when adding features. Remove dead endpoints.
+
+### Quick check before shipping
+- [ ] Every route has auth (or a documented reason it doesn't)
+- [ ] IDs in requests are ownership-checked
+- [ ] Inputs are schema-validated
+- [ ] No secrets in URLs or logs
+- [ ] Auth endpoints are rate-limited
+
+### Learn more (official sources)
+- OWASP API Security Top 10: https://owasp.org/API-Security/
+- OWASP Cheat Sheet Series (API Security): https://cheatsheetseries.owasp.org/
+- OWASP Web Security Testing Guide: https://github.com/OWASP/wstg
+- Practice on a vulnerable API: https://github.com/OWASP/crAPI
+- Prevent committing secrets: https://github.com/awslabs/git-secrets
+
+## Skill: ux-edge-states
+
+When to use: building or reviewing any screen, page, or component.
+
+Your product works when everything goes right. The real test is what it does when nothing does. Run every screen through these 10 states before calling it done.
+
+### States to design
+1. **Empty state.** What does the screen say before there is any data? Never show a blank page. Explain what's missing and give a clear next action ("No sessions yet — create one").
+2. **Loading state.** Make the wait feel short. Show a skeleton or spinner immediately; never freeze the UI with no feedback. For long waits, show progress.
+3. **Error state.** Say what went wrong *and how to fix it*. "Something went wrong" is not enough. Include the cause and the recovery step ("Connection failed — check the backend is running, then Retry").
+4. **No internet.** Never leave the user staring at a blank screen. Detect offline, show a clear banner, and queue actions for retry when back online.
+5. **Slow network.** Show progress, not a frozen spinner. Use timeouts with friendly messages; allow cancel. Distinguish "loading" from "stuck".
+6. **No search results.** Suggest something instead of a dead end. Show "No results for X" plus alternatives: clear filters, related items, or a create action.
+7. **Permission denied.** Explain why and give a way back. Don't just hide the button — tell the user what permission is missing and how to get it (or who to ask).
+8. **Session expired.** Save their work before logging out. Warn before expiry when possible; preserve form input and drafts across re-auth.
+9. **Form validation.** Flag the mistake the moment it happens, not after submit. Inline errors next to the field; explain the rule ("Password needs 8+ characters").
+10. **Success state.** Confirm it, celebrate it, then show what is next. A toast or checkmark plus the logical next action ("Session created — add your first terminal").
+
+### Quick check before shipping
+- [ ] Empty: screen explains what's missing + next action
+- [ ] Loading: immediate feedback, no frozen UI
+- [ ] Error: cause + recovery step, not just "failed"
+- [ ] Offline/slow: detected and communicated
+- [ ] Validation: inline, immediate, explanatory
+- [ ] Success: confirmed + next step shown
+
+### Anti-patterns
+- Blank screens with no explanation.
+- Generic "Something went wrong" with no recovery path.
+- Spinners that never resolve and can't be cancelled.
+- Losing user input on error, expiry, or navigation.
+- Dead-end "no results" with no suggestions.
+
+## Skill: owasp-top10
+
+When to use: building, reviewing, or auditing any web application or API.
+
+The OWASP Top 10 is the industry-standard list of the most critical web security risks. Check every app against these before shipping.
+
+### The 10 risks (2021 edition)
+1. **Broken Access Control.** Users can act outside their permissions. Fix: deny by default; check ownership on every request; never rely on client-side hiding.
+2. **Cryptographic Failures.** Sensitive data exposed or weakly protected. Fix: encrypt in transit (TLS) and at rest; use strong algorithms; never store plain-text secrets.
+3. **Injection.** Untrusted data sent to an interpreter (SQL, NoSQL, OS, LDAP). Fix: parameterized queries; validate and sanitize all input; least-privilege DB accounts.
+4. **Insecure Design.** Missing or ineffective security controls by design. Fix: threat-model new features; use secure design patterns; write abuse cases.
+5. **Security Misconfiguration.** Default configs, open cloud storage, verbose errors, missing headers. Fix: hardened configs; remove defaults; minimal error details; security headers.
+6. **Vulnerable Components.** Outdated libraries with known CVEs. Fix: inventory dependencies; patch promptly; remove unused packages.
+7. **Authentication Failures.** Weak login, session, or credential handling. Fix: MFA where possible; strong password policy; secure session management; rate-limit logins.
+8. **Software & Data Integrity Failures.** Unverified updates, CI/CD tampering, insecure deserialization. Fix: verify signatures; secure pipelines; avoid deserializing untrusted data.
+9. **Logging & Monitoring Failures.** Breaches go undetected. Fix: log auth events, input validation failures, and access-control denials; alert on anomalies; retain logs securely.
+10. **Server-Side Request Forgery (SSRF).** App fetches attacker-chosen URLs. Fix: validate and whitelist URLs; block internal network access; disable unused URL schemas.
+
+### Quick check before shipping
+- [ ] Access control tested (try accessing another user's data)
+- [ ] No secrets in code, logs, or URLs
+- [ ] All inputs validated; queries parameterized
+- [ ] Dependencies up to date; no known CVEs
+- [ ] Auth endpoints rate-limited; sessions secure
+- [ ] Errors don't leak stack traces or internals
+- [ ] Security headers set (CSP, HSTS, X-Frame-Options)
+
+### Learn more
+- OWASP Top 10: https://owasp.org/Top10/
+- Cheat Sheet Series: https://cheatsheetseries.owasp.org/
+- Test your app: https://github.com/OWASP/wstg
+- Practice: https://github.com/juice-shop/juice-shop
