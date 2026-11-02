@@ -31,7 +31,8 @@
     "owasp-top10",
     "backend-performance",
     "devops-basics",
-    "motion-design"
+    "motion-design",
+    "frontend-performance"
   ],
-  "version": "1.10.0"
+  "version": "1.11.0"
 }
