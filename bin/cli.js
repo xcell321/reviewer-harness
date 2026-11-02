@@ -45,7 +45,7 @@ Usage (run inside your project):
   reviewer-harness commands list            List bundled slash commands
   reviewer-harness commands add <name>      Install a slash command (OpenCode + Claude)
 
-  reviewer-harness global [--dry-run]       Install EVERY bundled skill for ALL projects (OpenCode + Claude "/" menus; Freebuff, Copilot CLI, Antigravity skill bundles)
+  reviewer-harness global [--dry-run]       Install EVERY bundled skill for ALL projects (OpenCode + Claude "/" menus; Freebuff, Copilot CLI, Antigravity, Qoder skill bundles)
 
   reviewer-harness memory init              Start the local memory (memory/ folder)
   reviewer-harness memory index             Rebuild the memory INDEX.md + graph.json
@@ -232,6 +232,7 @@ function cmdGlobal() {
     { runtime: "Freebuff", dir: join(homedir(), ".agents", "skills"), bundle: true },
     { runtime: "Copilot CLI", dir: join(homedir(), ".copilot", "skills"), bundle: true },
     { runtime: "Antigravity", dir: join(homedir(), ".gemini", "config", "skills"), bundle: true },
+    { runtime: "Qoder", dir: join(homedir(), ".qoder", "skills"), bundle: true },
   ];
   if (dryRun) console.log("(dry-run: nothing was written)\n");
   for (const { runtime, dir, bundle } of targets) {
@@ -252,7 +253,7 @@ function cmdGlobal() {
   }
   console.log(
     `\nDone: ${skills.map((s) => "/" + s.name).join(", ")} are now available in EVERY project.` +
-      `\n(OpenCode + Claude: "/" menu commands. Freebuff, Copilot CLI, Antigravity: Agent Skills bundles.)` +
+      `\n(OpenCode + Claude: "/" menu commands. Freebuff, Copilot CLI, Antigravity, Qoder: Agent Skills bundles.)` +
       `\n(Per-project rules still come from "sync" inside a project.)`
   );
 }

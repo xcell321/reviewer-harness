@@ -17,7 +17,8 @@
     "cline",
     "freebuff",
     "copilot-cli",
-    "antigravity"
+    "antigravity",
+    "qoder"
   ],
   "license": "MIT",
   "name": "reviewer-harness",
@@ -26,7 +27,7 @@
     "url": "https://github.com/xcell321/reviewer-harness.git"
   },
   "type": "module",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "files": [
     "bin",
     "lib",

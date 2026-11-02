@@ -48,7 +48,7 @@ harness.config.json          ← your master spec (ONE file)
         │  validate()        ← quality checks + secret scanning
         ▼
 lib/adapters/*.js            ← adapters: opencode, claude, gemini, cline,
-                               freebuff, copilot, antigravity
+                               freebuff, copilot, antigravity, qoder
         │  renderInstructions()
         ▼
 .opencode/instructions.md    ← OpenCode
@@ -241,7 +241,7 @@ Running from a source checkout instead? The same commands work as `node bin/cli.
 - `lib/memory.js` — local memory: notes vault, graph builder, index generator
 - `lib/skills.js` — skills system: bundled store, install/enable, section rendering
 - `lib/agents.js` / `lib/commands.js` — one source → OpenCode + Claude formats
-- `lib/adapters/` — registry + one adapter per runtime (opencode, claude, gemini, cline, freebuff, copilot, antigravity)
+- `lib/adapters/` — registry + one adapter per runtime (opencode, claude, gemini, cline, freebuff, copilot, antigravity, qoder)
 - `skills/` — bundled skills · `agents/` — bundled sub-agents · `commands/` — bundled slash commands
 
 ## How it was built (the lessons)
