@@ -29,7 +29,8 @@
     "ux-edge-states",
     "owasp-top10",
     "backend-performance",
-    "devops-basics"
+    "devops-basics",
+    "motion-design"
   ],
   "version": "1.8.0"
 }
