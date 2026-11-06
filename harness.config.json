@@ -32,7 +32,8 @@
     "backend-performance",
     "devops-basics",
     "motion-design",
-    "frontend-performance"
+    "frontend-performance",
+    "system-design"
   ],
-  "version": "1.11.0"
+  "version": "1.12.0"
 }
