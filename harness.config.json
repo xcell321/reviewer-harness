@@ -33,7 +33,8 @@
     "devops-basics",
     "motion-design",
     "frontend-performance",
-    "system-design"
+    "system-design",
+    "nodejs-quality"
   ],
-  "version": "1.12.0"
+  "version": "1.13.0"
 }
