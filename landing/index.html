@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#07080a" />
+    <meta name="description" content="Free AI agent harness: one set of rules and skills, synced to 8 runtimes. MIT licensed." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffb347'/%3E%3Cstop offset='.55' stop-color='%23ff6b4a'/%3E%3Cstop offset='1' stop-color='%23ff2f3a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%2307080a'/%3E%3Crect x='20' y='20' width='24' height='24' rx='4' transform='rotate(45 32 32)' fill='url(%23g)'/%3E%3C/svg%3E" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffb347'/%3E%3Cstop offset='.55' stop-color='%23ff6b4a'/%3E%3Cstop offset='1' stop-color='%23ff2f3a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%2307080a'/%3E%3Crect x='20' y='20' width='24' height='24' rx='4' transform='rotate(45 32 32)' fill='url(%23g)'/%3E%3C/svg%3E" />
+    <title>reviewer-harness — One harness. Every agent.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/fontsource/fonts/geist-mono@latest/index.css" rel="stylesheet" />
+    <style>
+      :root{
+        color-scheme:dark;
+        --bg:#07080a; --white:#ffffff; --muted:#9c9c9d; --muted2:#c9c9ca;
+        --hair:rgba(255,255,255,.09); --hair2:rgba(255,255,255,.06);
+        --card:rgba(255,255,255,.028); --card-solid:#0c0d0f;
+        --crimson:#ff2f3a; --coral:#ff6b4a; --amber:#ffb347;
+        --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+        --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      }
+      *{box-sizing:border-box}
+      html{scroll-behavior:smooth}
+      body{margin:0;background:var(--bg);color:var(--white);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+      ::selection{background:var(--coral);color:#fff}
+      .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+      a{color:inherit}
+      /* ---------- Buttons generic ---------- */
+      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;font-family:var(--sans);font-weight:600;text-decoration:none;cursor:pointer;border:1px solid transparent;white-space:nowrap;transition:border-color .15s,background .15s,transform .1s}
+      .btn:active{transform:translateY(1px)}
+      .btn-outline{background:rgba(255,255,255,.03);color:var(--white);border-color:var(--hair);border-radius:10px}
+      .btn-outline:hover{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.06)}
+      .btn-lg{padding:13px 24px;font-size:15.5px}
+      .copy-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--hair);color:var(--muted);border-radius:7px;font-family:var(--mono);font-size:12px;padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
+      .copy-btn:hover{color:var(--white);border-color:rgba(255,255,255,.4)}
+      .copy-btn.copied{color:var(--amber);border-color:var(--coral)}
+
+      /* ---------- HERO + AURORA ---------- */
+      .hero{position:relative;overflow:hidden;padding:22px 0 72px;text-align:center;isolation:isolate}
+      .aurora{position:absolute;inset:0;z-index:-2;overflow:hidden;background:var(--bg)}
+      .blade{position:absolute;border-radius:50%;mix-blend-mode:screen;filter:blur(58px);will-change:transform,opacity}
+      .blade-1{width:980px;height:300px;left:-12%;top:2%;background:linear-gradient(100deg,transparent 0%,rgba(255,47,58,.0) 8%,rgba(255,47,58,.75) 38%,rgba(255,107,74,.65) 62%,rgba(255,179,71,.5) 84%,transparent 100%);transform:rotate(-24deg);animation:drift1 18s ease-in-out infinite alternate}
+      .blade-2{width:860px;height:250px;right:-14%;top:16%;background:linear-gradient(100deg,transparent,rgba(255,179,71,.55) 25%,rgba(255,107,74,.7) 52%,rgba(255,47,58,.72) 78%,transparent);transform:rotate(-28deg);animation:drift2 21s ease-in-out infinite alternate}
+      .blade-3{width:760px;height:210px;left:8%;top:44%;background:linear-gradient(100deg,transparent,rgba(255,107,74,.5) 30%,rgba(255,47,58,.62) 58%,rgba(255,179,71,.42) 85%,transparent);transform:rotate(-20deg);animation:drift3 16s ease-in-out infinite alternate}
+      .blade-4{width:640px;height:180px;right:2%;top:62%;background:linear-gradient(100deg,transparent,rgba(255,179,71,.4) 28%,rgba(255,107,74,.5) 60%,rgba(255,47,58,.45) 85%,transparent);transform:rotate(-30deg);animation:drift1 22s ease-in-out infinite alternate-reverse}
+      .blade-5{width:520px;height:150px;left:32%;top:-4%;background:linear-gradient(100deg,transparent,rgba(255,47,58,.55) 35%,rgba(255,179,71,.5) 75%,transparent);transform:rotate(-18deg);animation:drift2 15s ease-in-out infinite alternate-reverse}
+      @keyframes drift1{0%{transform:rotate(-24deg) translate(0,0) scale(1);opacity:1}50%{transform:rotate(-21deg) translate(46px,18px) scale(1.07);opacity:.82}100%{transform:rotate(-27deg) translate(-30px,-12px) scale(.96);opacity:.94}}
+      @keyframes drift2{0%{transform:rotate(-28deg) translate(0,0) scale(1);opacity:1}50%{transform:rotate(-31deg) translate(-52px,22px) scale(1.05);opacity:.78}100%{transform:rotate(-25deg) translate(28px,-16px) scale(.97);opacity:.92}}
+      @keyframes drift3{0%{transform:rotate(-20deg) translate(0,0) scale(1);opacity:.95}50%{transform:rotate(-17deg) translate(38px,-20px) scale(1.09);opacity:.75}100%{transform:rotate(-23deg) translate(-24px,14px) scale(.95);opacity:.9}}
+      .aurora-dim{position:absolute;inset:0;background:radial-gradient(900px 520px at 50% 30%,transparent 0%,rgba(7,8,10,.18) 55%,rgba(7,8,10,.72) 100%),linear-gradient(180deg,rgba(7,8,10,.25),transparent 30%,transparent 62%,var(--bg) 98%)}
+      .grain{position:absolute;inset:0;z-index:-1;opacity:.055;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")}
+      .vignette{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(120% 90% at 50% 42%,transparent 55%,rgba(0,0,0,.55) 100%)}
+      .hero-inner{position:relative;z-index:2}
+
+      /* Floating pill nav */
+      .pill-nav{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:9px 10px 9px 18px;border-radius:999px;background:rgba(12,13,15,.58);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--hair);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 18px 50px rgba(0,0,0,.45)}
+      .brand{display:inline-flex;align-items:center;gap:9px;font-size:15px;font-weight:600;color:var(--white);text-decoration:none;letter-spacing:-.02em;white-space:nowrap}
+      .diamond{width:11px;height:11px;flex:none;transform:rotate(45deg);border-radius:2px;background:linear-gradient(135deg,#ffb347 0%,#ff6b4a 55%,#ff2f3a 100%);box-shadow:0 0 12px rgba(255,107,74,.75)}
+      .nav-links{display:flex;gap:28px}
+      .nav-links a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;transition:color .15s}
+      .nav-links a:hover{color:var(--white)}
+      .nav-right{display:flex;align-items:center;gap:16px}
+      .nav-login{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500}
+      .nav-login:hover{color:var(--white)}
+      .nav-cta{background:#f2f2f2;color:#111214;font-size:13.5px;font-weight:600;padding:7px 15px;border-radius:999px}
+      .nav-cta:hover{background:#fff}
+
+      .eyebrow{display:inline-flex;align-items:center;gap:8px;margin-top:56px;padding:6px 14px;border-radius:999px;border:1px solid var(--hair);background:rgba(12,13,15,.5);backdrop-filter:blur(10px);font-size:12.5px;font-weight:500;color:var(--muted2);letter-spacing:.01em}
+      .eyebrow .spark{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px rgba(255,179,71,.9);flex:none}
+      .hero-title{font-size:64px !important;font-weight:600 !important;line-height:1.1 !important;letter-spacing:-.03em;color:var(--white);margin:26px auto 20px;max-width:860px;text-shadow:0 4px 40px rgba(0,0,0,.6)}
+      .grad-word{background:linear-gradient(92deg,var(--amber) 0%,var(--coral) 52%,var(--crimson) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+      .hero-sub{font-size:18px;font-weight:400;letter-spacing:.2px;line-height:1.6;color:rgba(255,255,255,.78);max-width:640px;margin:0 auto;text-shadow:0 2px 22px rgba(0,0,0,.75)}
+      .hero-sub strong{color:#fff;font-weight:600}
+
+      /* Keycap buttons */
+      .keycap-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+      .keycap{display:inline-flex;align-items:center;gap:10px;background:#e6e6e6;color:#2f3031;font-family:var(--sans);font-size:14px;font-weight:500;padding:12px 20px;border-radius:8px;border:0;cursor:pointer;text-decoration:none;
+        box-shadow:0 0 0 2px rgba(0,0,0,.85),0 0 14px rgba(255,255,255,.19),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -2px 0 rgba(0,0,0,.28),0 8px 20px rgba(0,0,0,.5);
+        transition:transform .1s,box-shadow .15s}
+      .keycap:hover{transform:translateY(-1px);box-shadow:0 0 0 2px rgba(0,0,0,.85),0 0 20px rgba(255,255,255,.26),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -2px 0 rgba(0,0,0,.28),0 10px 24px rgba(0,0,0,.5)}
+      .keycap:active{transform:translateY(1px)}
+      .keycap svg{flex:none;display:block}
+      .keycap.copied{color:#8a2b12}
+      .install-caption{margin:18px auto 0;font-family:var(--mono);font-size:12px;color:var(--muted)}
+      .install-caption b{color:var(--muted2);font-weight:400}
+
+      /* Command bar mockup */
+      .cmdbar{max-width:700px;margin:44px auto 0;text-align:left;border-radius:14px;background:rgba(13,14,17,.72);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--hair);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 30px 80px rgba(0,0,0,.65),0 0 90px rgba(255,47,58,.13);overflow:hidden}
+      .cmdbar-input{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--hair2)}
+      .cmdbar-input svg{flex:none}
+      .cmd-query{font-size:15.5px;color:var(--white);font-weight:500;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .caret{display:inline-block;width:2px;height:18px;background:var(--coral);vertical-align:-3px;margin-left:2px;box-shadow:0 0 8px rgba(255,107,74,.9);animation:blink 1.05s steps(1) infinite}
+      @keyframes blink{50%{opacity:0}}
+      .mode-pill{margin-left:auto;flex:none;font-size:11.5px;font-weight:600;color:var(--muted2);border:1px solid var(--hair);background:rgba(255,255,255,.04);padding:4px 11px;border-radius:999px;letter-spacing:.02em}
+      .cmd-rows{padding:8px}
+      .cmd-row{display:flex;align-items:center;gap:13px;padding:11px 12px;border-radius:9px}
+      .cmd-row .ric{width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--hair2);color:var(--muted2)}
+      .cmd-row .rlabel{font-size:14.5px;color:var(--muted2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .cmd-row .rlabel b{color:var(--white);font-weight:600;font-family:var(--mono);font-size:13.5px}
+      .kbd{margin-left:auto;flex:none;font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--hair);border-bottom-width:2px;background:rgba(255,255,255,.04);padding:3px 8px;border-radius:6px}
+      .cmd-row.active{background:linear-gradient(90deg,rgba(255,47,58,.20),rgba(255,107,74,.10) 60%,rgba(255,179,71,.05));box-shadow:inset 0 0 0 1px rgba(255,107,74,.28)}
+      .cmd-row.active .ric{background:rgba(255,107,74,.18);border-color:rgba(255,107,74,.35);color:#ffd9c9}
+      .cmd-row.active .kbd{color:#ffd9c9;border-color:rgba(255,107,74,.4)}
+      .cmdbar-foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:11px 18px;border-top:1px solid var(--hair2);font-family:var(--mono);font-size:11px;color:var(--muted)}
+      .cmdbar-foot .wm{display:inline-flex;align-items:center;gap:7px;color:var(--muted2)}
+      .cmdbar-foot .diamond{width:7px;height:7px}
+
+      .ghost-pill{display:inline-flex;align-items:center;gap:8px;margin-top:30px;padding:9px 20px;border-radius:999px;background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);font-size:14px;font-weight:500;text-decoration:none;transition:border-color .15s,color .15s}
+      .ghost-pill:hover{border-color:rgba(255,255,255,.45);color:#fff}
+
+      .ph-badge{position:absolute;right:26px;bottom:26px;z-index:3;display:flex;align-items:center;gap:12px;text-align:left;background:rgba(12,13,15,.78);backdrop-filter:blur(14px);border:1px solid var(--hair);border-radius:12px;padding:12px 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 18px 44px rgba(0,0,0,.55)}
+      .ph-badge .star{width:32px;height:32px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(255,179,71,.22),rgba(255,47,58,.22));border:1px solid rgba(255,107,74,.35);color:var(--amber)}
+      .ph-badge .t1{font-size:13px;font-weight:600;color:var(--white);line-height:1.3}
+      .ph-badge .t2{font-size:11.5px;color:var(--muted);line-height:1.3}
+
+      /* Metrics */
+      .metrics{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--hair2);border-radius:12px;margin:8px 0 0;background:var(--card-solid);overflow:hidden}
+      .metric{padding:26px 24px;border-right:1px solid var(--hair2);text-align:left}
+      .metric:last-child{border-right:0}
+      .metric .num{font-size:42px;font-weight:700;letter-spacing:-.04em;line-height:1;color:var(--white)}
+      .metric .num .unit{font-size:19px;color:var(--amber);font-weight:600}
+      .metric .lbl{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:10px;text-transform:uppercase;letter-spacing:.07em}
+
+      /* Sections */
+      section{padding:96px 0 8px;position:relative}
+      .sec-head{max-width:680px;margin-bottom:42px}
+      .sec-tag{font-family:var(--mono);font-size:12px;color:var(--amber);text-transform:uppercase;letter-spacing:.14em;margin:0 0 14px}
+      .sec-head h2{font-size:clamp(30px,4.6vw,44px);font-weight:700;letter-spacing:-.035em;line-height:1.1;margin:0 0 14px}
+      .sec-head p{color:var(--muted2);font-size:16.5px;margin:0}
+      .sec-head code,.mono-inline{font-family:var(--mono);font-size:14px;color:var(--white)}
+      .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+      .step{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:26px 24px 24px;display:flex;flex-direction:column}
+      .step .step-no{font-family:var(--mono);font-size:12.5px;color:#160a06;background:linear-gradient(135deg,var(--amber),var(--coral));border-radius:7px;width:27px;height:27px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:18px}
+      .step h3{font-size:18px;font-weight:600;letter-spacing:-.02em;margin:0 0 8px}
+      .step p{color:var(--muted2);font-size:14.5px;margin:0 0 18px;flex:1}
+      .step p code{font-family:var(--mono);font-size:13px;color:var(--white)}
+      .codeblock{background:#050607;border:1px solid var(--hair2);border-radius:9px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+      .codeblock code{font-family:var(--mono);font-size:13px;color:var(--white);overflow-wrap:break-word;flex:1}
+      .codeblock code .p{color:var(--coral)}
+      .codeblock .copy-btn{flex:none}
+      .install-note{margin-top:16px;background:var(--card);border:1px solid var(--hair2);border-left:3px solid var(--coral);border-radius:12px;padding:18px 22px;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+      .install-note .tag{font-family:var(--mono);font-size:12px;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+      .install-note p{margin:0;color:var(--muted2);font-size:15px}
+      .install-note code{font-family:var(--mono);font-size:13.5px;color:var(--white);background:rgba(255,255,255,.07);padding:2px 7px;border-radius:100px}
+      .alt-install{margin-top:16px;font-family:var(--mono);font-size:13px;color:var(--muted);display:flex;gap:10px 28px;flex-wrap:wrap}
+      .alt-install b{color:var(--muted2);font-weight:400}
+
+      .usage-grid{display:grid;grid-template-columns:1fr 1.25fr;gap:16px;align-items:stretch}
+      .usage-copy{display:flex;flex-direction:column;gap:16px}
+      .usage-card{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:24px}
+      .usage-card h3{font-size:17px;font-weight:600;letter-spacing:-.02em;margin:0 0 8px}
+      .usage-card p{color:var(--muted2);font-size:14.5px;margin:0}
+      .usage-card code{font-family:var(--mono);font-size:13px;color:var(--amber)}
+      .demo{background:var(--card-solid);border:1px solid var(--hair2);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+      .term-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--hair2);background:rgba(255,255,255,.02)}
+      .term-bar .tdot{width:11px;height:11px;border-radius:50%;background:#2b2c2e;flex:none}
+      .term-bar .tdot.warm{background:var(--coral)}
+      .term-bar .tdot.light{background:#55565a}
+      .term-title{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .demo-chips{display:flex;gap:8px;flex-wrap:wrap;padding:16px 18px;border-bottom:1px solid var(--hair2)}
+      .skill-chip{font-family:var(--mono);font-size:13px;background:rgba(255,255,255,.06);color:var(--muted2);border:1px solid transparent;border-radius:100px;padding:6px 13px;cursor:pointer;transition:color .15s,border-color .15s,background .15s}
+      .skill-chip:hover{color:var(--white)}
+      .skill-chip.active{color:#160a06;background:linear-gradient(135deg,var(--amber),var(--coral));font-weight:700}
+      .term-body{padding:20px 22px 22px;font-family:var(--mono);font-size:13.5px;line-height:1.9;overflow-x:auto;flex:1;min-height:264px;text-align:left}
+      .term-body .line{white-space:pre-wrap;overflow-wrap:break-word}
+      .term-body .p{color:var(--coral)}
+      .term-body .cmd{color:var(--white)}
+      .term-body .out{color:var(--muted2)}
+      .term-body .ok{color:var(--amber)}
+      .term-body .cmt{color:var(--muted)}
+      .tcur{display:inline-block;width:8px;height:15px;background:var(--amber);vertical-align:-2px;animation:blink 1.1s steps(1) infinite}
+      .demo-hint{padding:0 18px 16px;font-family:var(--mono);font-size:12px;color:var(--muted);margin:0}
+      .cmd-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px}
+      .cmd-card{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:22px;text-align:left;cursor:pointer;transition:border-color .15s;font-family:var(--sans);color:var(--white);width:100%}
+      .cmd-card:hover{border-color:rgba(255,107,74,.45)}
+      .cmd-card .cname{font-family:var(--mono);font-size:15px;color:var(--amber);display:block;margin-bottom:8px}
+      .cmd-card p{color:var(--muted2);font-size:14px;margin:0;line-height:1.55}
+
+      .skills-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+      .skill-card{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:22px;transition:border-color .15s}
+      .skill-card:hover{border-color:rgba(255,107,74,.4)}
+      .skill-card .sname{font-family:var(--mono);font-size:14.5px;color:var(--white);display:flex;align-items:center;gap:9px;margin-bottom:8px}
+      .skill-card .sname::before{content:"";width:6px;height:6px;border-radius:2px;background:linear-gradient(135deg,var(--amber),var(--crimson));flex:none}
+      .skill-card p{color:var(--muted2);font-size:14px;margin:0;line-height:1.55}
+
+      .rules{border:1px solid var(--hair2);border-radius:12px;background:var(--card-solid);overflow:hidden}
+      .rule{display:flex;gap:20px;align-items:baseline;padding:20px 24px;border-bottom:1px solid var(--hair2)}
+      .rule:last-child{border-bottom:0}
+      .rule .rno{font-family:var(--mono);font-size:13px;color:var(--muted);flex:none;width:34px}
+      .rule h3{font-size:16.5px;font-weight:600;letter-spacing:-.015em;margin:0 0 3px}
+      .rule p{color:var(--muted2);font-size:14.5px;margin:0}
+      .rule p code{font-family:var(--mono);font-size:13px;color:var(--white)}
+      .rule.hero-rule{background:linear-gradient(90deg,rgba(255,47,58,.14),rgba(255,107,74,.06));box-shadow:inset 3px 0 0 var(--coral)}
+      .rule.hero-rule .rno{color:var(--amber)}
+      .rule-badge{margin-left:auto;flex:none;align-self:center;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;background:linear-gradient(135deg,var(--amber),var(--coral));color:#160a06;font-weight:700;padding:4px 10px;border-radius:100px}
+
+      .runtimes{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+      .runtime{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:22px}
+      .runtime .rname{font-size:16.5px;font-weight:600;letter-spacing:-.02em;margin-bottom:8px;display:flex;align-items:center;gap:9px}
+      .runtime .rname .dot{width:6px;height:6px;border-radius:50%;background:var(--coral);flex:none}
+      .runtime .rfile{font-family:var(--mono);font-size:12.5px;color:var(--muted2);word-break:break-all;line-height:1.6}
+
+      .final{margin-top:96px;border:1px solid var(--hair2);border-radius:16px;background:var(--card-solid);padding:56px 40px;text-align:center;position:relative;overflow:hidden}
+      .final::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(520px 240px at 50% -80px,rgba(255,107,74,.20),transparent 70%)}
+      .final h2{position:relative;font-size:clamp(28px,4.4vw,42px);font-weight:700;letter-spacing:-.035em;margin:0 0 12px}
+      .final p{position:relative;color:var(--muted2);margin:0 auto 28px;max-width:520px}
+      .final-ctas{position:relative;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+      .btn-white{background:#f2f2f2;color:#111214;border-radius:10px}
+      .btn-white:hover{background:#fff}
+      footer{padding:44px 0 52px;margin-top:72px;border-top:1px solid var(--hair2)}
+      .foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+      .foot .free{font-family:var(--mono);font-size:14px;color:var(--white)}
+      .foot .free .warm{color:var(--amber)}
+      .foot-links{display:flex;gap:24px}
+      .foot-links a{color:var(--muted);text-decoration:none;font-size:14px}
+      .foot-links a:hover{color:var(--white)}
+      .foot .credit{width:100%;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:6px}
+
+      /* ---------- Problem ---------- */
+      .problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+      .fail-card{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:26px 26px 22px;display:flex;flex-direction:column}
+      .fail-card h3{font-size:18px;font-weight:600;letter-spacing:-.02em;margin:0 0 10px;display:flex;align-items:baseline;gap:10px}
+      .fail-card h3 .fx{font-family:var(--mono);font-size:12px;color:var(--crimson);font-weight:700;flex:none}
+      .fail-card .story{color:var(--muted2);font-size:14.5px;margin:0 0 14px;line-height:1.6}
+      .fail-ex{background:#050607;border:1px solid var(--hair2);border-radius:9px;padding:13px 15px;font-family:var(--mono);font-size:12.5px;line-height:1.75;color:var(--muted2);margin:0 0 16px;overflow-x:auto;white-space:pre}
+      .fail-ex .bad{color:#ff8a7a}
+      .fail-ex .cmt{color:var(--muted)}
+      .guard{margin-top:auto;padding-top:14px;border-top:1px solid var(--hair2);font-size:13.5px;color:var(--muted)}
+      .guard b{color:var(--amber);font-family:var(--mono);font-size:12.5px;font-weight:600}
+
+      /* ---------- Without vs With ---------- */
+      .vs-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch}
+      .vs-panel{border:1px solid var(--hair2);border-radius:12px;background:var(--card-solid);overflow:hidden;display:flex;flex-direction:column}
+      .vs-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--hair2);font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+      .vs-head .vs-dot{width:8px;height:8px;border-radius:50%;flex:none}
+      .vs-panel.bad .vs-head{color:#ff8a7a}
+      .vs-panel.bad .vs-dot{background:var(--crimson);box-shadow:0 0 8px rgba(255,47,58,.8)}
+      .vs-panel.good{border-color:rgba(255,107,74,.35);box-shadow:0 0 60px rgba(255,47,58,.07)}
+      .vs-panel.good .vs-head{color:var(--amber)}
+      .vs-panel.good .vs-dot{background:var(--amber);box-shadow:0 0 8px rgba(255,179,71,.8)}
+      .vs-body{padding:18px;font-family:var(--mono);font-size:12.8px;line-height:1.85;overflow-x:auto;flex:1}
+      .vs-body .line{white-space:pre-wrap;overflow-wrap:break-word}
+      .vs-body .p{color:var(--coral)}
+      .vs-body .cmd{color:var(--white)}
+      .vs-body .out{color:var(--muted2)}
+      .vs-body .err{color:#ff8a7a}
+      .vs-body .ok{color:var(--amber)}
+      .vs-body .cmt{color:var(--muted)}
+      .vs-verdict{padding:14px 18px;border-top:1px solid var(--hair2);font-size:14px;color:var(--muted2);line-height:1.55}
+      .vs-verdict b{color:var(--white);font-weight:600}
+
+      /* ---------- File tree ---------- */
+      .tree-wrap{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:stretch}
+      .tree{background:#050607;border:1px solid var(--hair2);border-radius:12px;padding:22px 24px;font-family:var(--mono);font-size:13px;line-height:1.95;overflow-x:auto;white-space:pre;color:var(--muted2)}
+      .tree .dir{color:var(--white)}
+      .tree .note{color:var(--muted)}
+      .tree .hl{color:var(--amber)}
+      .tree-notes{display:flex;flex-direction:column;gap:16px}
+      .tree-note{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:22px 24px;flex:1}
+      .tree-note h3{font-size:16.5px;font-weight:600;letter-spacing:-.02em;margin:0 0 7px}
+      .tree-note p{color:var(--muted2);font-size:14.5px;margin:0;line-height:1.6}
+      .tree-note code{font-family:var(--mono);font-size:13px;color:var(--amber)}
+
+      /* ---------- FAQ ---------- */
+      .faq{border:1px solid var(--hair2);border-radius:12px;background:var(--card-solid);overflow:hidden}
+      .faq-item{border-bottom:1px solid var(--hair2)}
+      .faq-item:last-child{border-bottom:0}
+      .faq-item summary{list-style:none;cursor:pointer;padding:20px 24px;font-size:16.5px;font-weight:600;letter-spacing:-.015em;display:flex;align-items:center;gap:14px;transition:color .15s}
+      .faq-item summary::-webkit-details-marker{display:none}
+      .faq-item summary:hover{color:var(--amber)}
+      .faq-item summary .plus{margin-left:auto;flex:none;font-family:var(--mono);font-size:18px;color:var(--amber);font-weight:400;transition:transform .2s}
+      .faq-item[open] summary .plus{transform:rotate(45deg)}
+      .faq-item .faq-a{padding:0 24px 22px;color:var(--muted2);font-size:15px;line-height:1.65;max-width:760px}
+      .faq-item .faq-a p{margin:0}
+      .faq-item .faq-a code{font-family:var(--mono);font-size:13.5px;color:var(--white)}
+
+      /* ---------- Final CTA ---------- */
+      .cta-band{margin-top:96px;border:1px solid rgba(255,107,74,.3);border-radius:16px;background:var(--card-solid);padding:56px 40px;text-align:center;position:relative;overflow:hidden}
+      .cta-band::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(560px 260px at 50% -90px,rgba(255,107,74,.22),transparent 70%)}
+      .cta-band h2{position:relative;font-size:clamp(28px,4.4vw,42px);font-weight:700;letter-spacing:-.035em;margin:0 0 12px}
+      .cta-band p{position:relative;color:var(--muted2);margin:0 auto 26px;max-width:520px}
+      .cta-cmd{position:relative;max-width:520px;margin:0 auto;display:flex;align-items:center;gap:10px;background:#050607;border:1px solid var(--hair);border-radius:10px;padding:14px 16px;text-align:left}
+      .cta-cmd code{font-family:var(--mono);font-size:14px;color:var(--white);flex:1;overflow-wrap:break-word}
+      .cta-cmd code .p{color:var(--coral)}
+      .cta-links{position:relative;margin-top:22px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+      /* ---------- Command reference ---------- */
+      .cmdtable{background:var(--card-solid);border:1px solid var(--hair2);border-radius:12px;overflow:hidden}
+      .cmdtable table{width:100%;border-collapse:collapse;text-align:left}
+      .cmdtable th{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:15px 20px;border-bottom:1px solid var(--hair);background:rgba(255,255,255,.02);white-space:nowrap}
+      .cmdtable td{padding:17px 20px;border-bottom:1px solid var(--hair2);vertical-align:middle;font-size:14.5px;line-height:1.55}
+      .cmdtable tbody tr{transition:background .15s}
+      .cmdtable tbody tr:last-child td{border-bottom:0}
+      .cmdtable tbody tr:hover{background:linear-gradient(90deg,rgba(255,47,58,.07),rgba(255,107,74,.04))}
+      .cmdtable .col-cmd{width:34%}
+      .cmd-cell{display:flex;align-items:center;gap:12px}
+      .cmd-cell code{font-family:var(--mono);font-size:13.5px;color:var(--white);white-space:nowrap}
+      .cmd-cell .copy-btn{flex:none}
+      .does-cell{color:var(--muted2)}
+      .when-cell{color:var(--muted);white-space:nowrap}
+
+      /* Scroll reveal — hidden state is added by JS only, so content is visible if JS fails */
+      .rv{opacity:0;transform:translateY(16px)}
+      .rv-in{opacity:1;transform:none;transition:opacity .65s ease,transform .65s ease}
+
+      @media (max-width:900px){
+        .problem-grid,.vs-grid,.tree-wrap{grid-template-columns:1fr}
+        .steps,.skills-grid{grid-template-columns:repeat(2,1fr)}
+        .cmd-cards,.runtimes{grid-template-columns:repeat(2,1fr)}
+        .usage-grid{grid-template-columns:1fr}
+        .metrics{grid-template-columns:repeat(2,1fr)}
+        .metric:nth-child(2){border-right:0}
+        .metric:nth-child(1),.metric:nth-child(2){border-bottom:1px solid var(--hair2)}
+        .nav-links{gap:20px}
+        .cmd-cell{flex-wrap:wrap}
+        .cmd-cell code{white-space:normal;overflow-wrap:break-word}
+      }
+      @media (max-width:680px){
+        .nav-links,.nav-login{display:none}
+        .pill-nav{padding:8px 8px 8px 14px}
+        .hero{padding-top:14px}
+        .eyebrow{margin-top:40px}
+        .hero-title{font-size:42px !important}
+        .hero-sub{font-size:16.5px}
+        .keycap-row{flex-direction:column;align-items:stretch;max-width:340px;margin-left:auto;margin-right:auto}
+        .keycap{justify-content:center;width:100%}
+        .cmdbar{margin-top:36px}
+        .cmd-row .rlabel{white-space:normal}
+        .ph-badge{position:static;margin:26px auto 0;width:fit-content}
+        section{padding-top:68px}
+        .steps,.skills-grid,.cmd-cards,.runtimes{grid-template-columns:1fr}
+        .metric .num{font-size:34px}
+        .term-body{font-size:12.5px;padding:14px 16px 16px}
+        .final,.cta-band{padding:40px 22px}
+        .fail-card{padding:22px 20px 18px}
+        .faq-item summary{padding:17px 18px;font-size:15.5px}
+        .faq-item .faq-a{padding:0 18px 19px}
+        .rule{padding:18px;gap:14px}
+        .rule-badge{display:none}
+        .cmdtable table,.cmdtable tbody,.cmdtable tr,.cmdtable td{display:block;width:100%}
+        .cmdtable thead{display:none}
+        .cmdtable tbody tr{padding:15px 0;border-bottom:1px solid var(--hair2)}
+        .cmdtable tbody tr:last-child{border-bottom:0}
+        .cmdtable td{padding:4px 20px;border-bottom:0}
+        .cmdtable td::before{content:attr(data-label);display:block;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:2px}
+        .cmd-cell code{white-space:normal;overflow-wrap:break-word}
+        .when-cell{white-space:normal}
+      }
+      @media (prefers-reduced-motion:reduce){
+        html{scroll-behavior:auto}
+        .blade,.caret,.tcur{animation:none}
+        *{transition:none !important}
+      }
+    </style>
+  </head>
+  <body>
+    <main id="top">
+      <!-- ================= HERO ================= -->
+      <div class="hero">
+        <div class="aurora" aria-hidden="true">
+          <div class="blade blade-1"></div><div class="blade blade-2"></div><div class="blade blade-3"></div><div class="blade blade-4"></div><div class="blade blade-5"></div>
+          <div class="aurora-dim"></div>
+        </div>
+        <div class="grain" aria-hidden="true"></div>
+        <div class="vignette" aria-hidden="true"></div>
+
+        <div class="wrap hero-inner">
+          <!-- Floating pill nav -->
+          <nav class="pill-nav" aria-label="Main">
+            <a class="brand" href="#top"><span class="diamond"></span>reviewer-harness</a>
+            <div class="nav-links">
+              <a href="#install">Install</a><a href="#usage">How to use</a><a href="#skills">Skills</a><a href="#rules">Rules</a><a href="#faq">FAQ</a><a href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">GitHub</a>
+            </div>
+            <div class="nav-right">
+              <a class="nav-login" href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">GitHub</a>
+              <a class="btn nav-cta" href="#install">Install — free</a>
+            </div>
+          </nav>
+
+          <span class="eyebrow"><span class="spark"></span>FREE FOREVER — MIT LICENSED · v1.13.0 · 15 skills · 8 runtimes</span>
+
+          <h1 class="hero-title">One harness. Every agent.<br /><span class="grad-word">Zero</span> breakage.</h1>
+          <p class="hero-sub">Syncs anti-breakage rules, skills and prompts to <strong>8 AI coding runtimes</strong> — so your AI stops breaking your code.</p>
+
+          <div class="keycap-row">
+            <button class="keycap" type="button" data-copy="npm install -g reviewer-harness" aria-label="Copy the npm install command">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2f3031" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-5-6-5"/><path d="M12 19h8"/></svg>
+              Install with npm
+            </button>
+            <a class="keycap" href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#2f3031" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.49 1.93.43.37.81 1.1.81 2.23v3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .3Z"/></svg>
+              View on GitHub
+            </a>
+          </div>
+          <p class="install-caption"><b>npm install -g reviewer-harness</b> — then run <b>reviewer-harness sync</b></p>
+
+          <!-- Command-bar mockup -->
+          <div class="cmdbar" role="img" aria-label="Command bar showing reviewer-harness sync and its slash commands">
+            <div class="cmdbar-input">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9c9c9d" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <span class="cmd-query">reviewer-harness sync<span class="caret"></span></span>
+              <span class="mode-pill">Command</span>
+            </div>
+            <div class="cmd-rows">
+              <div class="cmd-row active">
+                <span class="ric"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></span>
+                <span class="rlabel"><b>sync</b> — Sync skills to 8 runtimes</span>
+                <span class="kbd">⌘ + Enter</span>
+              </div>
+              <div class="cmd-row">
+                <span class="ric"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10Z"/><path d="M9 12l2 2 4-4"/></svg></span>
+                <span class="rlabel"><b>/audit-team</b> — Run the 5-agent code audit</span>
+                <span class="kbd">⌘ + B</span>
+              </div>
+              <div class="cmd-row">
+                <span class="ric"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg></span>
+                <span class="rlabel"><b>/system-design</b> — Plan before you code</span>
+                <span class="kbd">⌘ + O</span>
+              </div>
+              <div class="cmd-row">
+                <span class="ric"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></span>
+                <span class="rlabel"><b>/explain</b> — Explain it in Bisaya</span>
+                <span class="kbd">⌘ + K</span>
+              </div>
+            </div>
+            <div class="cmdbar-foot">
+              <span>↑↓ navigate &nbsp;·&nbsp; enter open &nbsp;·&nbsp; esc dismiss</span>
+              <span class="wm"><span class="diamond"></span>reviewer-harness</span>
+            </div>
+          </div>
+
+          <a class="ghost-pill" href="#install">Learn more <span aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="ph-badge" aria-label="Free and open source, MIT licensed">
+          <span class="star"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.95 5.98 6.6.96-4.78 4.66 1.13 6.58L12 17.57l-5.9 3.1 1.13-6.57L2.45 9.44l6.6-.96L12 2.5Z"/></svg></span>
+          <span><span class="t1">Free &amp; open source</span><br /><span class="t2">MIT licensed — forever</span></span>
+        </div>
+      </div>
+
+      <div class="wrap">
+        <div class="metrics">
+          <div class="metric"><div class="num">15</div><div class="lbl">Bundled skills</div></div>
+          <div class="metric"><div class="num">8</div><div class="lbl">AI runtimes synced</div></div>
+          <div class="metric"><div class="num">6</div><div class="lbl">Guardrail rules</div></div>
+          <div class="metric"><div class="num">0<span class="unit"> deps</span></div><div class="lbl">Dependencies · Node 18+</div></div>
+        </div>
+      </div>
+
+      <!-- ================= THE PROBLEM ================= -->
+      <section id="problem">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">The problem</p>
+            <h2>AI agents write fast. They also break things quietly.</h2>
+            <p>The code compiles, the agent says "done" — and the damage surfaces three commits later. These are the four failures every AI-assisted developer has already met. Each one has a specific guard in the harness.</p>
+          </div>
+          <div class="problem-grid">
+            <article class="fail-card">
+              <h3><span class="fx">✕</span>Edits the wrong file</h3>
+              <p class="story">You asked for a one-line fix in the login handler. The agent "cleaned up" the whole auth module while it was in there — and your custom session handling, the part that actually worked, was rewritten away.</p>
+              <p class="fail-ex"><span class="cmt"># what you asked</span>
+fix the redirect in <span class="bad">login.php</span> line 42
+
+<span class="cmt"># what got committed</span>
+<span class="bad">auth.php · session.php · login.php</span>
+<span class="bad">3 files rewritten — 412 lines changed</span></p>
+              <p class="guard">Guarded by <b>safe-editing</b> — surgical edits only: change what the task requires, never rewrite code that already works.</p>
+            </article>
+            <article class="fail-card">
+              <h3><span class="fx">✕</span>Invents APIs that don't exist</h3>
+              <p class="story">The code reads beautifully. It just calls a method that was never in the library — so it passes review, gets merged, and crashes the first time that path runs in production.</p>
+              <p class="fail-ex"><span class="cmt">// agent's "fix", merged as-is</span>
+const user = await db.<span class="bad">findUserByEmailFast</span>(email);
+<span class="cmt">// runtime, two days later</span>
+<span class="bad">TypeError: db.findUserByEmailFast is not a function</span></p>
+              <p class="guard">Guarded by <b>no-hallucination</b> — only packages, APIs and functions that exist in your project or its docs get used.</p>
+            </article>
+            <article class="fail-card">
+              <h3><span class="fx">✕</span>Ignores your conventions</h3>
+              <p class="story">Your codebase has a way of doing things — prepared statements, your naming, your folder layout. The agent never looked. Its code works, but it's written in a dialect nobody on the project speaks.</p>
+              <p class="fail-ex"><span class="cmt"># your project, everywhere</span>
+$stmt = $pdo-&gt;prepare("SELECT … WHERE id = ?");
+
+<span class="cmt"># the agent's new file</span>
+<span class="bad">$r = mysqli_query($db, "SELECT … " . $_GET['id']);</span></p>
+              <p class="guard">Guarded by <b>safe-editing</b> + <b>debug-first</b> — Rule #4: read the surrounding code and match its discipline before writing a line.</p>
+            </article>
+            <article class="fail-card">
+              <h3><span class="fx">✕</span>Ships untested changes</h3>
+              <p class="story">"Done!" — except nothing was run. The renamed export is imported by six other files, the build is red, and you find out from CI, or worse, from a user.</p>
+              <p class="fail-ex"><span class="cmt">&gt; rename getUser() to fetchUser()</span>
+<span class="bad">✓ Done! Renamed in userService.js.</span>
+<span class="cmt"># 6 other files still import getUser()</span>
+<span class="bad"># no test run · no build run · no report</span></p>
+              <p class="guard">Guarded by <b>debug-first</b> + <b>Rule #6</b> — validate every change, then report exactly what changed. "Done" has to be earned.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= WITHOUT VS WITH ================= -->
+      <section id="compare">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">Without vs with</p>
+            <h2>Same task. Same agent. Different ending.</h2>
+            <p>"Fix the login bug" — run once with a bare agent, once with the harness synced. The only difference is the instructions the agent is working under.</p>
+          </div>
+          <div class="vs-grid">
+            <div class="vs-panel bad">
+              <div class="vs-head"><span class="vs-dot"></span>Without the harness</div>
+              <div class="vs-body">
+                <div class="line"><span class="p">&gt;</span> <span class="cmd">fix the login bug</span></div>
+                <div class="line"><span class="out">  Looking at the auth module…</span></div>
+                <div class="line"><span class="out">  I'll switch the check to use</span></div>
+                <div class="line"><span class="out">  auth.verifyTokenFast() — cleaner</span></div>
+                <div class="line"><span class="out">  and faster.</span></div>
+                <div class="line">&nbsp;</div>
+                <div class="line"><span class="err">✓ Done! Login bug fixed.</span></div>
+                <div class="line">&nbsp;</div>
+                <div class="line"><span class="cmt"># verifyTokenFast() does not exist</span></div>
+                <div class="line"><span class="cmt"># nothing was run · nothing verified</span></div>
+                <div class="line"><span class="err"># you find out at runtime</span></div>
+              </div>
+              <p class="vs-verdict"><b>Result:</b> a confident "done" on top of an invented API. The bug report comes back — from production.</p>
+            </div>
+            <div class="vs-panel good">
+              <div class="vs-head"><span class="vs-dot"></span>With the harness</div>
+              <div class="vs-body">
+                <div class="line"><span class="p">&gt;</span> <span class="cmd">fix the login bug</span></div>
+                <div class="line"><span class="out">  [Rule #4] reading memory/INDEX.md</span></div>
+                <div class="line"><span class="out">  and the surrounding auth code first…</span></div>
+                <div class="line"><span class="out">  root cause: token check compares</span></div>
+                <div class="line"><span class="out">  against the wrong expiry field.</span></div>
+                <div class="line"><span class="out">  editing src/auth.js — 3 lines, nothing else.</span></div>
+                <div class="line"><span class="out">  [Rule #6] running npm test…</span></div>
+                <div class="line"><span class="ok">  42 passed, 0 failed</span></div>
+                <div class="line">&nbsp;</div>
+                <div class="line"><span class="ok">✓ Validated. Changed: src/auth.js (+3 −1).</span></div>
+              </div>
+              <p class="vs-verdict"><b>Result:</b> root cause found, a 3-line surgical fix, tests run, every changed file reported. Done means done.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= WHAT SYNC WRITES ================= -->
+      <section id="files">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">Under the hood</p>
+            <h2>What sync actually puts in your project.</h2>
+            <p>No magic, no daemon, nothing phoning home. <span class="mono-inline">reviewer-harness sync</span> writes plain files into your project — each runtime's own native format — and you can open every one of them and read exactly what your agent will read.</p>
+          </div>
+          <div class="tree-wrap">
+            <div class="tree" role="img" aria-label="File tree of what reviewer-harness sync writes into a project"><span class="dir">your-project/</span>
+├── <span class="hl">harness.config.json</span>   <span class="note">← the master config — the one file you edit</span>
+├── <span class="dir">CLAUDE.md</span>             <span class="note">← Claude Code</span>
+├── <span class="dir">GEMINI.md</span>             <span class="note">← Gemini CLI</span>
+├── <span class="dir">.clinerules</span>           <span class="note">← Cline</span>
+├── <span class="dir">.opencode/</span>
+│   ├── instructions.md    <span class="note">← OpenCode</span>
+│   └── commands/          <span class="note">← every skill as a slash command</span>
+├── <span class="dir">.qoder/skills/</span>         <span class="note">← Qoder skill bundles</span>
+├── <span class="dir">.github/skills/</span>        <span class="note">← Copilot CLI skill bundles</span>
+└── <span class="dir">.agents/skills/</span>        <span class="note">← Freebuff · Antigravity</span>
+
+<span class="note"># every file sync overwrites is backed up</span>
+<span class="note"># first — same name, .bak extension</span></div>
+            <div class="tree-notes">
+              <div class="tree-note"><h3>One source of truth</h3><p>Your rules and skills live once, in <code>harness.config.json</code>. Sync renders them into each runtime's format — edit in one place, and all 8 runtimes agree.</p></div>
+              <div class="tree-note"><h3>Readable, not magic</h3><p>Every generated file is plain Markdown you can open, diff and commit to git. If you stop using the harness, the files are just text — delete them and nothing breaks.</p></div>
+              <div class="tree-note"><h3>Secrets never sync</h3><p>Before writing anything, sync scans your config for leaked keys and tokens — and blocks the sync if it finds one. Your credentials never land in an instruction file.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= INSTALL ================= -->
+      <section id="install">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">Install</p>
+            <h2>Running in under a minute.</h2>
+            <p>Three steps. The harness validates your config, scans it for leaked secrets, and writes each runtime's native instruction file — with a <span class="mono-inline">.bak</span> backup before anything is overwritten.</p>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <span class="step-no">1</span><h3>Install the CLI</h3>
+              <p>One global install. Zero dependencies — if you have Node.js 18+, you're ready.</p>
+              <div class="codeblock"><code><span class="p">$</span> npm install -g reviewer-harness</code><button class="copy-btn" type="button" data-copy="npm install -g reviewer-harness">⧉ copy</button></div>
+            </div>
+            <div class="step">
+              <span class="step-no">2</span><h3>Go to your project</h3>
+              <p>Every command works on the current directory — the harness lives inside your project, next to your code.</p>
+              <div class="codeblock"><code><span class="p">$</span> cd your-project</code><button class="copy-btn" type="button" data-copy="cd your-project">⧉ copy</button></div>
+            </div>
+            <div class="step">
+              <span class="step-no">3</span><h3>Init, then sync</h3>
+              <p><code>init</code> creates your master config. <code>sync</code> pushes the rules, skills and prompts into every runtime you enable.</p>
+              <div class="codeblock"><code><span class="p">$</span> reviewer-harness sync</code><button class="copy-btn" type="button" data-copy="reviewer-harness init && reviewer-harness sync">⧉ copy</button></div>
+            </div>
+          </div>
+          <div class="install-note">
+            <span class="tag">Set it up once</span>
+            <p>Run <code>reviewer-harness global</code> once and every skill becomes a slash command in <em>every</em> project you open — no per-project setup. Preview any sync first with <code>reviewer-harness sync --dry-run</code> — it writes nothing.</p>
+          </div>
+          <p class="alt-install">
+            <span><b>Zero-install:</b> npx reviewer-harness skills add safe-editing</span>
+            <span><b>macOS / Linux:</b> curl -fsSL …/bin/install.sh | bash</span>
+            <span><b>Windows:</b> irm …/bin/install.ps1 | iex</span>
+            <span><b>No Node?</b> Run it via Docker</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- ================= USAGE ================= -->
+      <section id="usage">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">How to use</p>
+            <h2>Sync once. The rules just apply.</h2>
+            <p>After sync, the rules and skills live inside your agent's own instruction files. There is nothing new to learn and nothing to remember — your AI follows them on every task, in every session.</p>
+          </div>
+          <div class="usage-grid">
+            <div class="usage-copy">
+              <div class="usage-card"><h3>Automatic, every session</h3><p>Rules and enabled skills are rendered into <code>CLAUDE.md</code>, <code>.opencode/instructions.md</code>, <code>GEMINI.md</code>, <code>.clinerules</code> and skill bundles — whichever runtimes you use read them before writing a single line.</p></div>
+              <div class="usage-card"><h3>Slash commands on demand</h3><p>Every skill also becomes a slash command in the <code>/</code> menu. Invoke one when a task needs a specific discipline — an audit before merging, a plan before building.</p></div>
+              <div class="usage-card"><h3>Change rules in one place</h3><p>Edit <code>harness.config.json</code>, run <code>reviewer-harness sync</code>, and all 8 runtimes update together. No more hand-syncing four different instruction files.</p></div>
+            </div>
+            <div class="demo">
+              <div class="term-bar"><span class="tdot warm"></span><span class="tdot light"></span><span class="tdot"></span><span class="term-title">try it — click a command</span></div>
+              <div class="demo-chips" role="group" aria-label="Demo slash commands">
+                <button class="skill-chip active" type="button" data-demo="audit-team">/audit-team</button>
+                <button class="skill-chip" type="button" data-demo="system-design">/system-design</button>
+                <button class="skill-chip" type="button" data-demo="nodejs-quality">/nodejs-quality</button>
+                <button class="skill-chip" type="button" data-demo="explain">/explain</button>
+              </div>
+              <div class="term-body" id="demoTerm" aria-live="polite"></div>
+              <p class="demo-hint">// demo output — in your editor, the agent runs the real skill</p>
+            </div>
+          </div>
+          <div class="cmd-cards">
+            <button class="cmd-card" type="button" data-demo="audit-team"><span class="cname">/audit-team</span><p>Five agents audit your code in parallel — correctness, hardcoding, dead code, security, readability.</p></button>
+            <button class="cmd-card" type="button" data-demo="system-design"><span class="cname">/system-design</span><p>Plan the architecture before coding — scaling, caching, data flow, trade-offs. Distilled from the System Design Primer.</p></button>
+            <button class="cmd-card" type="button" data-demo="nodejs-quality"><span class="cname">/nodejs-quality</span><p>Review Node.js code while you write it — error handling, structure, testing, production readiness.</p></button>
+            <button class="cmd-card" type="button" data-demo="explain"><span class="cname">/explain</span><p>Any code, explained in Bisaya — line by line, in plain words, until it actually makes sense.</p></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= COMMAND REFERENCE ================= -->
+      <section id="commands">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">Reference</p>
+            <h2>Command reference</h2>
+            <p>The commands you'll actually use. Click any row to copy it.</p>
+          </div>
+          <div class="cmdtable">
+            <table>
+              <thead>
+                <tr><th scope="col" class="col-cmd">Command</th><th scope="col">What it does</th><th scope="col">When to use it</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Command"><span class="cmd-cell"><code>npm install -g reviewer-harness</code><button class="copy-btn" type="button" data-copy="npm install -g reviewer-harness" aria-label="Copy: npm install -g reviewer-harness">⧉ copy</button></span></td>
+                  <td data-label="What it does" class="does-cell">Install the harness on your machine</td>
+                  <td data-label="When to use it" class="when-cell">First-time setup</td>
+                </tr>
+                <tr>
+                  <td data-label="Command"><span class="cmd-cell"><code>reviewer-harness sync</code><button class="copy-btn" type="button" data-copy="reviewer-harness sync" aria-label="Copy: reviewer-harness sync">⧉ copy</button></span></td>
+                  <td data-label="What it does" class="does-cell">Sync skills, rules and prompts into this project</td>
+                  <td data-label="When to use it" class="when-cell">In every project folder</td>
+                </tr>
+                <tr>
+                  <td data-label="Command"><span class="cmd-cell"><code>reviewer-harness global</code><button class="copy-btn" type="button" data-copy="reviewer-harness global" aria-label="Copy: reviewer-harness global">⧉ copy</button></span></td>
+                  <td data-label="What it does" class="does-cell">Set the harness up once for all projects</td>
+                  <td data-label="When to use it" class="when-cell">One-time setup</td>
+                </tr>
+                <tr>
+                  <td data-label="Command"><span class="cmd-cell"><code>npx reviewer-harness</code><button class="copy-btn" type="button" data-copy="npx reviewer-harness" aria-label="Copy: npx reviewer-harness">⧉ copy</button></span></td>
+                  <td data-label="What it does" class="does-cell">Run the harness without installing it</td>
+                  <td data-label="When to use it" class="when-cell">Quick try</td>
+                </tr>
+                <tr>
+                  <td data-label="Command"><span class="cmd-cell"><code>/audit-team</code><button class="copy-btn" type="button" data-copy="/audit-team" aria-label="Copy: /audit-team">⧉ copy</button></span></td>
+                  <td data-label="What it does" class="does-cell">Run the 5-agent code audit (correctness, no-hardcoding, dead-code, security, readability)</td>
+                  <td data-label="When to use it" class="when-cell">Before shipping or reviewing code</td>
+                </tr>
+                <tr>
+                  <td data-label="Command"><span class="cmd-cell"><code>/system-design</code><button class="copy-btn" type="button" data-copy="/system-design" aria-label="Copy: /system-design">⧉ copy</button></span></td>
+                  <td data-label="What it does" class="does-cell">Plan the architecture before you code</td>
+                  <td data-label="When to use it" class="when-cell">Planning phase</td>
+                </tr>
+                <tr>
+                  <td data-label="Command"><span class="cmd-cell"><code>/nodejs-quality</code><button class="copy-btn" type="button" data-copy="/nodejs-quality" aria-label="Copy: /nodejs-quality">⧉ copy</button></span></td>
+                  <td data-label="What it does" class="does-cell">Review Node.js quality while coding</td>
+                  <td data-label="When to use it" class="when-cell">While coding, before commit</td>
+                </tr>
+                <tr>
+                  <td data-label="Command"><span class="cmd-cell"><code>/explain</code><button class="copy-btn" type="button" data-copy="/explain" aria-label="Copy: /explain">⧉ copy</button></span></td>
+                  <td data-label="What it does" class="does-cell">Explain it in Bisaya</td>
+                  <td data-label="When to use it" class="when-cell">When something is unclear</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SKILLS ================= -->
+      <section id="skills">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">The skills</p>
+            <h2>15 playbooks your agent follows.</h2>
+            <p>Reusable disciplines, each distilled from a real, reputable source — not generic advice. Add one to any project with <span class="mono-inline">reviewer-harness skills add &lt;name&gt;</span>.</p>
+          </div>
+          <div class="skills-grid">
+            <div class="skill-card"><div class="sname">safe-editing</div><p>Surgical edits only — change what the task requires, never rewrite code that already works.</p></div>
+            <div class="skill-card"><div class="sname">no-hallucination</div><p>No invented packages, APIs or functions. If it isn't in the project or the docs, it doesn't get used.</p></div>
+            <div class="skill-card"><div class="sname">debug-first</div><p>Reproduce, isolate, find the root cause — then fix. Never patch a symptom.</p></div>
+            <div class="skill-card"><div class="sname">explain-bisaya</div><p>Code explained in Bisaya, step by step, so every change is actually understood.</p></div>
+            <div class="skill-card"><div class="sname">clone</div><p>Study a reference site and recreate its design faithfully — structure, spacing, type, color.</p></div>
+            <div class="skill-card"><div class="sname">rea</div><p>A reverse-engineering workflow for understanding unfamiliar code and tools before touching them.</p></div>
+            <div class="skill-card"><div class="sname">api-security</div><p>Twelve concrete rules for securing APIs — auth, validation, rate limits, error hygiene.</p></div>
+            <div class="skill-card"><div class="sname">ux-edge-states</div><p>Design every state, not just the happy path — loading, empty, error, offline, overflow.</p></div>
+            <div class="skill-card"><div class="sname">owasp-top10</div><p>The OWASP Top 10, checked against your code — injection, broken access control, and the rest.</p></div>
+            <div class="skill-card"><div class="sname">backend-performance</div><p>Caching layers, latency numbers and backpressure — backend speed with real figures.</p></div>
+            <div class="skill-card"><div class="sname">devops-basics</div><p>Docker and production fundamentals, distilled from Node.js best practices.</p></div>
+            <div class="skill-card"><div class="sname">motion-design</div><p>Real UI animation patterns — easing, timing and choreography, distilled from GSAP.</p></div>
+            <div class="skill-card"><div class="sname">frontend-performance</div><p>A full front-end performance pass, from the Front-End Checklist — images, fonts, rendering.</p></div>
+            <div class="skill-card"><div class="sname">system-design</div><p>68 rules from the System Design Primer — load balancing, sharding, queues, CAP trade-offs.</p></div>
+            <div class="skill-card"><div class="sname">nodejs-quality</div><p>59 rules from Node Best Practices — error handling, project structure, testing, production.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= RULES ================= -->
+      <section id="rules">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">The rules</p>
+            <h2>Six rules. Synced everywhere.</h2>
+            <p>These ship in the master config and land in every runtime's instruction file — so every AI you code with plays by the same guardrails.</p>
+          </div>
+          <div class="rules">
+            <div class="rule"><span class="rno">R—01</span><div><h3>Edit surgically</h3><p>Change only the code the task requires — never rewrite a whole file.</p></div></div>
+            <div class="rule"><span class="rno">R—02</span><div><h3>Never invent dependencies</h3><p>Use only libraries already in the project. No made-up package names or APIs.</p></div></div>
+            <div class="rule"><span class="rno">R—03</span><div><h3>Test before “done”</h3><p>After coding, run the tests or lint before saying the task is finished.</p></div></div>
+            <div class="rule"><span class="rno">R—04</span><div><h3>Read before you change</h3><p>When unsure about existing code, read the surrounding files first.</p></div></div>
+            <div class="rule"><span class="rno">R—05</span><div><h3>Use the project memory</h3><p>Read <code>memory/INDEX.md</code> before coding — decisions, gotchas, do-not-touch files — and write back what you learn.</p></div></div>
+            <div class="rule hero-rule"><span class="rno">R—06</span><div><h3>Validate and report every change</h3><p>After editing any code, run validation, then report every file changed with the actual output. A change is not done until it has been validated and reported — never finish silently.</p></div><span class="rule-badge">The rule that guards the rest</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= RUNTIMES ================= -->
+      <section id="runtimes">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">The runtimes</p>
+            <h2>One config. Eight homes.</h2>
+            <p>Switch CLIs whenever you like — free-tier quota runs out on one, you move to the next. Your rules, skills and memory move with you.</p>
+          </div>
+          <div class="runtimes">
+            <div class="runtime"><div class="rname"><span class="dot"></span>Claude Code</div><div class="rfile">CLAUDE.md · .claude/commands/</div></div>
+            <div class="runtime"><div class="rname"><span class="dot"></span>OpenCode</div><div class="rfile">.opencode/instructions.md · commands/</div></div>
+            <div class="runtime"><div class="rname"><span class="dot"></span>Gemini CLI</div><div class="rfile">GEMINI.md</div></div>
+            <div class="runtime"><div class="rname"><span class="dot"></span>Cline</div><div class="rfile">.clinerules</div></div>
+            <div class="runtime"><div class="rname"><span class="dot"></span>Freebuff</div><div class="rfile">.agents/skills/&lt;skill&gt;/SKILL.md</div></div>
+            <div class="runtime"><div class="rname"><span class="dot"></span>Copilot CLI</div><div class="rfile">.github/skills/&lt;skill&gt;/SKILL.md</div></div>
+            <div class="runtime"><div class="rname"><span class="dot"></span>Antigravity</div><div class="rfile">.agents/skills/&lt;skill&gt;/SKILL.md</div></div>
+            <div class="runtime"><div class="rname"><span class="dot"></span>Qoder</div><div class="rfile">.qoder/skills/&lt;skill&gt;/SKILL.md</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= FAQ ================= -->
+      <section id="faq">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-tag">FAQ</p>
+            <h2>Straight answers.</h2>
+            <p>No fine print — starting with the question everyone asks first.</p>
+          </div>
+          <div class="faq">
+            <details class="faq-item" open>
+              <summary>Is it really free?<span class="plus" aria-hidden="true">+</span></summary>
+              <div class="faq-a"><p><strong style="color:#fff">Yes — completely.</strong> The install, all 15 skills, all 8 runtimes, sync, updates — everything is free. reviewer-harness is MIT licensed and published free on npm and GitHub. There is no paid tier, no trial, no Pro version, and nothing to buy. No account, no card, no catch.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>Which agents does it work with?<span class="plus" aria-hidden="true">+</span></summary>
+              <div class="faq-a"><p>Eight runtimes: Claude Code, OpenCode, Gemini CLI, Cline, Freebuff, GitHub Copilot CLI, Antigravity, and Qoder. One <code>harness.config.json</code> syncs your rules, skills and prompts into each one's native instruction format — switch agents whenever you like and your setup comes with you.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>What happens to my existing instructions when I sync?<span class="plus" aria-hidden="true">+</span></summary>
+              <div class="faq-a"><p>Sync writes the harness instruction files — <code>CLAUDE.md</code>, <code>GEMINI.md</code>, <code>.clinerules</code> and the rest — into your project, and every file it overwrites is backed up first with a <code>.bak</code> extension. If you already keep custom instructions in those files, back them up yourself before your first sync and merge what you want to keep into <code>harness.config.json</code>, so it survives every future sync.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>Do the skills apply automatically?<span class="plus" aria-hidden="true">+</span></summary>
+              <div class="faq-a"><p>Yes. After sync, the rules and enabled skills live inside your agent's own instruction files, so they apply on every task, in every session — there is nothing to remember to turn on. When a task needs one specific discipline, every skill is also a slash command: type <code>/audit-team</code>, <code>/system-design</code> or <code>/explain</code> to focus that skill on demand.</p></div>
+            </details>
+            <details class="faq-item">
+              <summary>Does it need an internet connection or an API key?<span class="plus" aria-hidden="true">+</span></summary>
+              <div class="faq-a"><p>No. reviewer-harness has zero dependencies and runs entirely on your machine — it only reads and writes files inside your project. No API key, no telemetry, no network calls. The only download is the one-time install from npm (or run it with <code>npx</code>).</p></div>
+            </details>
+          </div>
+
+          <div class="cta-band">
+            <h2>Your AI stops breaking your code.<br />Free forever.</h2>
+            <p>Every rule, every skill, every runtime — free. MIT licensed, zero dependencies, no API key, nothing to buy. Install it once and it just works.</p>
+            <div class="cta-cmd">
+              <code><span class="p">$</span> npm install -g reviewer-harness</code>
+              <button class="copy-btn" type="button" data-copy="npm install -g reviewer-harness">⧉ copy</button>
+            </div>
+            <div class="cta-links">
+              <a class="btn btn-white btn-lg" href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">Get it on GitHub</a>
+              <a class="btn btn-outline btn-lg" href="#install">See the 3-step install</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="wrap foot">
+          <span class="free">Free forever. <span class="warm">MIT licensed.</span></span>
+          <nav class="foot-links" aria-label="Footer">
+            <a href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://www.npmjs.com/package/reviewer-harness" target="_blank" rel="noopener">npm</a>
+            <a href="#install">Install</a><a href="#skills">Skills</a>
+          </nav>
+          <p class="credit">reviewer-harness — created by Edsiel Ursal (@xcell321), built with Muse as pair programmer.</p>
+        </div>
+      </footer>
+    </main>
+    <script>
+      (function(){
+        function flashCopied(btn){var o=btn.textContent;btn.textContent="✓ copied";btn.classList.add("copied");setTimeout(function(){btn.textContent=o;btn.classList.remove("copied")},1600)}
+        function fallbackCopy(t,btn){var ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");flashCopied(btn)}catch(e){}document.body.removeChild(ta)}
+        function copyText(t,btn){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){flashCopied(btn)},function(){fallbackCopy(t,btn)})}else{fallbackCopy(t,btn)}}
+        document.querySelectorAll("[data-copy]").forEach(function(btn){btn.addEventListener("click",function(){copyText(btn.getAttribute("data-copy"),btn)})});
+        document.querySelectorAll(".cmdtable tbody tr").forEach(function(row){row.style.cursor="pointer";row.addEventListener("click",function(e){if(e.target.closest("[data-copy]"))return;var b=row.querySelector("[data-copy]");if(b)b.click()})});
+      })();
+      (function(){
+        var term=document.getElementById("demoTerm");
+        var reduceMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var typingTimer=null;
+        var demos={
+          "audit-team":{cmd:"/audit-team",lines:[{cls:"cmt",text:"  5 agents auditing in parallel…"},{cls:"out",text:"  correctness      ✓ no breakage found"},{cls:"out",text:"  no-hardcoding    ✓ config-driven"},{cls:"out",text:"  dead-code        ✓ nothing unused"},{cls:"out",text:"  security         ✓ no secrets, no injection"},{cls:"out",text:"  readability      ✓ clear names, small functions"},{cls:"ok",text:"  Audit complete — safe to merge."}]},
+          "system-design":{cmd:"/system-design src/api",lines:[{cls:"cmt",text:"  planning before coding…"},{cls:"out",text:"  load estimate    ~1k req/min at peak"},{cls:"out",text:"  bottleneck       DB reads → add cache layer"},{cls:"out",text:"  data flow        client → API → queue → worker"},{cls:"out",text:"  trade-off        consistency over availability (CP)"},{cls:"ok",text:"  Plan ready — 4 steps, no code written yet."}]},
+          "nodejs-quality":{cmd:"/nodejs-quality server.js",lines:[{cls:"cmt",text:"  reviewing against Node best practices…"},{cls:"out",text:"  errors           use async/await, one error handler"},{cls:"out",text:"  structure        separate routes / services / data"},{cls:"out",text:"  production       no console.log — use a logger"},{cls:"ok",text:"  3 fixes suggested — apply which ones?"}]},
+          "explain":{cmd:"/explain sync.js",lines:[{cls:"cmt",text:"  nagbasa sa code…"},{cls:"out",text:"  Kini nga file maoy sync engine — siya ang"},{cls:"out",text:"  magsulat sa imong rules ngadto sa tanang"},{cls:"out",text:"  runtime. Una, i-validate niya ang config;"},{cls:"out",text:"  kung naay secret nga nakalusot, dili siya"},{cls:"out",text:"  mopadayon. Mao nay Rule #6 in action."},{cls:"ok",text:"  Nasabtan? Pangutana lang kung naay dili klaro."}]}
+        };
+        function lineEl(html){var d=document.createElement("div");d.className="line";d.innerHTML=html;return d}
+        function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+        function runDemo(key){
+          var demo=demos[key];if(!demo||!term)return;
+          if(typingTimer){clearInterval(typingTimer);typingTimer=null}
+          term.innerHTML="";
+          var cmdLine=lineEl('<span class="p">&gt;</span> <span class="cmd"></span>');
+          var cmdSpan=cmdLine.querySelector(".cmd");term.appendChild(cmdLine);
+          function showLines(){demo.lines.forEach(function(l,i){setTimeout(function(){term.appendChild(lineEl('<span class="'+l.cls+'">'+esc(l.text)+"</span>"));if(i===demo.lines.length-1){term.appendChild(lineEl('<span class="p">&gt;</span> <span class="tcur"></span>'))}},reduceMotion?0:130*(i+1))})}
+          if(reduceMotion){cmdSpan.textContent=demo.cmd;showLines();return}
+          var i=0;typingTimer=setInterval(function(){cmdSpan.textContent=demo.cmd.slice(0,++i);if(i>=demo.cmd.length){clearInterval(typingTimer);typingTimer=null;setTimeout(showLines,220)}},42);
+        }
+        function activate(key,scroll){
+          document.querySelectorAll(".skill-chip[data-demo]").forEach(function(el){el.classList.toggle("active",el.getAttribute("data-demo")===key)});
+          runDemo(key);
+          if(scroll){var b=document.querySelector(".demo");if(b)b.scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"center"})}
+        }
+        document.querySelectorAll(".skill-chip[data-demo]").forEach(function(c){c.addEventListener("click",function(){activate(c.getAttribute("data-demo"),false)})});
+        document.querySelectorAll(".cmd-card[data-demo]").forEach(function(c){c.addEventListener("click",function(){activate(c.getAttribute("data-demo"),true)})});
+        runDemo("audit-team");
+      })();
+      (function(){
+        var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if(reduce||!("IntersectionObserver" in window))return;
+        var els=document.querySelectorAll(".fail-card,.vs-panel,.tree,.tree-note,.step,.usage-card,.cmd-card,.cmdtable,.skill-card,.rule,.runtime,.faq,.metric,.install-note,.cta-band");
+        var io=new IntersectionObserver(function(entries){
+          entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add("rv-in");io.unobserve(en.target)}});
+        },{threshold:.12,rootMargin:"0px 0px -40px 0px"});
+        els.forEach(function(el,i){el.classList.add("rv");el.style.transitionDelay=Math.min((i%3)*70,140)+"ms";io.observe(el)});
+      })();
+    </script>
+  </body>
+</html>
