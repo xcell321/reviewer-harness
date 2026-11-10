@@ -253,6 +253,7 @@ Running from a source checkout instead? The same commands work as `node bin/cli.
 5. ✅ Sub-agents and slash commands — `agents add`, `commands add`
 6. ✅ Polish and publish — v1.0.0, LICENSE, publish-ready for GitHub/npx
 7. ✅ v1.1.0 — all-English repo, validate-and-report rule, self-governing repo, modular skills, one-liner installers, Docker
+8. ✅ v1.14.0 — the working peak: 22 skills (audit-team + ub-mode, design-taste-frontend, ui-ux-pro-max, vengeance-ui, brainstorming, writing-plans), Qoder as 8th runtime, system-design, nodejs-quality, all fix rounds verified WORKS, CRLF frontmatter fix (Windows sync without manual LF conversion)
 
 ## Contributing & Security
 
