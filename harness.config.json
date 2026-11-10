@@ -41,7 +41,12 @@
     "ui-ux-pro-max",
     "vengeance-ui",
     "brainstorming",
-    "writing-plans"
+    "writing-plans",
+    "fix-team",
+    "verify_before_done",
+    "instruction_registers",
+    "verify_provider_claims",
+    "verify_publish_install_surface"
   ],
   "version": "1.14.0"
 }

@@ -187,7 +187,7 @@ Expected output when everything is fine:
 
 `validate` checks for empty or duplicate rules and scans the config for leaked API keys and tokens — secrets must never be synced into instruction files (they would leak into Git).
 
-**Step 3 — Add the skills you want.** Pick from the 22 bundled skills (full list below):
+**Step 3 — Add the skills you want.** Pick from the 27 bundled skills (full list below):
 
 ```bash
 reviewer-harness skills add safe-editing
@@ -237,12 +237,12 @@ npx reviewer-harness skills add no-hallucination
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer-harness skills list            # see all 22 bundled skills (+ which are enabled)
+reviewer-harness skills list            # see all 27 bundled skills (+ which are enabled)
 reviewer-harness skills add <name>      # install into the project and enable it in the config
 reviewer-harness skills remove <name>   # disable it in the config and remove it
 ```
 
-All 22 bundled skills (v1.14.0):
+All 27 bundled skills (v1.14.0):
 
 | Skill | What it does |
 |---|---|
@@ -268,6 +268,11 @@ All 22 bundled skills (v1.14.0):
 | `vengeance-ui` | Modern animated React components from VengeanceUI — 79 copy-paste components across 9 families. |
 | `brainstorming` | Find out what you actually want — and why — before anything gets built. Design doc first, approval first. |
 | `writing-plans` | Turn an approved spec into a bite-sized TDD implementation plan. |
+| `fix-team` | Run an 11-agent fix over an audit report's findings — 8 domain fixers plus ub-mode, superpowers, and a verification agent that runs last. Fix plan first, user approves, verification re-checks every fix. |
+| `verify_before_done` | Check defined-and-called plus remote evidence before reporting done, pushed, fixed, or working — never present an untested guess as done. |
+| `instruction_registers` | Name the user's target and action registers before building, pushing, or planning, and ask one clarifying question when they are ambiguous. |
+| `verify_provider_claims` | Check a provider's live documentation or the user's verified setup before asserting its current availability, free tier, pricing, endpoints, or retired status. |
+| `verify_publish_install_surface` | Verify a published version on each surface the user can see (commit/tag, registry, installed file) before claiming it is installed or live. |
 
 Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
@@ -387,7 +392,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness skills list` | List all 22 bundled skills (+ which are enabled) |
+| `reviewer-harness skills list` | List all 27 bundled skills (+ which are enabled) |
 | `reviewer-harness skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer-harness skills remove <name>` | Disable a skill and remove it |
 | `reviewer-harness agents list` | List the bundled sub-agents |
@@ -452,7 +457,7 @@ Check that you edited the config in the same folder you are syncing (`--target` 
 5. ✅ Sub-agents and slash commands — `agents add`, `commands add`
 6. ✅ Polish and publish — v1.0.0, LICENSE, publish-ready for GitHub/npx
 7. ✅ v1.1.0 — all-English repo, validate-and-report rule, self-governing repo, modular skills, one-liner installers, Docker
-8. ✅ v1.14.0 — the working peak: 22 skills (audit-team + ub-mode, design-taste-frontend, ui-ux-pro-max, vengeance-ui, brainstorming, writing-plans), Qoder as 8th runtime, system-design, nodejs-quality, all fix rounds verified WORKS, CRLF frontmatter fix (Windows sync without manual LF conversion)
+8. ✅ v1.14.0 — the working peak: 27 skills (audit-team + fix-team, ub-mode, design-taste-frontend, ui-ux-pro-max, vengeance-ui, brainstorming, writing-plans, verification skills), Qoder as 8th runtime, system-design, nodejs-quality, all fix rounds verified WORKS, CRLF frontmatter fix (Windows sync without manual LF conversion), --help/--version flags fixed
 
 ## Contributing & Security
 
