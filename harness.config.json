@@ -34,7 +34,8 @@
     "motion-design",
     "frontend-performance",
     "system-design",
-    "nodejs-quality"
+    "nodejs-quality",
+    "audit-team"
   ],
   "version": "1.13.0"
 }

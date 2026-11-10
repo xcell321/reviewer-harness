@@ -487,3 +487,632 @@ Source: general practice (GSAP community conventions)
 - 1-second+ durations on buttons or toggles (feels broken).
 - Ignoring `prefers-reduced-motion` (accessibility failure).
 - Bounce/elastic easings on serious UI (save for playful contexts only).
+
+## Skill: frontend-performance
+
+Distilled from [Front-End Checklist](https://github.com/thedaviddias/Front-End-Checklist) (`thedaviddias/Front-End-Checklist`) — the open-source frontend quality system with 385 quality-gated rules. Every rule below cites its source rule.
+
+### 1. Animate only transform and opacity
+Source: [animation-performance](https://frontendchecklist.io/rules/css/animation-performance) (priority: high)
+
+The browser renders through Style → Layout → Paint → Composite. Animating layout properties restarts this entire pipeline every frame on the main thread. Animating `transform` and `opacity` skips layout and paint — the GPU compositor thread handles them at 60fps even when the main thread is busy.
+
+- **Compositor-only (safe to animate):** `transform` (translate, scale, rotate, skew), `opacity`
+- **Paint-triggering (avoid):** `color`, `background-color`, `box-shadow`
+- **Layout-triggering (never animate):** `width`, `height`, `top`, `left`, `margin`, `padding`, `font-size`
+
+```css
+/* ❌ Bad: left triggers layout every frame */
+@keyframes slideIn { from { left: -100%; } to { left: 0; } }
+
+/* ✅ Good: translateX is compositor-only */
+@keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+/* ❌ Bad: width/height trigger layout */
+@keyframes expand { from { width: 0; height: 0; } to { width: 200px; height: 200px; } }
+
+/* ✅ Good: scale() instead */
+@keyframes expand { from { transform: scale(0); } to { transform: scale(1); } }
+```
+
+- Use `will-change: transform` sparingly — only on elements that will actually animate, and remove it after. Overuse bloats GPU memory.
+- Respect `prefers-reduced-motion` — disable or simplify animations for users who need it.
+
+### 2. Batch DOM reads and writes — never interleave
+Source: [dom-performance](https://frontendchecklist.io/rules/performance/dom-performance) (priority: high)
+
+Reading a layout property (offsetHeight, getBoundingClientRect, etc.) after writing to the DOM forces the browser to synchronously recalculate layout before returning a value. Alternating reads and writes in a loop — layout thrashing — can freeze the page for hundreds of milliseconds with just 10 elements.
+
+```javascript
+// ❌ Bad: read-write-read-write — forces reflow every iteration
+items.forEach(item => {
+  const height = item.offsetHeight;       // READ — forces reflow
+  item.style.height = height * 2 + 'px';  // WRITE — invalidates layout
+});
+
+// ✅ Good: all reads first, then all writes
+const heights = Array.from(items).map(item => item.offsetHeight); // READs
+items.forEach((item, i) => {
+  item.style.height = heights[i] * 2 + 'px'; // WRITEs
+});
+```
+
+- Use `requestAnimationFrame` for visual updates — never `setTimeout(..., 16)`. rAF syncs with the browser's paint cycle.
+- Never store per-frame animation values in framework state (e.g. React state at 60fps) — animate the DOM directly; use state for config only.
+
+### 3. Use resource hints for critical assets
+Source: [performance-resource-hints](https://frontendchecklist.io/rules/performance/performance-resource-hints) (priority: high)
+
+Resource hints let the browser discover critical assets earlier — improving LCP by 100-300ms on average. They help only when they accelerate the right asset at the right time.
+
+```html
+<!-- Preload: assets needed for the CURRENT route (hero image, critical font) -->
+<link rel="preload" href="/images/hero.webp" as="image" type="image/webp" fetchpriority="high">
+<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+<!-- Preconnect: origins you'll fetch from (fonts, APIs, CDNs) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<!-- Prefetch: the NEXT likely navigation, not the current page -->
+<link rel="prefetch" href="/about.html">
+```
+
+- `preload` = this page needs it now. `prefetch` = the user will probably need it next. `preconnect` = I'll be talking to this origin soon.
+- Don't preload everything — each preload competes for bandwidth. Preload only the LCP candidate and critical fonts.
+
+### 4. Enforce performance budgets
+Source: [performance-budget](https://frontendchecklist.io/rules/performance/performance-budget)
+
+Without automated enforcement, performance degrades gradually — each PR adds a library, each feature adds KB. Catch regressions at review time, not after user complaints.
+
+- General practice: set a JavaScript bundle budget (e.g. < 200KB gzipped for initial load) and an image budget per page.
+- Measure with Lighthouse (GoogleChrome/lighthouse) — track LCP ≤ 2.5s, CLS ≤ 0.1, INP ≤ 200ms.
+- Test animations on a real mid-range device, not just the dev machine. Target 95th-percentile frame time < 16.6ms.
+
+### When to apply
+
+- A page feels laggy or janky → check rule 1 first (are animations using transform/opacity?)
+- Animations stutter during JS execution → check rule 2 (layout thrashing? rAF?)
+- Slow initial load / poor LCP → check rule 3 (resource hints, preload LCP image)
+- Performance degrading over time → check rule 4 (budgets in CI)
+
+### Verification
+
+- Chrome DevTools → Performance tab → record interaction. Look for red frames and long Layout/Paint blocks. After the fix, frames should stay green at 60fps.
+- Run Lighthouse before and after — LCP, CLS, and INP should improve or stay green.
+- General practice: test on a mid-range Android device, not just desktop Chrome.
+
+## Skill: system-design
+
+When to use: designing or reviewing a system's architecture — a new app, a growing service, or any time the question is "how do the pieces fit and scale?" rather than "why is this endpoint slow?" Apply when choosing databases, splitting services, adding caching layers, or planning for traffic growth.
+
+Every rule below is distilled from donnemartin/system-design-primer (cited per rule). Nothing here is invented — if the primer doesn't cover a topic, it is labeled "general practice" instead. Pairs with `backend-performance` (caching patterns, latency numbers, backpressure, golden signals) — this skill covers the architecture around it.
+
+### Start with the problem, not the stack
+1. **Scope first.** Before designing anything, pin down users, use cases, inputs/outputs, expected data volume, requests/second, and read-to-write ratio. A design without constraints is guesswork.
+*Source: donnemartin/system-design-primer — `README.md`, "How to approach a system design interview question", Step 1*
+
+2. **Sketch a high-level design** of the main components and their connections, and justify each choice. If you can't justify a component, it doesn't belong yet.
+*Source: donnemartin/system-design-primer — `README.md`, "How to approach", Step 2*
+
+3. **Design core components in depth** (e.g. for a URL shortener: hash generation, collision handling, storage choice, lookup path). The happy path is easy — the core component is where designs fail.
+*Source: donnemartin/system-design-primer — `README.md`, "How to approach", Step 3*
+
+4. **Scale last.** Identify bottlenecks against the constraints, then apply load balancing, horizontal scaling, caching, and sharding as needed — every choice is a trade-off, so state what you give up.
+*Source: donnemartin/system-design-primer — `README.md`, "How to approach", Step 4*
+
+5. **Latency is time per action; throughput is actions per unit of time.** Aim for maximal throughput with acceptable latency — do not optimize one while ignoring the other.
+*Source: donnemartin/system-design-primer — `README.md`, "Latency vs throughput"*
+
+6. **Use back-of-the-envelope math** (powers-of-two table, latency numbers) to sanity-check estimates before committing to a design. 1 KB ≈ 10³, 1 MB ≈ 10⁶, 1 GB ≈ 10⁹, 1 TB ≈ 10¹² bytes — rough sizing first, precise calculation second.
+*Source: donnemartin/system-design-primer — `README.md`, "Appendix" (powers of two) and "How to approach"*
+
+### CAP theorem — pick your trade-off
+7. **In a distributed system you can only guarantee two of consistency, availability, partition tolerance** — and since networks are unreliable, partition tolerance is effectively mandatory, so the real choice is consistency vs availability.
+*Source: donnemartin/system-design-primer — `README.md`, "CAP theorem"*
+
+8. **Choose CP** (consistency + partition tolerance) when the business needs atomic reads and writes; a partitioned node may time out. Money movement, inventory counts, seat reservations.
+*Source: donnemartin/system-design-primer — `README.md`, "CAP theorem" (CP)*
+
+9. **Choose AP** (availability + partition tolerance) when the system must keep working despite errors or when eventual consistency is acceptable; reads may return stale data. Feeds, likes, comments.
+*Source: donnemartin/system-design-primer — `README.md`, "CAP theorem" (AP)*
+
+10. **Weak consistency:** after a write, reads may or may not see it (best effort). Fits real-time use cases — VoIP, video chat, multiplayer games (e.g. memcached).
+*Source: donnemartin/system-design-primer — `README.md`, "Consistency patterns" (weak)*
+
+11. **Eventual consistency:** after a write, reads will eventually see it (typically within ms); data replicates asynchronously. Fits highly available systems — DNS, email.
+*Source: donnemartin/system-design-primer — `README.md`, "Consistency patterns" (eventual)*
+
+12. **Strong consistency:** after a write, reads will see it; data replicates synchronously. Fits systems that need transactions — filesystems, RDBMS.
+*Source: donnemartin/system-design-primer — `README.md`, "Consistency patterns" (strong)*
+
+### Availability — design for failure
+13. **Active-passive fail-over:** heartbeats between active and standby; if the heartbeat stops, the passive takes over the active's IP. Only the active handles traffic; downtime depends on hot vs cold standby.
+*Source: donnemartin/system-design-primer — `README.md`, "Availability patterns" (active-passive)*
+
+14. **Active-active fail-over:** both servers handle traffic and spread the load; public-facing needs DNS aware of both IPs, internal-facing needs app logic aware of both.
+*Source: donnemartin/system-design-primer — `README.md`, "Availability patterns" (active-active)*
+
+15. **Fail-over costs real things:** extra hardware and complexity, plus possible data loss if the active fails before new writes replicate to the passive.
+*Source: donnemartin/system-design-primer — `README.md`, "Availability patterns" (disadvantages)*
+
+16. **Availability is measured in 9s:** 99.9% ("three 9s") allows 8h 45m downtime/year; 99.99% ("four 9s") allows 52m 35s/year. Name the target before designing — "high availability" without a number means nothing.
+*Source: donnemartin/system-design-primer — `README.md`, "Availability in numbers"*
+
+17. **Components in sequence multiply availability down:** two 99.9% components in sequence = 99.8% total. Every hop in the chain costs you.
+*Source: donnemartin/system-design-primer — `README.md`, "Availability in parallel vs in sequence"*
+
+18. **Components in parallel multiply availability up:** two 99.9% components in parallel = 99.9999% total — use redundancy to raise availability.
+*Source: donnemartin/system-design-primer — `README.md`, "Availability in parallel vs in sequence"*
+
+### DNS and CDN — the front door
+19. **DNS translates domain names to IPs**; it is hierarchical, and lower-level servers, browsers, and OSes cache mappings that can go stale during propagation — respect TTL.
+*Source: donnemartin/system-design-primer — `README.md`, "Domain name system"*
+
+20. **Use the right record type:** NS = name servers, MX = mail servers, A = name→IP, CNAME = name→name.
+*Source: donnemartin/system-design-primer — `README.md`, "Domain name system"*
+
+21. **Use managed DNS routing policies when needed:** weighted round-robin (maintenance, cluster-size balancing, A/B testing), latency-based, geolocation-based.
+*Source: donnemartin/system-design-primer — `README.md`, "Domain name system"*
+
+22. **DNS is a dependency and a risk:** lookups add slight delay, management is complex, and DNS DDoS can take a site offline even when the site itself is healthy.
+*Source: donnemartin/system-design-primer — `README.md`, "Domain name system" (disadvantages)*
+
+23. **Serve static content (HTML/CSS/JS, photos, video) from a CDN** close to the user — users get content from nearby data centers, and origin servers skip requests the CDN fulfills.
+*Source: donnemartin/system-design-primer — `README.md`, "Content delivery network"*
+
+24. **Push CDN:** you upload content on change; good for small/low-traffic sites or rarely updated content; minimizes traffic, maximizes storage.
+*Source: donnemartin/system-design-primer — `README.md`, "Content delivery network" (push)*
+
+25. **Pull CDN:** the CDN fetches from origin on first request; good for heavy-traffic sites; TTL controls cache lifetime; minimizes storage but can create redundant traffic on expiry.
+*Source: donnemartin/system-design-primer — `README.md`, "Content delivery network" (pull)*
+
+26. **CDN costs can be significant at scale** — weigh them against the costs of not using one. Content can go stale if updated before TTL expires, and using a CDN requires rewriting static-content URLs to point at it.
+*Source: donnemartin/system-design-primer — `README.md`, "Content delivery network" (disadvantages)*
+
+### Load balancing and reverse proxies
+27. **Put a load balancer in front of app servers and databases** to keep requests off unhealthy servers, prevent overload, and eliminate a single point of failure.
+*Source: donnemartin/system-design-primer — `README.md`, "Load balancer"*
+
+28. **Terminate SSL at the load balancer** so backends skip expensive decrypt/encrypt work and you avoid installing certificates on every server.
+*Source: donnemartin/system-design-primer — `README.md`, "Load balancer" (SSL termination)*
+
+29. **Use session persistence (sticky sessions)** — issue cookies routing a client to the same instance — when the app does not track sessions centrally. Better: store sessions centrally (DB or Redis) and stay stateless.
+*Source: donnemartin/system-design-primer — `README.md`, "Load balancer" (session persistence)*
+
+30. **Protect the load balancer itself:** run multiple LBs in active-passive or active-active mode, because a single LB is a single point of failure.
+*Source: donnemartin/system-design-primer — `README.md`, "Load balancer"*
+
+31. **Layer 4 balancing** decides on transport-layer info (source/destination IP and ports) without inspecting packet contents — faster, less flexible. **Layer 7 balancing** decides on application-layer info (headers, message, cookies) — e.g. video traffic to video servers, billing traffic to hardened servers — at the cost of more time and compute.
+*Source: donnemartin/system-design-primer — `README.md`, "Load balancer" (Layer 4 / Layer 7)*
+
+32. **Prefer horizontal scaling (more commodity machines) over vertical scaling (one bigger machine)** — cheaper and more available — but keep servers stateless and store sessions in a centralized store; downstream caches and databases must handle more simultaneous connections as you scale out.
+*Source: donnemartin/system-design-primer — `README.md`, "Load balancer" (horizontal scaling)*
+
+33. **Use a reverse proxy to centralize internal services behind one public interface** — it forwards client requests and returns responses, adding security (hide backend details, blacklist IPs, limit connections per client), SSL termination, compression, caching, and static-content serving.
+*Source: donnemartin/system-design-primer — `README.md`, "Reverse proxy (web server)"*
+
+34. **Load balancer vs reverse proxy:** an LB is useful with multiple servers doing the same function; a reverse proxy is useful even with a single server. NGINX and HAProxy can do both. A single reverse proxy is a single point of failure — plan fail-over if it fronts production traffic.
+*Source: donnemartin/system-design-primer — `README.md`, "Reverse proxy" (vs load balancer, disadvantages)*
+
+### Application layer — services
+35. **Separate the web layer from the application (platform) layer** so each scales and is configured independently; adding an API means adding app servers, not necessarily web servers.
+*Source: donnemartin/system-design-primer — `README.md`, "Application layer"*
+
+36. **Follow the single responsibility principle:** small, autonomous services that work together; small teams with small services can plan more aggressively for growth.
+*Source: donnemartin/system-design-primer — `README.md`, "Application layer"*
+
+37. **Use microservices as independently deployable, small, modular services**, each running its own process and communicating through a well-defined lightweight mechanism to serve one business goal (e.g. user profile, follower, feed, search, photo upload as separate services).
+*Source: donnemartin/system-design-primer — `README.md`, "Application layer" (microservices)*
+
+38. **Use service discovery** (Consul, Etcd, Zookeeper) so services find each other by registered name/address/port; verify integrity with health checks, often over an HTTP endpoint; the built-in key-value store can hold config and shared data.
+*Source: donnemartin/system-design-primer — `README.md`, "Application layer" (service discovery)*
+
+39. **Microservices cost complexity** in deployments and operations versus a monolith — do not adopt them without a reason.
+*Source: donnemartin/system-design-primer — `README.md`, "Application layer" (disadvantages)*
+
+### Databases — scaling the data layer
+40. **RDBMS transactions guarantee ACID:** atomicity (all or nothing), consistency (valid state to valid state), isolation (concurrent = serial), durability (committed stays committed).
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (RDBMS)*
+
+41. **Master-slave replication:** master serves reads and writes, replicating writes to slaves that serve only reads; if the master dies the system can run read-only until a slave is promoted — but promotion needs extra logic.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (master-slave replication)*
+
+42. **Master-master replication:** both masters serve reads and writes and coordinate on writes; either can fail and the system keeps reading and writing — but you need an LB or app logic to pick where to write, most systems are loosely consistent or slower to write, and conflict resolution grows with more write nodes and latency.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (master-master replication)*
+
+43. **Replication risks (both modes):** data loss if the master fails before writes replicate; read replicas can bog down replaying heavy writes; more slaves = more replication lag; replication adds hardware and complexity.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (replication disadvantages)*
+
+44. **Federation (functional partitioning):** split the DB by function (forums, users, products) — less read/write traffic per DB, less replication lag, more data fits in memory (better cache locality), parallel writes with no central master serializing them.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (federation)*
+
+45. **Sharding:** distribute data across databases so each manages a subset (e.g. shard users by last-name initial or geography) — less traffic, less replication, more cache hits, smaller indexes/faster queries, one shard down doesn't stop the others (but add replication to avoid data loss).
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (sharding)*
+
+46. **Sharding risks:** app logic must work with shards (complex SQL); distribution can go lopsided (power users overload one shard) and rebalancing is complex — consistent hashing reduces data moved during rebalancing; cross-shard joins are complex.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (sharding disadvantages)*
+
+47. **Denormalization:** duplicate data across tables to avoid expensive joins and improve read performance at the cost of write performance; use materialized views (PostgreSQL, Oracle) to keep redundant copies consistent. Reads often outnumber writes 100:1 or even 1000:1, so a join-heavy read is very expensive.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (denormalization)*
+
+48. **Benchmark and profile before optimizing:** benchmark with load tools (e.g. `ab`) and profile with the slow query log to find real bottlenecks. Then tighten the schema (`CHAR` for fixed-length, `TEXT` for large blocks, `DECIMAL` for currency, `NOT NULL` where applicable), index columns you query (`SELECT`, `GROUP BY`, `ORDER BY`, `JOIN` — usually B-trees), avoid expensive joins, and partition hot spots into separate tables.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (SQL tuning)*
+
+### NoSQL — when relational doesn't fit
+49. **NoSQL = key-value, document, wide-column, or graph stores; data is denormalized and joins move into application code; most NoSQL lacks true ACID and favors eventual consistency.** BASE (basically available, soft state, eventually consistent) chooses availability over consistency.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (NoSQL)*
+
+50. **Key-value store (abstraction: hash table):** O(1) reads/writes, often memory- or SSD-backed; high performance for simple or rapidly-changing data such as a cache layer — but limited operations push complexity to the app layer. **Document store (abstraction: key-value with documents as values):** documents (XML/JSON/binary) hold all info for one object, queryable by internal structure; flexible schema, good for occasionally changing data (MongoDB, CouchDB, DynamoDB).
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (key-value store, document store)*
+
+51. **Wide column store (abstraction: nested map):** columns grouped in families, keys in lexicographic order for selective range retrieval, timestamps for versioning/conflict resolution; high availability and scalability for very large datasets (Bigtable, HBase, Cassandra). **Graph database (abstraction: graph):** nodes are records, arcs are relationships; optimized for complex relationships with many foreign keys or many-to-many links (e.g. social networks); newer, fewer tools, often REST-only access.
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (wide column store, graph database)*
+
+52. **Choose SQL when:** structured data, strict schema, relational data, complex joins, transactions, clear scaling patterns, established tooling, fast index lookups. **Choose NoSQL when:** semi-structured/flexible schema, non-relational, no complex joins, TB–PB scale, data-intensive workloads, very high IOPS (clickstream/log ingest, leaderboards, shopping carts, hot tables, metadata tables).
+*Source: donnemartin/system-design-primer — `README.md`, "Database" (SQL or NoSQL)*
+
+### Caching layers (patterns live in backend-performance)
+53. **Cache at every layer:** client (OS/browser), CDN, web server/reverse proxy (e.g. Varnish — serves static and dynamic content without contacting app servers), database (tune built-in defaults), and application (in-memory Redis/Memcached between app and storage — RAM is faster than disk).
+*Source: donnemartin/system-design-primer — `README.md`, "Cache" (client/CDN/web server/database/application caching)*
+
+54. **Prefer in-memory caches (Redis/Memcached) over file-based caching** — file-based caching makes cloning and auto-scaling harder. Redis adds persistence and built-in structures (sorted sets, lists).
+*Source: donnemartin/system-design-primer — `README.md`, "Cache" (application caching)*
+
+55. **Cache by query or by object:** hashing the query as the key suffers expiration problems (one cell change invalidates many cached queries); object-level caching lets the app assemble datasets into objects, evict on underlying change, and use workers to assemble asynchronously. Good candidates: user sessions, fully rendered pages, activity streams, user-graph data.
+*Source: donnemartin/system-design-primer — `README.md`, "Cache" (query level / object level)*
+
+56. **Cache-aside, write-through, write-behind, refresh-ahead** — the four patterns, their staleness and failure tradeoffs, live in `backend-performance` rules 3–4. Use this skill for *where* to cache; use that skill for *how* each pattern behaves.
+*Source: donnemartin/system-design-primer — `README.md`, "Cache" (cache-aside, write-through, write-behind, refresh-ahead); see also `backend-performance`*
+
+### Asynchronism — work off the request path
+57. **Move expensive work off the request path:** async workflows reduce request times for slow operations and let you pre-compute (e.g. periodic aggregation) in advance.
+*Source: donnemartin/system-design-primer — `README.md`, "Asynchronism"*
+
+58. **Message queues** (Redis as simple broker — messages can be lost; RabbitMQ — AMQP, self-managed; Amazon SQS — hosted, higher latency, possible duplicate delivery): app publishes a job and notifies the user of status; a worker picks it up, processes it, signals completion — the user is never blocked.
+*Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" (message queues)*
+
+59. **Task queues** receive tasks + data, run them, deliver results; they support scheduling and run compute-intensive jobs in the background (e.g. Celery, mainly Python).
+*Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" (task queues)*
+
+60. **Do not queue what should be synchronous:** cheap calculations and real-time workflows are better inline — queues add delay and complexity. (Backpressure and 503-on-overflow live in `backend-performance` rule 6.)
+*Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" (disadvantages)*
+
+### Communication — how services talk
+61. **HTTP is a stateless request/response protocol:** GET reads (idempotent, safe, cacheable), POST creates/triggers (not idempotent), PUT creates/replaces (idempotent), PATCH partially updates, DELETE removes (idempotent). Use status codes for errors — don't reinvent them.
+*Source: donnemartin/system-design-primer — `README.md`, "Communication" (HTTP, REST)*
+
+62. **TCP guarantees delivery in order without corruption** (sequence numbers, checksums, ACKs, retransmission, flow + congestion control) — at the cost of delay and memory for many open connections; use connection pooling. Use TCP when all data must arrive intact (web servers, databases, SMTP, FTP, SSH). **UDP is connectionless and faster but unreliable** — datagrams may arrive out of order or not at all, no congestion control; it can broadcast. Use UDP when lowest latency matters, late data is worse than lost data, or you implement your own error correction (VoIP, video chat, streaming, real-time games).
+*Source: donnemartin/system-design-primer — `README.md`, "Communication" (TCP, UDP)*
+
+63. **RPC makes a remote call look like a local call** (client stub marshals id/args, server stub unmarshals and executes) — good for internal performance with hand-crafted native calls (Protobuf, Thrift, Avro), but clients couple tightly to the implementation, every new operation needs a new API, and debugging/caching is harder.
+*Source: donnemartin/system-design-primer — `README.md`, "Communication" (RPC)*
+
+64. **REST exposes data as resources via URIs + verbs + headers, stateless and cacheable** — minimize client/server coupling, prefer it for public HTTP APIs; its statelessness is great for horizontal scaling and partitioning. Its limits: resources that don't fit a simple hierarchy are awkward, the few verbs don't fit every action, nested resources need multiple round trips (bad on mobile), and new response fields bloat payloads for old clients.
+*Source: donnemartin/system-design-primer — `README.md`, "Communication" (REST)*
+
+65. **Choose by audience:** RPC for internal performance-critical communication, REST for public APIs; a native library/SDK when you know the target platform and performance/UX is the priority.
+*Source: donnemartin/system-design-primer — `README.md`, "Communication" (RPC / REST comparison)*
+
+### Security basics
+66. **Encrypt in transit and at rest. Sanitize all user inputs** (and any user-exposed input parameters) to prevent XSS and SQL injection. **Use parameterized queries** to prevent SQL injection. **Apply the principle of least privilege.** (The primer's security section is short by its own admission — depth lives in `owasp-top10` and `api-security`.)
+*Source: donnemartin/system-design-primer — `README.md`, "Security"*
+
+### Back-of-the-envelope numbers
+67. **Sequential throughput rules of thumb:** HDD ~30 MB/s, 1 Gbps Ethernet ~100 MB/s, SSD ~1 GB/s, main memory ~4 GB/s.
+*Source: donnemartin/system-design-primer — `README.md`, "Appendix" (latency numbers, handy metrics)*
+
+68. **Round-trip budget:** ~6–7 world-wide round trips per second, ~2,000 round trips per second within a data center — design chatty protocols accordingly. (The full latency table — L1 ~0.5ns, RAM ~100ns, SSD ~150µs, HDD ~10ms — lives in `backend-performance` rule 8.)
+*Source: donnemartin/system-design-primer — `README.md`, "Appendix" (latency numbers, handy metrics)*
+
+### Also apply (general practice — NOT in the primer, labeled honestly)
+- **Rate limiting:** the primer names it only as an interview-question topic ("Design an API rate limiter") with no implementation guidance. For real rules, use `nodebestpractices` §6.2 (express-rate-limit, nginx, cloud load balancers) — see `api-security`.
+- **Monitoring / observability / error tracking:** not covered in the primer. Track the four golden signals (errors, latency, throughput, saturation — see `backend-performance` rule 10) and use an APM product (Sentry free tier is a good start) to discover errors and downtime.
+- **Autoscaling:** not a named topic in the primer; only horizontal scaling and cloning are discussed. In practice: scale on CPU/requests/latency metrics, never on vibes — and keep services stateless so new instances can join safely (rule 32).
+- **CI/CD:** not covered in the primer. Automate typecheck → lint → test → build on every push so broken code never reaches main.
+
+### Quick check before shipping
+- [ ] Constraints scoped first (users, volume, requests/sec, read-to-write ratio)
+- [ ] CAP choice named (CP vs AP) with the reason written down
+- [ ] Availability target named in 9s; single points of failure identified
+- [ ] Static content on a CDN; SSL terminated at the load balancer
+- [ ] Servers stateless; sessions in a centralized store
+- [ ] Database scaling named (replication vs federation vs sharding) with its risks
+- [ ] SQL vs NoSQL choice justified against the decision table (rule 52)
+- [ ] Slow work moved off the request path (message/task queue)
+- [ ] Internal vs public communication chosen (RPC vs REST)
+- [ ] Secrets encrypted in transit and at rest; inputs sanitized; queries parameterized
+
+### Learn more (official sources)
+- System design primer (377k stars): https://github.com/donnemartin/system-design-primer
+- CAP theorem revisited: https://robertgreiner.com/cap-theorem-revisited/
+- Node.js best practices (rate limiting, APM): https://github.com/goldbergyoni/nodebestpractices
+
+## Skill: nodejs-quality
+
+When to use: writing or reviewing Node.js code — a new endpoint, a new service, a refactor, or any time the question is "is this code correct, testable, and shippable?" rather than "is it fast?" (that's `backend-performance`) or "does it deploy?" (that's `devops-basics`). Apply when errors are swallowed, tests are thin, files are spaghetti, or production surprises keep happening.
+
+Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rule: the `sections/` file and the README section). Nothing here is invented — if the repo doesn't cover a topic, it is labeled "general practice" instead. Rules already covered by `backend-performance`, `devops-basics`, `system-design`, `api-security`, or `owasp-top10` are NOT repeated here; the skill points to them instead.
+
+### Error handling — the biggest gap
+1. **Use async/await (or promises) for async errors — never callbacks.** Callbacks force error checks everywhere, nest deeply, and break try/catch flow. Async/await gives one try/catch for the whole chain plus `finally` for cleanup.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/asyncerrorhandling.md` (README §2.1)*
+
+2. **Throw one AppError type with name, HTTP code, and an `isOperational` flag — never strings, never a different class per error.** Throwing a string loses the stack trace; many error classes add nothing over one class with properties. Mark operational errors (known, understood — e.g. invalid input, failed HTTP call) `isOperational: true`; programmer errors (bugs — reading undefined, leaking pool) are unmarked and must crash the process, because the app may be in an inconsistent state.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/useonlythebuiltinerror.md` (§2.2) + `sections/errorhandling/operationalvsprogrammererror.md` (§2.3)*
+
+3. **Handle errors in one centralized handler object — never inside middleware.** The middleware only catches and forwards; the handler logs, fires metrics (Prometheus/CloudWatch/Sentry), and decides crash-vs-respond. Otherwise request errors, startup errors, cron-job errors, and queue-consumer errors each get handled differently.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/centralizedhandling.md` (§2.4)*
+
+4. **Document API errors in OpenAPI/Swagger (or GraphQL schema).** State every error status up front (e.g. 409 when the name already exists) so callers can render the right UX. A caller that doesn't know what errors can happen cannot be correct except by accident.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/documentingusingswagger.md` (§2.5)*
+
+5. **Subscribe to `uncaughtException` and `unhandledRejection`; crash on untrusted errors, log-and-continue on operational ones.** A promise rejection without `.catch` vanishes silently — the `unhandledRejection` handler is the safety net. On `uncaughtException`, run the centralized handler, then `process.exit(1)` unless the error is trusted/operational; run under a restarter (PM2/systemd/Kubernetes) so the crash restores clean state. **Security note:** never let invalid user input crash the process — validate first and wrap all routes with a catch, or an attacker can DoS you by sending the same crashing request repeatedly; alert at critical severity on every crash.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/shuttingtheprocess.md` (§2.6) + `sections/errorhandling/catchunhandledpromiserejection.md` (§2.10) + README §6.23*
+
+6. **Use a mature logger (Pino), never `console.log`.** Log frequently at levels (debug/info/error), with JSON context objects, and query/filter logs with the logger's API or a log viewer. (JSON structured format itself is covered by `devops-basics` rule 8 — this rule is about the logger choice.)
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/usematurelogger.md` (§2.7)*
+
+7. **Test error flows, not just happy paths.** Assert that the right exception type is thrown, that the API returns the right HTTP error code, and that the logger records the mandatory fields (name, status, stack, message) on failure. Also test that uncaught exceptions reach the logger.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/testingerrorflows.md` (§2.8)*
+
+8. **Fail fast: validate arguments at the top of every function with a dedicated library (Joi/Zod/validator).** Missing or wrong-typed arguments cause hidden bugs far from the cause (e.g. a forgotten `discount` param silently redirecting a user). Assertions come first, logic second.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/failfast.md` (§2.11)*
+
+9. **Always `return await` a promise before returning it, and declare the returning function `async`.** Without `await`, the caller function disappears from the stack trace (V8's zero-cost async stack traces only extend the chain on `await`), leaving a partial trace. The microtask cost of one extra `await` is negligible next to network/DB latency.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/returningpromises.md` (§2.12)*
+
+10. **Subscribe to the `'error'` event on EventEmitters and streams — try/catch cannot catch them.** Emitters (DB connections, message queues) throw outside try/catch; an unhandled emitter error crashes the process, or worse leaves it alive as a zombie with a key function dead. For EventTargets (web-standard emitters) there is no `'error'` event — errors land on the global handler, so at least decide crash-vs-continue there. Also set `{captureRejections: true}` so errors from async event handlers are caught.
+*Source: goldbergyoni/nodebestpractices — README §2.13 (no dedicated section file exists for 2.13 — README is the only source)*
+
+### Project structure
+11. **Structure by business components, not by technical role.** Root folders per domain (`orders/`, `users/`, `payments/`), each self-contained with its own API, logic, data access, and tests; other components consume it only through its public interface. Never group by role (`controllers/`, `services/`, `models/`) — that produces a spaghetti monolith where every change can affect anything.
+*Source: goldbergyoni/nodebestpractices — `sections/projectstructre/breakintcomponents.md` (§1.1)*
+
+12. **Layer each component in 3 tiers: entry-points → domain → data-access.** Entry-points adapt the payload (HTTP, queue, cron) and call the domain; domain holds pure logic on plain JS objects, never `req`/`res`; data-access talks to the DB behind a repository interface. Never pass web objects into the domain layer — it blocks reuse by tests, jobs, and queues.
+*Source: goldbergyoni/nodebestpractices — `sections/projectstructre/createlayers.md` (§1.2)*
+
+13. **Wrap shared utilities as their own npm packages.** Put reusable modules in `libraries/<name>/` with their own `package.json` (main/exports = public interface), consumable via npm link, ts-paths, or a private registry. This stops clients coupling to a module's internals and makes the utility replaceable later. Wrap third-party utilities too, so swapping the library touches one place.
+*Source: goldbergyoni/nodebestpractices — `sections/projectstructre/wraputilities.md` (§1.3)*
+
+14. **Use environment-aware, secure, hierarchical config.** Combine config files with env-var overrides; keep secrets out of committed code; group keys hierarchically; validate at startup and fail fast if a required variable is missing (e.g. convict, zod, env-var). Never let the app start, persist data, and only then discover a mandatory key is absent.
+*Source: goldbergyoni/nodebestpractices — `sections/projectstructre/configguide.md` (§1.4)*
+
+15. **Choose the framework on consequences, not hype.** Express = unmatched ecosystem but minimal (web server only, no native async-await, barely maintained); Nest.js = batteries-included/OOP, best for large apps that can't split into small components, but heavy and opinionated; Fastify = recommended for reasonably-sized components/microservices built on plain Node mechanics. Compare the top 4 (Nest, Fastify, Express, Koa) before committing.
+*Source: goldbergyoni/nodebestpractices — `sections/projectstructre/choose-framework.md` (§1.5)*
+
+16. **Use TypeScript for type safety — sparingly.** Type the variables and function return types; avoid its ~50 advanced keywords and OOP constructs (abstract classes, namespaces) unless a real need arises. Research shows types catch ~15–20% of bugs; the other ~80% need tests. Over-sophisticated typing increases complexity, which itself breeds bugs.
+*Source: goldbergyoni/nodebestpractices — `sections/projectstructre/typescript-considerations.md` (§1.6)*
+
+### Code style
+17. **Run ESLint + Prettier, plus Node-specific ESLint plugins** (eslint-plugin-node, eslint-plugin-security, eslint-plugin-mocha/jest). ESLint catches real anti-patterns (e.g. throwing unclassified errors); Prettier owns formatting. Node plugins catch Node-only faults like `require(variable)` paths that let attackers execute arbitrary scripts. Put the opening brace on the same line and let the formatter own semicolons — ASI pitfalls (e.g. a line starting with `[` or `(` joining the previous statement) cause real syntax errors.
+*Source: goldbergyoni/nodebestpractices — `sections/codestylepractices/eslint_prettier.md` (§3.1–3.2) + README §3.3–3.4*
+
+18. **Name every function, including closures and callbacks.** Anonymous functions are invisible in memory snapshots and profilers; named functions make production debugging possible.
+*Source: goldbergyoni/nodebestpractices — README §3.5 (no section file)*
+
+19. **Follow naming conventions: `lowerCamelCase` for variables/functions, `UpperCamelCase` for classes, `UPPER_SNAKE_CASE` for globals/statics.** Descriptive but short. The convention is what lets a reader tell a class (needs instantiation) from a plain function at a glance.
+*Source: goldbergyoni/nodebestpractices — README §3.6 (no section file)*
+
+20. **Prefer `const`, then `let`, never `var`.** `const` prevents reusing one variable for different purposes; `let` is block-scoped for genuine reassignment; `var` is function-scoped and obsolete in ES6.
+*Source: goldbergyoni/nodebestpractices — README §3.7 (no section file)*
+
+21. **Require modules at the top of the file, never inside functions.** Top-level requires make dependencies visible at a glance, fail fast at startup if a module or its dependency throws, and avoid blocking requests with synchronous loads at critical moments.
+*Source: goldbergyoni/nodebestpractices — README §3.8 (no section file)*
+
+22. **Give every module/folder an explicit entry point.** `index.js` re-exporting the public API, `package.json` `main`, or ESM `exports` — clients must never deep-import internal files. The entry point is the public contract; internals can change without breaking callers.
+*Source: goldbergyoni/nodebestpractices — README §3.9 (no section file)*
+
+23. **Use `===`, never `==`.** `==` coerces types (`0 == ""` is true, `false == "0"` is true); `===` requires the same type. Coercion bugs are silent.
+*Source: goldbergyoni/nodebestpractices — README §3.10 (no section file)*
+
+24. **Never put side effects outside functions.** No network/DB calls at module top level — they run the moment another file requires the module, before the framework, env vars, and monitoring are initialized, and they can't be mocked in tests. Put them in explicitly-called functions; use a factory/revealing-module pattern if something must run at load.
+*Source: goldbergyoni/nodebestpractices — README §3.13 (no section file)*
+
+### Testing
+25. **Write API (component) tests first — before unit tests.** API tests are the easiest to write and give more coverage than unit tests (even codeless via Postman). Only after API coverage exists, add unit, DB, and performance tests. Unit-test-only suites commonly reach ~20% system coverage after long effort.
+*Source: goldbergyoni/nodebestpractices — README §4.1 (no section file)*
+
+26. **Name every test in 3 parts and structure it AAA.** Name: (1) unit under test, (2) scenario, (3) expected result — e.g. "When no price is specified, then the product status is pending approval". Body: Arrange (setup), Act (one line executing the unit), Assert (one line checking the result). A failing test name must explain the failure without reading the test code.
+*Source: goldbergyoni/nodebestpractices — `sections/testingandquality/3-parts-in-name.md` (§4.2) + `sections/testingandquality/aaa.md` (§4.3)*
+
+27. **Each test adds and acts on its own DB rows — no global fixtures/seeds.** Shared seed data couples tests: one test mutating a row breaks another that assumed it. Seed only the read-only query suites if performance forces a compromise.
+*Source: goldbergyoni/nodebestpractices — `sections/testingandquality/avoid-global-test-fixture.md` (§4.5)*
+
+28. **Tag tests so subsets can run alone** (`#cold`, `#api`, `#sanity`; e.g. `mocha --grep 'sanity'`). Fast smoke/IO-less tests run on every save; full e2e runs on pull requests. Running the whole suite (dozens of DB queries) on every small change is so slow developers stop running tests.
+*Source: goldbergyoni/nodebestpractices — README §4.6 (no section file)*
+
+29. **Measure coverage and fail the build below a threshold.** Coverage (Istanbul/NYC) is free, shows coverage drops, and exposes wrong test patterns — e.g. uncovered `catch` clauses mean only happy paths are tested.
+*Source: goldbergyoni/nodebestpractices — README §4.7 (no section file)*
+
+30. **Refactor regularly with static analysis in CI.** SonarQube/Code Climate find cross-file smells ESLint can't (duplication, complexity), track history, and fail the build on new smells. Linting checks style in one file; static analysis checks quality across files.
+*Source: goldbergyoni/nodebestpractices — `sections/testingandquality/refactoring.md` (§4.9)*
+
+31. **Mock external HTTP services (nock/Mock-Server) and test middleware in isolation.** Intercept outgoing requests to simulate errors, delays, and timeouts — hitting real services makes tests slow, flaky, and happy-path-only. Compensate with a few contract/e2e tests so drift isn't missed. Middleware affects most requests but tests as a pure function: invoke it with mocked `{req, res}` (node-mocks-http) and assert the status/behavior.
+*Source: goldbergyoni/nodebestpractices — `sections/testingandquality/mock-external-services.md` (§4.10) + `sections/testingandquality/test-middlewares.md` (§4.11)*
+
+32. **Fixed port in production, randomized (ephemeral, port 0) in testing.** Tests start the server in-process; parallel test runners collide on a fixed port. Port 0 lets the OS assign a free one.
+*Source: goldbergyoni/nodebestpractices — `sections/testingandquality/randomize-port.md` (§4.12)*
+
+33. **Test all five outcomes of every flow:** (1) the response (data, schema, HTTP status), (2) the new state (was the DB actually updated?), (3) outgoing calls (SMS/email/payment), (4) messages placed on queues, (5) observability (error logged, metric fired). Asserting only the response misses silent persistence and integration failures.
+*Source: goldbergyoni/nodebestpractices — `sections/testingandquality/test-five-outcomes.md` (§4.13)*
+
+### Production — ship it right
+34. **Delegate CPU-heavy work to a reverse proxy — never do it in Node.** Gzip, SSL termination, static files, throttling: nginx/HAProxy/cloud services. Node's single thread doing infrastructural work starves application code. Same for frontend assets: serve them from nginx/S3/CDN (exception: server-side rendering).
+*Source: goldbergyoni/nodebestpractices — `sections/production/delegatetoproxy.md` (§5.3) + `sections/production/frontendout.md` (§5.11)*
+
+35. **Lock dependencies and install with `npm ci`.** Commit `package-lock.json` (exact versions, `--save-exact`) so every environment runs identical code; `npm ci` fails on package.json/lockfile mismatch and wipes `node_modules` first, while `npm install` silently drifts. Otherwise QA approves one version and production runs another.
+*Source: goldbergyoni/nodebestpractices — `sections/production/lockdependencies.md` (§5.4) + `sections/production/installpackageswithnpmci.md` (§5.19)*
+
+36. **Guard uptime with the right tool for the host — one layer only.** Bare metal: PM2 or systemd (restart on failure, clustering). Docker/Kubernetes/ECS: let the orchestrator restart and relocate — adding PM2 inside hides failures from the platform so it can't mitigate. Never stack cluster managers, Docker, and PM2 together.
+*Source: goldbergyoni/nodebestpractices — `sections/production/guardprocess.md` (§5.5) + README §8.3 (`sections/docker/restart-and-replicate-processes.md`)*
+
+37. **Utilize all CPU cores.** A naive Node deploy uses 1 of 4+ cores (~25% of the machine). Bare metal: Node `cluster` module or PM2 to spawn a process per core; orchestrated: replicate instances (the platform won't verify core usage for you).
+*Source: goldbergyoni/nodebestpractices — `sections/production/utilizecpu.md` (§5.6)*
+
+38. **Write production-ready code from day 1: twelve-factor, no env-branching in tests, `--trace-sync-io`.** Follow the twelve-factor guide; make dev match prod (docker-compose) and run the same code in tests — never `if (isTest)` branches. Use `--trace-sync-io` to find sync APIs on the request path. (Statelessness, caching, memory, logging, and error strategy are covered by `system-design` / `devops-basics` / error-handling rules above — this rule is the twelve-factor + dev-prod parity + sync-IO detection core of §5.9.) **Note:** README §4.8 (production-like e2e env) is flagged incomplete by the repo itself ("Missed -continue here, needs content") — the docker-compose guidance above is the repo's own §5.9 wording.
+*Source: goldbergyoni/nodebestpractices — `sections/production/productioncode.md` (§5.9) + README §4.8 (incomplete in source — flagged honestly)*
+
+39. **Pin the runtime: same Node version everywhere, LTS only, `NODE_ENV=production`.** One version across dev, CI, and prod (nvm/Volta/`.nvmrc`, Dockerfile, CI file); LTS releases (even versions) get ≥18 months of security/bug fixes, Current does not. Set `NODE_ENV=production` — libraries like Express change behavior (caching, diagnostics) based on it, and omitting it can badly degrade performance.
+*Source: goldbergyoni/nodebestpractices — `sections/production/setnodeenv.md` (§5.15) + `sections/production/LTSrelease.md` (§5.17) + README §4.4*
+
+40. **Design automated, atomic, zero-downtime deployments.** Many small automated deploys (Docker + CI) beat rare big manual ones: no manual steps, no downtime. Long scary deployments → fewer deployments → fewer features and more risk per deploy.
+*Source: goldbergyoni/nodebestpractices — README §5.16 (no section file)*
+
+41. **Log to stdout/stderr only — never hard-code a log destination.** The execution environment (container/orchestrator) routes the stream to Splunk/Elasticsearch/etc. If the app logs straight to a remote store, crash-time logs that explain the problem never arrive, and changing destinations requires a code change and deploy.
+*Source: goldbergyoni/nodebestpractices — `sections/production/logrouting.md` (§5.18)*
+
+### Node-specific security extras
+42. **Enforce security lint rules** (`eslint-plugin-security`, plus git hooks like pre-commit secret scans). The linter catches `eval`, child-process use, and variable-based `require()` while code is being written — cheap in dev, expensive in production.
+*Source: goldbergyoni/nodebestpractices — `sections/security/lintrules.md` (§6.1)*
+
+43. **Limit request payload size at the edge or in middleware.** A huge JSON body makes the single thread work hard per request — a cheap DoS with few requests. Cap body size via reverse proxy/firewall or `body-parser` limits.
+*Source: goldbergyoni/nodebestpractices — `sections/security/requestpayloadsizelimit.md` (§6.14)*
+
+44. **Never `eval`, `new Function`, or pass dynamic code to `setTimeout`/`setInterval` — and never `require()`/import a path built from user input.** Evaluated user input = arbitrary code execution on the server. The same ban extends to `fs.readFile()` and any sensitive resource access with dynamic user-supplied paths. `eslint-plugin-security` catches both patterns.
+*Source: goldbergyoni/nodebestpractices — `sections/security/avoideval.md` (§6.15) + `sections/security/safemoduleloading.md` (§6.17)*
+
+45. **Never hand-roll regex on user input — use validator.js or check with safe-regex.** One crafted input can block the event loop for seconds (a 10-word validation once blocked it for 6s; `moment` had a ReDoS CVE in 2017). ReDoS is a single-thread DoS.
+*Source: goldbergyoni/nodebestpractices — `sections/security/regex.md` (§6.16)*
+
+46. **Run untrusted/plugin code in a sandbox.** Isolate dynamically loaded code (plugins, loaders) via a dedicated child process (with time limits and crash recovery), a serverless function, or a sandbox package — otherwise a malicious plugin can infinite-loop, exhaust memory, or read `process.env` secrets.
+*Source: goldbergyoni/nodebestpractices — `sections/security/sandbox.md` (§6.18)*
+
+47. **Avoid child processes; when unavoidable, use `execFile` and sanitize input.** `exec` with shell expansion + unsanitized user input = remote command execution / shell injection / data loss. `execFile` runs one command with arguments and no shell expansion.
+*Source: goldbergyoni/nodebestpractices — `sections/security/childprocesses.md` (§6.19)*
+
+48. **Protect the npm supply chain: enable 2FA on npm/Yarn and never publish secrets.** A hijacked maintainer password lets an attacker inject malicious code into widely-installed packages (the eslint incident). Use `.npmignore` or the `package.json` `files` allowlist so secrets never reach the registry.
+*Source: goldbergyoni/nodebestpractices — README §6.21 + `sections/security/avoid_publishing_secrets.md` (§6.25)*
+
+49. **Validate redirect targets — never redirect to user-supplied URLs unchecked.** Unvalidated redirects enable phishing (crafted links posted on forums/social media that look like your domain) and credential theft.
+*Source: goldbergyoni/nodebestpractices — `sections/security/saferedirects.md` (§6.24)*
+
+50. **Import built-ins with the `node:` protocol** (`import { createServer } from "node:http"`). Without the prefix, a typo (`event` instead of `events`) can resolve to a malicious typosquat package. Enforce with the `prefer-node-protocol` ESLint rule.
+*Source: goldbergyoni/nodebestpractices — README §6.27 (no section file)*
+
+### Docker extras
+51. **Use multi-stage builds.** Build in one stage (dev deps, build tools), copy only production artifacts (`dist/`, `package.json`, lockfile) into a slim runtime stage, then `npm ci --production`. Build-only tools carry vulnerabilities and build-time secrets that must never ship.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/multi_stage_builds.md` (§8.1)*
+
+52. **Let the orchestrator replicate and restart — don't run PM2/cluster inside containers.** Kubernetes/ECS knows placement, spread, and crash relocation; an in-container process manager hides failures from it (a crashing container gets restarted in place instead of relocated to a roomy instance).
+*Source: goldbergyoni/nodebestpractices — `sections/docker/restart-and-replicate-processes.md` (§8.3)*
+
+53. **Keep secrets and dev files out of the image: `.dockerignore` + no build-time secrets.** `.dockerignore` must exclude `.env`, `.aws`, `.npmrc`, and dev artifacts (also speeds builds; copy explicitly, never `COPY . .` blindly). Never pass secrets as build args — they persist in image history; use multi-stage copy-and-delete or Docker BuildKit secrets, which leave zero trace.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/docker-ignore.md` (§8.4) + `sections/docker/avoid-build-time-secrets.md` (§8.11)*
+
+54. **Strip everything the runtime doesn't need.** Install dev deps for build/test, then ship production-only (`npm ci --production` in the final stage) — dev packages have hosted real breaches (eslint-scope). Also delete the npm cache after install (`npm cache clean`) — it duplicates dependencies and adds 10–50% image weight on an immutable image that will never install again.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/install-for-production.md` (§8.5) + `sections/docker/clean-cache.md` (§8.13)*
+
+55. **Set memory limits in BOTH Docker and V8.** Docker limit = placement decisions and protecting neighbors; `--max-old-space-size` slightly below the container limit = GC starts on time. Without the V8 flag, Node under-utilizes the container and can crash at ~50–60% of host memory. (`devops-basics` rule 9 covers the V8 flag alone; the Docker-side pairing is the new part.)
+*Source: goldbergyoni/nodebestpractices — `sections/docker/memory-limit.md` (§8.7)*
+
+56. **Order Dockerfile layers for caching: least-changed on top, app code at the bottom.** Dependencies first, source last — then a tiny code change rebuilds nearly instantly instead of reinstalling everything.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/use-cache-for-shorter-build-time.md` (§8.8)*
+
+57. **Pin an explicit image reference — never `latest`.** Use a versioned tag or, for determinism, a SHA256 digest. `latest` can silently deploy a breaking base-image change into production.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/image-tags.md` (§8.9)*
+
+58. **Scan the final image, not just dependencies.** Image scanners check OS binaries too (OpenSSL, tar) — clean app code can still ship hacked via a vulnerable system binary. Run it as the last step before deployment, ideally in CI.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/scan-images.md` (§8.12)*
+
+59. **Lint the Dockerfile** (e.g. hadolint). A linter catches root-as-production-user, unknown-source base images, and other best-practice violations before they ship.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/lint-dockerfile.md` (§8.15)*
+
+### Also apply (general practice — NOT in the repo, labeled honestly)
+- **CI/CD:** the repo has no CI section (its `citools.md` exists only in translations; `bumpversion.md` is an empty stub — "Title here", "Text", "code here"). Automate typecheck → lint → test → build on every push; red build blocks the merge. See `devops-basics` ("Also apply") for the same guidance.
+- **Rate limiting:** lives in `api-security` rule 8 (repo §6.2) — not re-distilled here.
+- **Caching patterns:** live in `backend-performance` rules 3–4 — not re-distilled here.
+- **Twelve-factor + memory/leak testing:** the repo's §5.9 points at the twelve-factor guide and at testing memory/leaks during development — treat as pointers to `system-design` and `devops-basics`, not standalone rules.
+
+### Quick check before shipping
+- [ ] Errors use one AppError type with `isOperational`; centralized handler; uncaught/rejection handlers wired
+- [ ] API errors documented (OpenAPI); error flows tested, not just happy paths
+- [ ] Arguments validated at function tops (fail fast); promises `return await`ed
+- [ ] Components structured by domain, 3-tier layers, no web objects in domain logic
+- [ ] Config validated at startup; secrets out of committed code
+- [ ] ESLint + Prettier + security plugin; `===` everywhere; no side effects at module top
+- [ ] API tests first; tests named in 3 parts (AAA); no global fixtures; coverage threshold enforced
+- [ ] Deps locked (`npm ci`); Node LTS pinned; `NODE_ENV=production`; zero-downtime deploys
+- [ ] Logs to stdout only; no `eval`/dynamic `require()`; `node:` protocol on built-ins
+- [ ] Multi-stage Docker build; `.dockerignore` set; image scanned and linted; no `latest` tag
+
+### Learn more (official sources)
+- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
+- System design primer: https://github.com/donnemartin/system-design-primer
+- Twelve-factor app: https://12factor.net/
+- Semantic versioning: https://semver.org/
+
+## Skill: audit-team
+
+When to use: the user asks for a team audit, a full review, or "/audit-team" on a repo — or after a big fix round, to verify the fixes held and catch regressions. Always report-only: auditors read, never edit.
+
+Every rule below is built from the harness's own skills (cited per agent) and from the audit pattern proven on the Community Pantry repo (audit rounds 1–3, round 3: 5 auditors, 65 findings, merged at `799b3b6`). If a rule doesn't apply, say why.
+
+### The team — three agents, in parallel
+
+Spawn all three at once. Each agent first reads its assigned skill files in full, then audits only its area. No agent edits code, runs migrations, or pushes — report-only.
+
+| Agent | Harness skills it applies | What it checks |
+|---|---|---|
+| **Backend** | safe-editing, debug-first, api-security, owasp-top10, backend-performance, system-design, nodejs-quality, rea | API security (auth, RLS, RPCs, Edge Functions), data integrity (status transitions, race conditions, idempotency), query cost (N+1, missing indexes), error handling, code quality (readability, dead code, hardcoded values) |
+| **Frontend** | ux-edge-states, motion-design, frontend-performance | Loading / empty / error / offline states, keyboard + screen-reader access, dark mode, real animations (not static visuals), render performance, contrast |
+| **DevOps** | devops-basics | CI (green on the target commit), tests (real pass count + exit code, not just the summary line), build, lint, migrations (idempotent + re-runnable), deploy config, secrets handling |
+
+**Every agent also applies no-hallucination** — every finding cites a real file and line, and every claim about what runs or passes is backed by evidence the agent actually saw.
+
+**The report is written with explain-bisaya** — findings in plain Bisaya, technical detail (file paths, code, SQL) in English.
+
+**Not applied, on purpose: clone.** Clone is a build skill (reproduce a design from a URL) — there is nothing for it to audit. Listing it as "applied" would be a label, not a real check. If the target itself is a clone task, run `clone` separately, not inside an audit.
+
+### Rules
+
+1. **Verify the target before auditing.** Confirm the exact commit under audit (remote HEAD, not a stale local clone) and that the tree the agents read is byte-identical to it. Auditing the wrong commit produces findings about code that no longer exists.
+   *Source: Pantry audit round 3 — the local clone was stale at `8c73c5f` while remote had moved; the audit ran on a fresh snapshot of remote HEAD instead.*
+
+2. **Spawn the three agents in parallel, each with its brief.** Give each agent its area, its skill list, the target commit, and the report-only rule in its brief. The agent reads its skills first — a skill that was never read cannot take effect.
+   *Source: the harness skills themselves (`skills/<name>.md`); Pantry audit round 3 ran 5 parallel auditors this way.*
+
+3. **Report-only, always.** Auditors never edit, fix, migrate, or push. A finding that was "fixed" by an auditor without the user picking it is not a finding — it is an unapproved change.
+   *Source: harness rule #1 (edit surgically, only what the task requires) + the user's standing rule that he picks what to fix.*
+
+4. **Every finding needs evidence.** File path + line number + what happens (or the exact error/output). A finding without a location is an opinion, not a finding — drop it or mark it unverified.
+   *Source: no-hallucination (`skills/no-hallucination.md`).*
+
+5. **Grade every finding: Blocker / Warning / Suggestion.** Blocker = broken, insecure, or data-losing in real use. Warning = works today, breaks or leaks under real conditions. Suggestion = polish for later. Never inflate a Suggestion into a Blocker to make the report look serious.
+   *Source: Pantry audit round 3 triage (8 Blockers, 29 Warnings, 28 Suggestions).*
+
+6. **Check regressions against the previous round.** When a prior fix round exists, each agent re-checks the findings that round claimed to fix. A fix that did not hold is a Blocker, even if it looks small — a regression means the verification step failed, not just the code.
+   *Source: Pantry audit round 3 found 1 regression (donor exact addresses readable via API again) among otherwise-holding round-2 fixes.*
+
+7. **The coordinator merges, dedupes, and triages — then stops.** One merged report: counts by severity, findings grouped by agent, regressions called out first. No maximal fix plan: the user picks what to fix ("ayaw ayoha ang dili guba" — don't fix what isn't broken). Never start fixing in the same run as the audit.
+   *Source: the user's standing triage rule; Pantry audit rounds 1–3 were all report-only, fix was a separate decision.*
+
+8. **Verify the verification.** The coordinator spot-checks each agent's headline claims (re-read the cited file, re-run the cited command) before the report goes to the user. A pass count is not proof — check the exit code and the "Errors" line too.
+   *Source: Pantry round 2 — "70/70 tests pass" hid 1 unhandled error; the suite's exit code was the real signal.*
+
+### Agent briefs (copy into each agent's brief)
+
+**Backend agent brief:** "Audit the backend of <repo> at <commit>. Read these skills first and apply them genuinely, not as labels: safe-editing, debug-first, api-security, owasp-top10, backend-performance, system-design, nodejs-quality, rea. Check: auth + RLS + RPCs + Edge Functions (who can read/write what, via the app AND via direct API calls); status transitions (can a client force an illegal state?); race conditions and idempotency (double-submit, re-invocation); query cost (N+1, missing indexes on hot filters); error handling (silent failures, swallowed errors); code quality (readability, dead code, hardcoded values, separation of concerns). Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
+
+**Frontend agent brief:** "Audit the frontend of <repo> at <commit>. Read these skills first and apply them genuinely, not as labels: ux-edge-states, motion-design, frontend-performance. Check: every screen's loading / empty / error / offline states (no blank screens, no whole-page error cards where an inline banner fits); keyboard operability and screen-reader labels on every interactive element; dark mode (no unreadable text, no invisible controls); animations are real motion, not static visuals; render performance (no infinite fetch loops, no effect deps on object identity); contrast (WCAG AA on text over gradients). Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
+
+**DevOps agent brief:** "Audit the shipping path of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics. Check: CI is green on this exact commit (read the Actions/runs page, not the workflow file — a workflow file is not proof); tests really pass (pass count AND exit code AND the 'Errors' line); build, lint, and typecheck clean; migrations are idempotent and re-runnable (every CREATE has DROP IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE); deploy config matches the live target; no secrets in the repo. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line or run URL, evidence, and what breaks in real use."
+
+### Quick check before reporting
+- [ ] Target commit verified against the remote (agents read the right code)
+- [ ] All three agents ran in parallel, each read its skills first
+- [ ] Every finding has file:line (or run URL) + evidence + severity
+- [ ] Regressions from the previous round re-checked and called out first
+- [ ] Merged report triaged (Blockers / Warnings / Suggestions), no fix started
+- [ ] Report in Bisaya, technical detail in English
+
+### Learn more (sources for the skills this team applies)
+- OWASP Top 10 (owasp-top10, api-security): https://owasp.org/www-project-top-ten/
+- Node.js best practices (backend-performance, devops-basics, nodejs-quality): https://github.com/goldbergyoni/nodebestpractices
+- System Design Primer (system-design): https://github.com/donnemartin/system-design-primer
+- Front-End Checklist (frontend-performance): https://github.com/thedaviddias/Front-End-Checklist
+- GSAP / GreenSock (motion-design): https://gsap.com/
+- 12 API security rules reel (api-security): Code Crack — "12 API Security Rules"
+- 10 UX states reel (ux-edge-states): Strategy Fox — "10 UX States"
+- Clean Code (safe-editing, ub-mode): Robert Martin — *Clean Code*
