@@ -190,7 +190,7 @@ When to use: the user wants to understand how a feature works inside an app, bin
 
 When to use: building or reviewing any API — REST, GraphQL, or internal endpoints.
 
-Apply these 12 rules to every endpoint. If a rule doesn't apply, say why.
+Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
 
 ### Authentication & Access
 1. **Authenticate every call.** No anonymous backdoors. Every endpoint requires a valid credential — no "internal" or "debug" routes left open.
@@ -212,12 +212,20 @@ Apply these 12 rules to every endpoint. If a rule doesn't apply, say why.
 11. **Limit response data.** Send only what's needed. Don't return full user objects, internal IDs, or stack traces to clients. Filter fields per role.
 12. **Inventory endpoints.** You can't guard what you forgot. Keep a list of every route; audit it when adding features. Remove dead endpoints.
 
+### Configuration & Queries (added 2026-11-10 — the effectiveness test caught real flaws these rules did not cover)
+13. **Restrict CORS to named origins — never `*`, never `*` with credentials.** A wildcard CORS policy lets any website read your users' authenticated responses. Name the exact origins the API serves; `Access-Control-Allow-Origin: *` combined with `Access-Control-Allow-Credentials: true` is a fail on sight. Test it in CI: send `Origin: https://evil.example` and fail if that origin is reflected.
+*Source: OWASP API Security Top 10 2023, API8:2023 Security Misconfiguration — "CORS accepting any origin with credentials" is a named example of the risk.*
+14. **Use parameterized queries — never build queries by string concatenation.** Concatenating user input into a query string lets an attacker inject SQL (or NoSQL/OS/LDAP commands) as code. Use prepared statements / parameterized queries for every database call so input is always data, never syntax. The same ban covers ORM raw-query escape hatches (`sequelize.query()`, `.raw()`, `find_by_sql`) that accept a plain string.
+*Source: OWASP Top 10 2021, A03:2021 Injection — parameterized queries (prepared statements) are the primary prevention for injection.*
+
 ### Quick check before shipping
 - [ ] Every route has auth (or a documented reason it doesn't)
 - [ ] IDs in requests are ownership-checked
 - [ ] Inputs are schema-validated
 - [ ] No secrets in URLs or logs
 - [ ] Auth endpoints are rate-limited
+- [ ] CORS names exact origins (no `*`, no `*` + credentials)
+- [ ] Every query is parameterized (no string concatenation into SQL)
 
 ### Learn more (official sources)
 - OWASP API Security Top 10: https://owasp.org/API-Security/
@@ -570,12 +578,84 @@ Without automated enforcement, performance degrades gradually — each PR adds a
 - Measure with Lighthouse (GoogleChrome/lighthouse) — track LCP ≤ 2.5s, CLS ≤ 0.1, INP ≤ 200ms.
 - Test animations on a real mid-range device, not just the dev machine. Target 95th-percentile frame time < 16.6ms.
 
+### 5. Load scripts with defer, async, or type=module — never render-blocking scripts
+Source: [defer-async](https://frontendchecklist.io/rules/html/defer-async) (priority: high)
+
+A plain `<script>` in the head blocks HTML parsing until it downloads and runs — the browser cannot continue building the DOM. `defer` downloads in parallel and runs after parsing, in order. `async` downloads in parallel and runs as soon as it arrives (order not guaranteed — only for independent scripts). `type="module"` defers by default.
+
+```html
+<!-- ❌ Bad: blocks parsing -->
+<script src="/app.js"></script>
+
+<!-- ✅ Good: parses while downloading, runs after -->
+<script src="/app.js" defer></script>
+<script src="/analytics.js" async></script>
+<script type="module" src="/main.js"></script>
+```
+
+### 6. Lazy-load offscreen content — never lazy-load the hero
+Source: [lazy-loading](https://frontendchecklist.io/rules/performance/lazy-loading) (priority: high), [lazy-above-fold](https://frontendchecklist.io/rules/performance/lazy-above-fold) (priority: medium), [offscreen-lazy](https://frontendchecklist.io/rules/images/offscreen-lazy) (priority: high)
+
+Images and heavy resources below the fold must not download on initial load — they compete with the LCP candidate for bandwidth. But lazy-loading the hero image delays LCP instead of helping it.
+
+```html
+<!-- ❌ Bad: hero image lazy-loaded — LCP waits for the scroll observer -->
+<img src="/hero.webp" loading="lazy" alt="Hero">
+
+<!-- ✅ Good: hero loads eagerly, below-fold images lazy -->
+<img src="/hero.webp" fetchpriority="high" alt="Hero">
+<img src="/gallery-3.webp" loading="lazy" alt="Gallery photo 3">
+```
+
+- Below the fold: `loading="lazy"` on images and heavy media. Above the fold: eager load, and use `fetchpriority="high"` on the LCP candidate (see rule 3 — preload only the LCP candidate and one critical font).
+- Lazy-load non-hero components too (dynamic import / route splitting) — same principle, applied to code.
+
+### 7. Set explicit width and height on images — and serve them at display size
+Source: [dimensions](https://frontendchecklist.io/rules/images/dimensions) (priority: high), [responsive-size](https://frontendchecklist.io/rules/images/responsive-size) (priority: high)
+
+Without dimensions, the browser cannot reserve space before the image loads — content jumps when it arrives (CLS). And serving a 2000px image into a 400px container wastes bandwidth and hurts LCP.
+
+```html
+<!-- ❌ Bad: no dimensions — layout shifts when the image loads -->
+<img src="/photo.webp" alt="Photo">
+
+<!-- ✅ Good: space reserved, correct size served -->
+<img src="/photo-800.webp" srcset="/photo-400.webp 400w, /photo-800.webp 800w"
+     sizes="(max-width: 600px) 400px, 800px" width="800" height="600" alt="Photo">
+```
+
+- Every `<img>` gets explicit `width` and `height` (or an `aspect-ratio` in CSS) so the browser reserves space.
+- Serve responsive sizes (`srcset`/`sizes`); never serve an image significantly larger than its display dimensions.
+
+### 8. Load non-critical code on user interaction
+Source: [import-on-interaction](https://frontendchecklist.io/rules/performance/import-on-interaction) (priority: high)
+
+JavaScript modules, widgets, and third-party code that the user may never touch should not load on initial page load — defer them until the user signals intent (click, focus, hover).
+
+```javascript
+// ❌ Bad: chat widget + heavy editor load on every page view
+import { ChatWidget } from './chat.js';
+import { Editor } from './editor.js';
+
+// ✅ Good: load on first intent
+document.querySelector('#chat-button').addEventListener('click', async () => {
+  const { ChatWidget } = await import('./chat.js');
+  new ChatWidget().open();
+}, { once: true });
+```
+
+- Third-party scripts: `async`/`defer`, and audit regularly — remove the ones nobody uses (see rule 3 for the hint mechanics; this rule is about *when* code loads at all).
+
 ### When to apply
 
 - A page feels laggy or janky → check rule 1 first (are animations using transform/opacity?)
 - Animations stutter during JS execution → check rule 2 (layout thrashing? rAF?)
 - Slow initial load / poor LCP → check rule 3 (resource hints, preload LCP image)
 - Performance degrading over time → check rule 4 (budgets in CI)
+- Scripts block rendering → check rule 5 (defer/async/module?)
+- Below-fold images compete with the hero → check rule 6 (lazy offscreen, eager hero)
+- Layout jumps as images load → check rule 7 (width/height + display size?)
+- Heavy widgets load before anyone uses them → check rule 8 (load on interaction?)
 
 ### Verification
 
@@ -1019,6 +1099,18 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 59. **Lint the Dockerfile** (e.g. hadolint). A linter catches root-as-production-user, unknown-source base images, and other best-practice violations before they ship.
 *Source: goldbergyoni/nodebestpractices — `sections/docker/lint-dockerfile.md` (§8.15)*
 
+### Gaps the test found (added 2026-11-10 — the effectiveness test caught real code these rules did not cover)
+
+60. **Always send a response — never leave a request hanging.** Every code path, success AND error, must end the HTTP response. A handler that returns without responding leaves the client waiting until it times out — from the user's side the app looks dead, and no error is ever logged. The centralized error handler (rule 3) exists precisely so every failure still produces a response.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/centralizedhandling.md` (§2.4) (the handler "will send a response") — the always-respond discipline itself is general practice, grounded in that rule*
+*General practice: set server and request timeouts (e.g. `server.timeout`, per-route timeouts) so a hung handler fails loudly with a 503 instead of hanging forever — the repo has no timeout rule of its own.*
+
+61. **Keep functions small — one job per function.** A function you cannot describe in one sentence is too big: split it until each piece does one thing. Giant functions hide bugs, cannot be unit-tested in isolation, and make every change risky.
+*Source: NOT in nodebestpractices — labeled general practice. Cross-reference: `ub-mode` (CRAP < 10 per function, "one decision lives in one place").*
+
+62. **No magic numbers — name every constant.** A bare `86400000` or `3` in code means nothing to the next reader and breaks silently when the value must change in one place but not another. Give it a named constant (`const MS_PER_DAY = 86_400_000`) at the top of its scope — the same discipline as rule 19's `MS_PER_DAY` example.
+*Source: goldbergyoni/nodebestpractices — `sections/codestylepractices/eslint_prettier.md` (§3.1) (run ESLint; enable the `no-magic-numbers` rule) — the named-constants discipline itself is general practice.*
+
 ### Also apply (general practice — NOT in the repo, labeled honestly)
 - **CI/CD:** the repo has no CI section (its `citools.md` exists only in translations; `bumpversion.md` is an empty stub — "Title here", "Text", "code here"). Automate typecheck → lint → test → build on every push; red build blocks the merge. See `devops-basics` ("Also apply") for the same guidance.
 - **Rate limiting:** lives in `api-security` rule 8 (repo §6.2) — not re-distilled here.
@@ -1036,6 +1128,7 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 - [ ] Deps locked (`npm ci`); Node LTS pinned; `NODE_ENV=production`; zero-downtime deploys
 - [ ] Logs to stdout only; no `eval`/dynamic `require()`; `node:` protocol on built-ins
 - [ ] Multi-stage Docker build; `.dockerignore` set; image scanned and linted; no `latest` tag
+- [ ] Every code path sends a response (no hung requests); functions do one job; no magic numbers (rules 60–62)
 
 ### Learn more (official sources)
 - Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
@@ -1134,15 +1227,97 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 ## Skill: ub-mode
 
-Source: unclebob/ub-mode — by Robert C. Martin ("Uncle Bob"), author of Clean Code.
-Installed on Edsiel's PC via `npx skills add unclebob/ub-mode`.
+Distilled from [unclebob/ub-mode](https://github.com/unclebob/ub-mode) — by Robert C. Martin ("Uncle Bob"), author of Clean Code. The source skill is "loosely based on portions of @poteto's rules, reduced and paired with deterministic quality-gate tools" (README). Every rule below cites its source section. Anything the source does not cover is labeled "general practice".
 
-## Discipline
+When to use: `/ub-mode`, or any backend/logic change, bug fix, or refactor where the code must stay clean and provable.
 
-1. **TDD first** — write the failing test BEFORE the implementation. Red → Green → Refactor.
-2. **Low complexity** — keep functions small, single responsibility, minimal branching.
-3. **No duplication** — extract shared logic; DRY.
-4. **Quality gates** — mutation testing and complexity checks via quality-gate tools where available.
+The principle: every change follows **First Make it Work → Then Make it Right → Follow Practice**.
+
+### Phase 1 — First Make it Work
+
+1. **Laziness Protocol — one decision lives in one place; ship the smallest edit that solves the problem.**
+*Source: SKILL.md, "Laziness Protocol"*
+
+2. **Foundational Thinking — get the data shape right before writing the logic; do first whatever helps every later phase; if a concurrent writer would matter, do not share state.**
+*Source: SKILL.md, "Foundational Thinking"*
+
+3. **TDD — write the failing test before changing code; see it fail for the reason you expect; make the smallest change that makes it pass; if an honest test is impractical, do not write a bad one.**
+*Source: SKILL.md, "TDD"*
+
+4. **Redesign From First Principles — do not bolt a new requirement onto the old design; ask what you would have built if it had been there from the start, think it through, deliver it in pieces.**
+*Source: SKILL.md, "Redesign From First Principles"*
+
+5. **Attack the Premise — when two fixes sharing one premise fail the same gate, write that premise in one sentence, count which actors hold the imbalance, remove the assignment, and do not start another fix until that is done.**
+*Source: SKILL.md, "Attack the Premise"*
+
+6. **Subtract Before You Add — take complexity out before adding anything.**
+*Source: SKILL.md, "Subtract Before You Add"*
+
+7. **Outcome-Oriented Execution — aim at an end state you can check; a break in the middle is allowed when planned and undoable.**
+*Source: SKILL.md, "Outcome-Oriented Execution"*
+
+8. **Build the Lever — if the work is not obvious at a glance, build the tool that does it; do one unit by hand, then make the tool match that unit.**
+*Source: SKILL.md, "Build the Lever"*
+
+9. **Architecture — Model the Domain: put the domain in a structure that makes the illegal states impossible; maintain a glossary of domain terms; if the code is already clear and local, leave it.**
+*Source: SKILL.md, "Architecture — Model the Domain"*
+
+10. **Architecture — Boundary Discipline: check the data where it enters; inside, trust it; keep business logic in a pure function.**
+*Source: SKILL.md, "Architecture — Boundary Discipline"*
+
+11. **Architecture — Type System Discipline: make the illegal value impossible to write; parse outside data once, where it comes in; do not silence the compiler.**
+*Source: SKILL.md, "Architecture — Type System Discipline"*
+
+12. **Architecture — Idempotency: running it twice, or running it after a crash halfway through, ends in the same state.**
+*Source: SKILL.md, "Architecture — Idempotency"*
+
+13. **Architecture — Shared State: if two parts do not need the same mutable thing, give each its own; if they do, allow one writer, enforced in the structure.**
+*Source: SKILL.md, "Architecture — Shared State"*
+
+### Phase 2 — Then Make it Right
+
+14. **Fix Root Causes — reproduce it; fix the cause; a guard that only hides the crash is not a fix.**
+*Source: SKILL.md, "Fix Root Causes"*
+
+15. **Sequence work into verifiable units — finish one small unit and check it, then start the next.**
+*Source: SKILL.md, "Sequence work into verifiable units"*
+
+16. **Test Behavior, Not Implementation — the test calls the code the way its user does and checks the result that user would see; if the test would still pass when every function returned nothing, throw it out.**
+*Source: SKILL.md, "Test Behavior, Not Implementation"*
+
+17. **Crapper — every function under CRAP 10.** Use the crapper tool (computes cyclomatic complexity + test coverage + CRAP per function); reduce each function under CRAP 10 by splitting it, by testing it, or both; consider whether case statements are worth reducing.
+*Source: SKILL.md, "Crapper" + README L24–25 — gate: CRAP < 10*
+
+18. **Dryer — eliminate duplication ranked 0.8 or above.** Use the dryer tool to eliminate duplicate blocks with similarity ≥ 0.8.
+*Source: SKILL.md, "Dryer" + README L27 — gate: duplication ≥ 0.8 eliminated*
+
+19. **Mutator — cover the uncovered; kill the survivors; delete dead code.** Use the mutator tool; mutation testing exposes uncovered code and surviving mutants.
+*Source: SKILL.md, "Mutator" + README L29*
+
+20. **Refactoring — pin what the code does; change the structure; prove the behavior did not change.**
+*Source: SKILL.md, "Refactoring"*
+
+### Phase 3 — Practice
+
+21. **Keep a Log — keep a log of every action and the reason; report that log upon completion.**
+*Source: SKILL.md, "Keep a Log"*
+
+22. **Guard the Context Window — keep the main thread small; send the bulk elsewhere and keep the summary.**
+*Source: SKILL.md, "Guard the Context Window"*
+
+23. **Worktree Cleanup — find what is safe to remove, confirm nothing still in use needs it, then reclaim the disk; uncommitted work waits for a decision.**
+*Source: SKILL.md, "Worktree Cleanup"*
+
+24. **Commit and Push — commit often, in small ordered commits; each commit says why, what changed, and how you proved it; push to the main line at the end.**
+*Source: SKILL.md, "Commit and Push"*
+
+### Thresholds — the only numbers the source gives
+- **CRAP < 10 per function** (rule 17).
+- **Duplication similarity ≥ 0.8 eliminated** (rule 18).
+- No other numeric thresholds exist in the source: no function line limit, no branch-count limit, no mutation-score percentage (the mutator's rule is "kill the survivors", with no number). Do not invent numbers and attribute them to the source.
+
+### Tools
+The source names three quality-gate tools: **crapper**, **dryer**, **mutator** (see the ub-mode repo README for the tool repos). Use them where they are installed — the gates above are the point, not the tools. *General practice:* where the tools are not installed, apply the same thresholds by manual review (estimate CRAP from complexity + coverage, flag near-duplicate blocks) and say so — a manual estimate is not a gate pass.
 
 ## When to apply
 
@@ -1154,53 +1329,202 @@ Installed on Edsiel's PC via `npx skills add unclebob/ub-mode`.
 
 Backend team = `ub-mode` + `safe-editing` (+ `api-security` for endpoints, `owasp-top10` for audits, `debug-first` for bugs).
 
+## Learn more
+- ub-mode skill (source): https://github.com/unclebob/ub-mode
+- Clean Code (Robert C. Martin): the book behind the discipline
+
 ## Skill: design-taste-frontend
 
-Source: Leonxlnx/taste-skill — installed on Edsiel's PC via `npx skills add Leonxlnx/taste-skill`.
-Location on his PC: `~/.claude/skills/design-taste-frontend` (needed manual copy from `~/.agents/skills/`).
+Distilled from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (`tasteskill 2.5.1`, HEAD `f6b7657`) — SKILL.md + references/layout-v4.md, copy.md, copy-tells.md, system.md, motion.md, library/palettes.json, library/type.json. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
 
-## Purpose
+When to use: build, design, redesign, restyle, polish, or review a landing page, company site, product page, shop, cafe, hotel, studio, SaaS, AI, devtool, or game site — or when a page looks generic, templated, or "AI-made".
 
-Anti-slop design taste for frontend work. Paired with ui-ux-pro-max for the
-anti-slop check in DevPilotAI UI audits (since 2026-10-31).
+### The method — classify first, deal, never choose by taste
 
-## Discipline
+1. **Classify the business first; the kind decides everything.** Six kinds: `software` (app/SaaS/AI/devtool/fintech), `gaming`, `tech` (hardware/device), `product` (other physical product), `service` (people hired), `place` (people come to it: cafe, bakery, guesthouse, shop). Declare it on the page: `<html data-type>` + `<meta name="page-type">` (same value) + `<meta name="site-kind">`; a place adds `<meta name="page-kind" content="place">`.
+*Source: SKILL.md §1*
 
-- Enforce genuine design taste — no generic, slop-looking UI.
-- Prefer distinctive, intentional visual decisions over safe defaults.
-- Used together with ui-ux-pro-max: taste checks the *feel*, pro-max checks the *system*.
+2. **Deal, never choose by taste.** Palette, type pairing, hero layout, and moments are dealt from the library with a history file so pages differ; take the first deal (next only if it clashes with the client's logo/photos or fails a check). Never violet: deal again.
+*Source: SKILL.md §4 step 4; layout-v4.md §5*
 
-## Edsiel's rule
+3. **Effects are tech-only.** Shader grounds, scroll scenes, WebGL, loops, counts, CSS grounds, dark pages/heroes exist only on `software`, `tech`, `gaming`. Every other kind is photographs, flat colour, type, real icons, hero entrance, and photo-/type-led moments only.
+*Source: SKILL.md §1, house rule 8*
 
-Frontend team = `design-taste-frontend` + `ui-ux-pro-max` (+ `ux-edge-states`, `ub-mode`).
+4. **The bar is figma.com and x.ai, in words:** hero fills the first screen with nothing of the next section showing; sections hold 0.45–1.25 screens of content with ~a quarter screen between them. (From a study of 327 sites at 1440×900 and 390×844: hero alone on first screen on 78% of company sites.)
+*Source: SKILL.md intro; layout-v4.md §1*
+
+### The nine house rules — win over everything else
+*Source: SKILL.md, "House rules"*
+
+5. **No caption or description under any image, render, or visual.** Licence credits go in one footer line only.
+6. **Every visual renders, never an empty ground,** at 1440, 1024, 768, and 390.
+7. **One section per screen:** hero alone on the first screen; every section exactly 1 or 2 screens tall at 1440×900; no second section heading peeking in. Exception: a live `photo-chapters` section, 3–4 screens.
+8. **Equal left and right content edges.**
+9. **Hover micro-animations:** linked card lifts 2px; photo zooms 1.02–1.03 inside its frame; buttons step on hover and press on click; underlines draw; card loops cycle in 2.5–4 s, repeat and restart on hover. Never strip or override the motion layer. **No tilt, carousels, or timed tabs.** Every hero enters once on load (`data-enter`); every page carries one dealt moment, two on a long page.
+10. **More and better real photographs where they fit;** nicer backgrounds; better heroes, layouts, and fonts.
+11. **Real full-colour icons** (a known product's real icon, never a drawn one); small diagram visuals in cards (a hub with branches; one input, a main processor, three parallel lanes; pulses running along the lines).
+12. **Shader effects and scenes only where the trade has a technical subject** (tech, AI, dev tools, gaming, fintech, hardware), never on a local cafe, bakery, guesthouse, or shop — those get photographs.
+13. **Addresses:** street and district only (no street given: the district); no house number, postcode, or coordinates; no register or VAT numbers; no phone in a real format; contacts on `.example`.
+
+### Layout — the checkable numbers
+*Source: layout-v4.md §2–§5; system.md*
+
+14. **Section heights (content height c at 1440×900, one screen holds 708px, y 120–828):** under 360 → merge into the section above or add its picture; 360–495 → one screen, warning; 495–708 → one screen; 708–1,320 → no height fits (cut/split/`.g2`); 1,320–1,608 → two screens; over 1,608 → split. Fill ≥ 0.55.
+15. **The shell:** `body` renders only `header.nav`, `main`, `footer.closing`, and on a phone `nav.actionbar`. No popups, newsletter modals, chat bubbles, help pills, back-to-top squares, badges, award strips, or modal asks; nothing else is fixed.
+16. **Section box:** `main > section` and `footer.closing` are `height: calc(var(--h,1) * 100svh)`, `--h` is 1 or 2. Never `min-height` alone, never `dvh`, never a third screen, never a height set by script.
+17. **Top-aligned, never vertically centred.** The one h2 is the first content, `--padt` (120px desktop, 96px phone) under the section top. Never a second h2.
+18. **Separation by full-width ground change or space only:** no rules, shadows, or inner hairlines between/inside sections; no inset coloured box standing in for a ground.
+19. **Grid:** one `.wrap` for header, every section, footer: `width: min(100% - 2 * var(--gut), 1280px)` (place: 1200px). 12 columns, 24px gutter. Every block starts on the left line or a column start; every block ending on the right ends on a column end. Card rows (6+6, 4+4+4, 3+3+3+3): first card on the left line, last on the right, all one height, every row full. **Splits: text left, visual right, top-aligned, on every split — never mirrored, never alternating.**
+20. **Hero is exactly the first screen** (`100svh`, `--h: 1`), content ends by y 836 at 1440×900, nothing of the next section shows at 1440, 1280, 1024, 820, 768, or 390. H1 first, top at y 120 (96 phone), at most 3 lines at every width, never smaller than an h2. At most 2 buttons (a place: 1), buttons above the fold at every width.
+21. **Eleven dealt hero layouts** (never chosen by taste, never the same within three pages): `split`, `centred`, `product`, `photo`, `place`, `collage`, `editorial`, `word`, `film`, `statement`, `triptych`. A product page is dealt only `product`, `photo`, `film` heroes. The place hero is printed, never dealt.
+22. **Type scale (1440/390):** h1 72/38, h2 48/30, h3 and quotes 28/24, lead and card titles 20/18, body 16/26, small 14, labels 13/500 sentence case, stat 38/28. Each level ≥1.3× the next from 1024 (1.2× below); nothing under 13px; lines at most 62 characters.
+23. **Type rules:** one family, or a display face plus a text face with fixed jobs; never three; at most four font files. Headlines at `--display-weight`: 400 on product/service/place, 500 on tech; size + tight tracking (−0.5% to −4.5% at 40px+) carry them, never bold-and-big. Text 400 and 500 only. Never 700 or 800. No light weight under 20px. **Banned faces: Inter, Roboto, Open Sans, Lato, Montserrat, Poppins, Space Grotesk, Plus Jakarta Sans, or the system look.**
+24. **Radius:** `<html data-radius>`: `sharp` 4/6/8, `soft` 8/12/20 (default), `round` 10/16/24. `sharp` for fintech and dev tools, `soft` default, `round` for consumer apps, square on a place.
+25. **Buttons:** `.btn.btn--primary` + `.btn.btn--secondary`, 44px high (48 on a place), label 16px, 24px side padding, at most 2 in a `.btn-row`, full width on a phone. Exactly one filled button marks the main action in any view. **Never a slanted, gradient, ghost, or shadowed button, or a third style.**
+
+### Colour — the checkable numbers
+*Source: system.md "Colour", "Type"*
+
+26. **The interface stays 90–95% neutral;** colour comes from photographs, the product, the work, and real logos. One near-black ink, often warm, never `#000`, for text, hairlines (12–15% of it), button borders, glyphs, and the mark.
+27. **One accent at most,** from the client (product, shopfront paint, tiles, a bag label): the primary button (the only filled accent), focus ring, links, state in visuals, small marks, one brand band; under 3% of a screen elsewhere; its label 4.5:1 on it, it 3:1 on the ground.
+28. **Violet/lavender is banned in the page's own design** — accent, ground, gradient, effect colour, or tint. A token whose OKLCH hue falls between ~270° and ~330° is turned to 255 (blue) or 345 (rose), whichever is nearer; a deal that returns violet is dealt again. A real third-party logo keeps its own colours.
+29. **Grounds:** three tokens (`--g-main`, `--g-alt`, `--g-dark`) + one brand band on product/place. Dark pages/heroes are tech-only. The grade (light/evening) is chosen once on load or by click, never by scrolling.
+30. **Contrast:** body text in `--ink` at 7:1 or more; `--muted` (4.5:1+) only for labels, dates, meta, and a heading's grey run-on. Large text (24px+) in a muted half 3:1 minimum. On a place every text is 4.5:1+ and every word on the brand band 7:1. Never 14px paragraphs or 15px grey card text.
+31. **No scrim or gradient over a photograph;** words on a photograph only in the hero and one closing band, on a crop whose calm part is dark and empty at the phone crop too, or on a solid box; never on a place. **Highlight by contrast, never by colour:** no marker highlights or coloured bars behind words; colour inside a word once a page at most, never on a place.
+32. **Palettes are data, dealt by trade.** Each palette in `library/palettes.json` has exact tokens — `bg`, `surface`, `ink`, `muted`, `accent`, `accentInk` — plus a `trades` list and a usage note. Examples: `white-link-blue` ("Sheet and biro": bg `#ffffff`, surface `#f4f4f4`, ink `#111111`, muted `#6b6b6b`, accent `#1a4be0`, trades saas/devtool/fintech/law/clinic/retail); `lunar-grey-bronze` (bg `#111111`, surface `#1c1c1c`, ink `#f2f2f2`, accent `#a08672`, trades hardware/ai/fintech/game).
+33. **Type pairings are data, dealt by kind.** Each pairing in `library/type.json` has display/text/mono families with exact weights, tracking, and scale. Examples: `geist` (Geist/Geist/Geist Mono, tracking −0.035, suits devtools/AI/fintech); `manrope` (Manrope, tracking −0.035, suits fintech/data/AI). Load from Google Fonts with `display=swap`.
+
+### Copy — the checkable rules and the ban lists
+*Source: copy.md; copy-tells.md*
+
+34. **H1 names the category** (and for an unknown brand, the buyer or the place), in 2–8 words; a place: what and where in ≤40 characters. A game: its name and genre. Never a riddle, command, mood, or brand line over a plain sub-line.
+35. **First screen holds one hard fact:** a number, a place, a price, or a date.
+36. **Every heading has a noun that names a thing** (product, part, place, section noun, or digit). One brand line a page at most, never the h1.
+37. **Buttons are a verb + what the visitor gets,** 1–5 words, starting with book/buy/order/pre-order/reserve/try/start/get/download/compare/see/watch/read/find/join/subscribe/sign up/contact/configure/add/send/email/request. **Never "Learn more", "Read more", "Discover", "Explore", "More", or "Click here".**
+38. **Few actions, each with one wording:** at most 2 in the hero (1 on a place), 10 different labels a page at most. Main action names the transaction and reads the same in nav, hero, close, and phone bar, nowhere else. One screen shows it twice at most; a third copy on one screen FAILs.
+39. **Word budgets:** tech (software/gaming/hardware) 60–80 words a screen at 1440, counted outside UI mocks/diagrams/code — over 80 WARNs. Product 47, place 44, service 34 words a screen; a page ~900 words at most, footer aside. Hero sub-line 15–30 words (place: fact ≤80 chars with today's hours). Section headings 1–6 words, ≤2 lines. Card body 1–2 sentences, ≤25 words.
+40. **Banned slop words** (FAIL): delve, tapestry, testament to, realm, embark, beacon, multifaceted, paradigm, myriad, plethora, meticulous, intricate, interplay, garner, boasts (for "has"), elevate, unlock, unleash, empower, harness, supercharge, turbocharge, seamless, effortless, cutting-edge, revolutionary, transformative, holistic, next-level, next-generation, world-class, best-in-class, game-changer, game-changing, state-of-the-art, bespoke, synergy, leverage, reimagine, powerful, robust, nestled, unparalleled, unrivalled. A word that is literal for the trade stays (a climbing harness, bespoke tailoring).
+41. **Banned stock lines:** "In today's fast-paced world", "Unlock the power of", "The future of X is here", "Say goodbye to", "Whether you're A or B", "Join thousands of", "Trusted by teams worldwide", "Imagine a world where", "Ready to transform your X?", "Look no further", "one-stop shop", "X made simple", "at your fingertips", "in just a few clicks", "It's not just a X, it's a Y", "Not only X but also Y", "Here's the thing", "Let that sink in".
+42. **Second-generation tells (caps apply):** stat strip (row of 3–4 figures over one-word labels — each number goes in the sentence it proves); two-fragment headings "X. Y." (cap 1/page); number-pair headings (cap 0–1); contrast frames "not X but Y" and substitutes "rather than / instead of / without the" (cap 2 total); negation runs (cap 1); virtue words about ourselves — honest, calm, quiet, actually, genuinely, truly, simply, thoughtful, carefully, intentional, steady, dependable (ban); polished testimonials (none unless the brief gives them word for word); the default cast (people: Priya, Daniel, Amara Okafor, Marcus, Dana, Aisha, Lena M., Tomas, Nora, Maya, Mara, Theo, Isla, Ines, Jess, Sarah J., Elara; companies: Fieldnote, Kestrel, Halcyon, Brightloop, Acme, Northwind, Lumen, Nimbus, Apex, Zenith, Vertex); the section template (eyebrow + claim heading + short lede + 3–4 cards, every section); "Most popular" on the middle plan; response-time promises ("Within two working days"); proof figures ("3x faster", "10,000+ teams", "98% satisfied").
+43. **Nothing invented:** no invented reviews, ratings, review counts, quotes, testimonials, statistics, customer counts, customer names, portraits, clients, awards, press lines, or products. Only two things may be assumed when the brief lacks them: a coined brand name (searched first) and, on a place, plausible hours and prices (uneven, local currency — 3.60 not 4.00), each marked `data-assumed`. Never a coined name models keep coining (Kestrel, Halcyon, Lumen, Nimbus, Fieldnote).
+44. **No placeholders, no residue:** no square brackets, "lorem ipsum", "your name here", "to be added", TODO, kit sample text, no link to `#` or empty href.
+
+### Real visuals — what is shown
+*Source: SKILL.md §2, §6; system.md*
+
+45. **Place pages lead with photographs: 12–20 on the full page** (8–12 compact; under 8 frames = the 3-screen short page). Product/service pages: the product, people, rooms, work — two or more photographs a screen on a product page. **A different picture each section, never one view twice; every headline promise pictured; no fact twice.**
+46. **Every product page shows the product big, whole** (most of its frame, or on the ground at anchor scale), never mid-size in a grey rounded panel on a grey ground. One object never carries the page: the hero object leads the hero and at most two more sections.
+47. **Software shows its own UI as live HTML** in one `app-frame` (e.g. a code-review tool: a red/green diff with its Accept action), never a generic dashboard or only fragments on panels.
+48. **Stock photographs are never passed off as the client's product, people, or place.** Stand-ins are listed in the report as stand-ins, never shown with another maker's name or logo. A product with no photographs is shown in stand-in photographs of the same kind of thing; a render only when the brief asks for 3D; never a drawing, mood stock, or a set of props.
+49. **One system only:** one button pair, one card style, one radius scale, one link look; two boxes deep at most; one heading scale. Never add a second grid, spacing scale, type scale, radius, button, card, hairline, fade, or link style. Spacing scale 4, 8, 12, 16, 24, 32, 48, 64, 96, 128.
+
+### Motion — the checkable numbers
+*Source: motion.md; SKILL.md §6*
+
+50. **Three layers of motion only, on every page:** (1) hero entrance on load, once, ~1.1 s then the hero stands; (2) one dealt moment in its own section (two on a long page, 8+ sections); (3) the hover/press layer on every link, button, linked card, linked photograph. Nothing else moves.
+51. **Hover/press tokens:** `--m-in` 150ms, `--m-out` 120ms, `--m-press` 90ms, `--m-panel` 200ms, `--m-close` 120ms, `--m-slide` 240ms, `--m-image` 600ms in / 400ms out, `--m-cycle` 3.2s. Curves: one UI ease-out `cubic-bezier(.2,.8,.2,1)`; entrance `cubic-bezier(.22,1,.36,1)`; `--m-ease-io` `cubic-bezier(.65,0,.35,1)` only for travel; linear for loops/drifts. No curve passes its mark: no bounce, no overshoot. Motion moves transform, scale, and opacity only — never width, height, top, left, margin, or padding.
+52. **Hover distances:** card lift 2px; photo zoom 1.02–1.03; arrow 3px; menu drop 6px; button step 1px up (2px on `.btn--xl`), press 1px down + scale .985. Focus: a 2px ring in the action colour, 2px off the control, no transition.
+53. **Card loops (tech only):** one cycle 2.5–4 s (`--m-cycle` 3.2s default), then restarts; seeded on the finished picture, never an empty window; pointer/focus entering the card restarts it from the top. One fragment loop per card group; below the hero, two loops are never on one screen.
+54. **Scrolling moves nothing but the dealt moment.** No card/row/tile ever fades, rises, or staggers in on scroll; no parallax on text; no scroll-jacking, smooth-scroll libraries, scroll-snap, scroll-tinted ground, progress line, or scroll-spy. A moment may pin with `position: sticky` inside its own section only.
+55. **Banned motion:** a card/row/tile that fades in on scroll; fade-in on every section; parallax on text; scroll-jacking; random blinking; a card that tilts, flips, scales, follows the pointer, or glows at the cursor; a magnetic button; a carousel; a self-advancing slider; timed tabs; a rotating notice; a logo marquee; twinkling dots, glitter, flicker, hue cycling, scrambled text; a loop that plays once; a card loop cycle over 4 s; two loops in one panel; a hover slower than its token; an overshooting ease; a delay before a button reacts; an animated focus ring; an animated width/height/margin.
+56. **Reduced motion / no script / phones:** everything rests, nothing stays hidden; every loop, effect, moment, and scene shows its finished frame; numbers show their final text; pause buttons hidden. Anything still moving 5 s after it is seen has one round 32px pause button per panel, 12px in from bottom-right.
+
+### Verification — the gate
+*Source: SKILL.md §4 step 6, §5*
+
+57. **Check in a real browser over HTTP** (never `file://`), at widths 1440, 1024, 820, 768, 390 (layout check also 1440×900, 1024×768, 820×1180, 768×1024, 390×844; gate walks the page at 320 for overflow/collide/tap-size). Fix every FAIL (and every copy-lint WARN, or say why it stays).
+58. **The gate holds the finish until no fixable FAIL is left, three rounds at most.** Last line must be `GATE: PASS` or `GATE: OPEN`. A FAIL judged false is waived with its reason — never fixed by gaming the check.
+59. **Tap targets:** every link/control outside running text ≥44px tall; a FAIL when another target is under 8px away. Nothing past the screen at 320.
+
+### Edsiel's rules (local — not from the source)
+- Frontend team = `design-taste-frontend` + `ui-ux-pro-max` (+ `ux-edge-states`, `ub-mode`).
+- Installed on Edsiel's PC via `npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"`; location `~/.claude/skills/design-taste-frontend` (needed manual copy from `~/.agents/skills/`).
+- Paired with ui-ux-pro-max for the anti-slop check in DevPilotAI UI audits (since 2026-10-31).
+
+### Learn more
+- taste-skill (source): https://github.com/Leonxlnx/taste-skill
+- Skill file: https://raw.githubusercontent.com/Leonxlnx/taste-skill/main/skills/taste-skill/SKILL.md
 
 ## Skill: ui-ux-pro-max
 
-Source: nextlevelbuilder/ui-ux-pro-max-skill — installed on Edsiel's PC via
-`npm install -g ui-ux-pro-max-cli` then `uipro init`.
-(Marketplace route failed; the CLI is a terminal tool invocable via Bash.)
+Distilled from [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT) — SKILL.md + references/quick-reference.md (all 120 UX guidelines) + references/pro-rules.md. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
 
-Includes the family: ui-ux-pro-max, design, design-system, ui-styling, brand,
-banner-design, slides.
+When to use: a full UI/UX audit, a fix plan for an existing UI, or a new page/project design system. **Scope boundary (source): skip for pure backend/API/DB/infra work. The pro-rules tables are native/mobile-app UI only — their touch-target and safe-area numbers do not transfer 1:1 to desktop web.**
 
-## Purpose
+Includes the family: ui-ux-pro-max, design, design-system, ui-styling, brand, banner-design, slides.
 
-Full UI/UX audit and fix planning. First full DevPilotAI audit scored 8.4/10.
+### The priority table — audit categories 1→10, in order
+*Source: SKILL.md, "Rule Categories by Priority". Each row's "Key checks" are pass/fail; its "Anti-patterns" are fails.*
 
-## Discipline
+| # | Category | Impact | Key checks | Anti-patterns |
+|---|---|---|---|---|
+| 1 | Accessibility | CRITICAL | Contrast 4.5:1, alt text, keyboard nav, aria-labels | Removing focus rings; icon-only buttons without labels |
+| 2 | Touch & Interaction | CRITICAL | Min size 44×44px, 8px+ spacing, loading feedback | Hover-only reliance; instant state changes (0ms) |
+| 3 | Performance | HIGH | WebP/AVIF, lazy loading, reserve space (CLS < 0.1) | Layout thrashing; cumulative layout shift |
+| 4 | Style Selection | HIGH | Match product type, consistency, SVG icons (no emoji) | Mixing flat & skeuomorphic randomly; emoji as icons |
+| 5 | Layout & Responsive | HIGH | Mobile-first breakpoints, viewport meta, no horizontal scroll | Horizontal scroll; fixed px container widths; disable zoom |
+| 6 | Typography & Color | MEDIUM | Base 16px, line-height 1.5, semantic color tokens | Text < 12px body; gray-on-gray; raw hex in components |
+| 7 | Animation | MEDIUM | Context-aware timing, motion conveys meaning, spatial continuity | One duration for every transition; animating width/height; no reduced-motion |
+| 8 | Forms & Feedback | MEDIUM | Visible labels, error near field, helper text, progressive disclosure | Placeholder-only label; errors only at top; overwhelm upfront |
+| 9 | Navigation Patterns | HIGH | Predictable back, bottom nav ≤5, deep linking | Overloaded nav; broken back behavior; no deep links |
+| 10 | Charts & Data | LOW | Legends, tooltips, accessible colors | Relying on color alone to convey meaning |
 
-- Systematic UI/UX review: layout, typography, color, spacing, states, accessibility.
-- Produces prioritized fix plans (Edsiel prefers triaged subsets over maximal plans —
-  he rejected the full 15-fix plan and trusted the 3-fix one).
-- Paired with design-taste-frontend for the anti-slop check.
+### The 120 guidelines — rule IDs verbatim, grouped by category
+*Source: references/quick-reference.md. Check each ID against the UI; a failed ID is a finding, named by its ID.*
 
-## Edsiel's rules
+**1. Accessibility (CRITICAL)** — `color-contrast` 4.5:1 normal text, 3:1 large text · `focus-states` visible focus rings 2–4px · `alt-text` descriptive alt for meaningful images · `aria-labels` aria-label for icon-only buttons / accessibilityLabel in native · `icon-context` decorative icons beside visible text hidden from a11y tree; meaningful icons need text alternative; icon controls need accessible name + state · `keyboard-nav` tab order = visual order, full keyboard support · `form-labels` label with `for` · `skip-links` skip to main content · `heading-hierarchy` sequential h1→h6, no level skip · `color-not-only` never convey info by color alone (add icon/text) · `dynamic-type` support system text scaling, no truncation as text grows · `reduced-motion` respect `prefers-reduced-motion` · `voiceover-sr` meaningful accessibilityLabel/Hint, logical reading order · `escape-routes` cancel/back in modals and multi-step flows · `keyboard-shortcuts` preserve system/a11y shortcuts; keyboard alternative for drag-and-drop · `focus-not-obscured` sticky UI/overlays/banners must not hide the focused control (WCAG 2.2 AA) · `focus-not-obscured-enhanced` entire focused component visible (AAA) · `focus-appearance` focus indicator area + 3:1 state contrast (AAA) · `dragging-alternative` every author-controlled drag needs single-pointer + keyboard alternative (AA) · `web-target-size` web pointer targets 24×24 CSS px or documented exception (AA) · `consistent-help` repeated help mechanisms in same relative order (A) · `redundant-entry` reuse already-supplied info unless re-entry essential (A) · `accessible-authentication` allow password managers + paste; non-cognitive auth path (AA) · `auto-rotation-controls` carousels/moving content need pause/stop, stop on focus or reduced motion · `contextual-live-badge-updates` announce changed count/status as one complete contextual phrase without moving focus.
 
+**2. Touch & Interaction (CRITICAL)** — `touch-target-size` min 44×44pt (Apple) / 48×48dp (Material); extend hit area beyond visual bounds · `touch-spacing` min 8px/8dp gap between targets · `hover-vs-tap` click/tap for primary interactions, never hover alone · `loading-buttons` disable button during async ops; show spinner/progress · `error-feedback` clear error near problem · `cursor-pointer` cursor-pointer on clickable elements (web) · `gesture-conflicts` no horizontal swipe on main content; prefer vertical scroll · `tap-delay` `touch-action: manipulation` to cut 300ms delay · `standard-gestures` platform-standard gestures, don't redefine (swipe-back, pinch-zoom) · `system-gestures` don't block system gestures (Control Center, back swipe) · `press-feedback` visual feedback on press (ripple/highlight; MD state layers) · `haptic-feedback` haptic for confirmations/important actions, avoid overuse · `gesture-alternative` never gesture-only; visible controls for critical actions · `safe-area-awareness` primary touch targets away from notch, Dynamic Island, gesture bar, screen edges · `no-precision-required` no pixel-perfect taps on small icons/thin edges · `swipe-clarity` swipe actions show affordance/hint (chevron, label, tutorial) · `drag-threshold` movement threshold before drag starts.
+
+**3. Performance (HIGH)** — `image-optimization` WebP/AVIF, responsive images (srcset/sizes), lazy-load non-critical · `image-dimension` declare width/height or aspect-ratio to prevent layout shift (CLS) · `font-loading` `font-display: swap/optional`, reserve space (no FOIT) · `font-preload` preload only critical fonts · `critical-css` prioritize above-the-fold CSS · `lazy-loading` lazy-load non-hero components (dynamic import / route splitting) · `bundle-splitting` split by route/feature (Suspense / Next.js dynamic) · `third-party-scripts` async/defer; audit and remove unnecessary ones · `reduce-reflows` batch DOM reads then writes · `content-jumping` reserve space for async content (CLS) · `lazy-load-below-fold` `loading="lazy"` for below-fold images/heavy media · `virtualize-lists` virtualize lists with 50+ items · `main-thread-budget` per-frame work under ~16ms for 60fps; heavy tasks off main thread · `progressive-loading` skeleton/shimmer, not long blocking spinners, for >1s operations · `input-latency` input latency under ~100ms · `tap-feedback-speed` visual feedback within 100ms of tap · `debounce-throttle` debounce/throttle scroll/resize/input · `offline-support` offline state messaging + basic fallback · `network-fallback` degraded modes for slow networks (lower-res images, fewer animations).
+
+**4. Style Selection (HIGH)** — `style-match` match style to product type (via `--design-system`) · `consistency` same style across all pages · `no-emoji-icons` SVG icons (Heroicons, Lucide), never emojis · `color-palette-from-product` palette from product/industry (`--domain color`) · `effects-match-style` shadows/blur/radius aligned with chosen style · `platform-adaptive` respect platform idioms (iOS HIG vs Material) · `state-clarity` hover/pressed/disabled states visually distinct, on-style · `elevation-consistent` one consistent elevation/shadow scale; no random shadow values · `dark-mode-pairing` design light/dark variants together · `icon-style-consistent` one icon set/visual language (stroke width, corner radius) · `system-controls` prefer native/system controls; customize only for branding · `blur-purpose` blur = background dismissal (modals/sheets), not decoration · `primary-action` one primary CTA per screen; secondary actions subordinate.
+
+**5. Layout & Responsive (HIGH)** — `viewport-meta` `width=device-width, initial-scale=1`, never disable zoom · `mobile-first` design mobile-first, scale up · `breakpoint-consistency` systematic breakpoints (e.g. 375 / 768 / 1024 / 1440) · `readable-font-size` min 16px body on mobile (avoids iOS auto-zoom) · `line-length-control` mobile 35–60 chars/line; desktop 60–75 · `horizontal-scroll` no horizontal scroll on mobile · `spacing-scale` 4pt/8dp incremental spacing system · `touch-density` component spacing comfortable for touch (not cramped, no mis-taps) · `container-width` consistent desktop max-width (max-w-6xl / 7xl) · `z-index-management` defined z-index scale (e.g. 0 / 10 / 20 / 40 / 100 / 1000) · `fixed-element-offset` fixed navbar/bottom bar reserves safe padding for content · `scroll-behavior` no nested scroll regions interfering with main scroll · `viewport-units` prefer `min-h-dvh` over `100vh` on mobile · `orientation-support` layout readable/operable in landscape · `content-priority` core content first on mobile; fold/hide secondary · `visual-hierarchy` hierarchy via size, spacing, contrast — not color alone · `compact-label-overflow` choose badge/chip by semantics; disclose unavoidable truncation to pointer + keyboard users · `chip-collection-reflow` wrap collection before shrinking labels; `+n` overflow is an operable disclosure, not hidden values.
+
+**6. Typography & Color (MEDIUM)** — `line-height` 1.5–1.75 body · `line-length` 65–75 chars/line · `font-pairing` match heading/body font personalities · `font-scale` consistent type scale (e.g. 12 14 16 18 24 32) · `contrast-readability` darker text on light backgrounds (e.g. slate-900 on white) · `text-styles-system` platform type system: iOS 11 Dynamic Type styles / Material 5 type roles · `weight-hierarchy` bold headings 600–700, regular body 400, medium labels 500 · `color-semantic` semantic color tokens (primary, secondary, error, surface, on-surface), never raw hex in components · `color-dark-mode` dark mode uses desaturated/lighter tonal variants, not inverted colors; test contrast separately · `color-accessible-pairs` fg/bg pairs 4.5:1 (AA) or 7:1 (AAA), verified with tools · `color-not-decorative-only` functional color (error red, success green) must include icon/text · `truncation-strategy` prefer wrapping over truncation; ellipsis + tooltip/expand when truncating · `letter-spacing` default per platform; no tight tracking on body · `number-tabular` tabular/monospaced figures for data columns, prices, timers · `whitespace-balance` whitespace groups related items, separates sections · `heading-line-balance` balanced wrapping on short headings; never force final words together with blanket nonbreaking spaces · `long-token-wrapping` URLs/IDs/user content reflow with `overflow-wrap: anywhere` + shrinkable flex/grid text child; never `word-break: break-all` on prose.
+
+**7. Animation (MEDIUM)** — `duration-timing` shared motion tokens chosen by distance/complexity/platform/context; test responsiveness, never treat one range as universal · `transform-performance` transform/opacity only; never animate width/height/top/left · `loading-states` feedback matched to expected wait; no flashing indicators for near-instant work, no unexplained long waits · `excessive-motion` animate 1–2 key elements per view max · `easing` deceleration arriving, acceleration leaving, linear only for constant-rate progress/rotation · `motion-meaning` every animation expresses cause-effect, never purely decorative · `state-transition` state changes animate smoothly, never snap · `continuity` screen transitions keep spatial continuity (shared element, directional slide) · `parallax-subtle` parallax sparingly; respect reduced-motion · `spring-physics` prefer spring/physics curves over linear/cubic-bezier · `exit-faster-than-enter` exit ~60–70% of enter duration · `stagger-sequence` stagger list/grid entrance 30–50ms per item · `shared-element-transition` shared-element/hero transitions between screens · `interruptible` user tap/gesture cancels in-progress animation immediately · `no-blocking-animation` never block input during animation · `fade-crossfade` crossfade for content replacement in same container · `scale-feedback` subtle scale 0.95–1.05 on press for tappable cards/buttons, restore on release · `gesture-feedback` drag/swipe/pinch give real-time visual response tracking the finger · `hierarchy-motion` enter from below = deeper, exit upward = back · `motion-consistency` unify duration/easing tokens globally · `opacity-threshold` fading elements must not linger below opacity 0.2 · `modal-motion` modals/sheets animate from trigger source (scale+fade or slide-in) · `navigation-direction` forward = left/up, backward = right/down, consistent · `layout-shift-avoid` animations must not cause reflow/CLS; transform for position changes · `cancellable-state-transitions` rapid state changes cancel/replace prior micro-interactions safely, set final state explicitly, never depend on animation-end event for correctness.
+
+**8. Forms & Feedback (MEDIUM)** — `input-labels` visible label per input, never placeholder-only · `error-placement` specific error below the field, connected with `aria-describedby` · `submit-feedback` loading then success/error state on submit · `ime-composition-enter` custom web Enter shortcuts: cancel handled Enter default before isComposing/229 guard; keep IME confirmation separate from submission · `required-indicators` mark required fields (e.g. asterisk) · `empty-states` helpful message + action when no content · `toast-dismiss` auto-dismiss toasts in 3–5s · `confirmation-dialogs` confirm before destructive actions · `input-helper-text` persistent helper text below complex inputs, not just placeholder · `disabled-states` disabled = reduced opacity 0.38–0.5 + cursor change + semantic attribute · `progressive-disclosure` reveal complex options progressively · `inline-validation` validate on blur, not keystroke; error only after user finishes input · `input-type-keyboard` semantic input types (email, tel, number) for correct mobile keyboard · `password-toggle` show/hide toggle for password fields · `autofill-support` autocomplete/textContentType attributes · `undo-support` undo for destructive/bulk actions (e.g. "Undo delete" toast) · `success-feedback` brief visual confirmation (checkmark, toast, color flash) · `error-recovery` error messages include a recovery path (retry, edit, help link) · `multi-step-progress` step indicator/progress bar; allow back navigation · `form-autosave` long forms auto-save drafts · `sheet-dismiss-confirm` confirm before dismissing sheet/modal with unsaved changes · `error-clarity` errors state cause + how to fix, never just "Invalid input" · `field-grouping` group related fields (fieldset/legend or visual grouping) · `read-only-distinction` read-only visually + semantically different from disabled · `focus-management` after failed submit with multiple errors, focus the error summary; without a summary, focus first invalid field · `error-summary` focusable summary at top after failed submit, each item linked to its field, inline errors retained · `touch-friendly-input` mobile input height ≥44px · `destructive-emphasis` destructive actions use semantic danger color (red), visually separated from primary actions · `toast-accessibility` toasts must not steal focus; `aria-live="polite"` · `aria-live-errors` form errors use aria-live region or `role="alert"` · `contrast-feedback` error/success colors meet 4.5:1 · `timeout-feedback` request timeout shows clear feedback with retry option.
+
+**9. Navigation Patterns (HIGH)** — `bottom-nav-limit` bottom nav max 5 items, labels with icons · `drawer-usage` drawer/sidebar for secondary nav, not primary actions · `back-behavior` back predictable + consistent; preserve scroll/state · `deep-linking` all key screens reachable via deep link/URL · `tab-bar-ios` iOS: bottom Tab Bar for top-level nav · `top-app-bar-android` Android: Top App Bar with nav icon for primary structure · `nav-label-icon` nav items have icon AND text label; icon-only harms discoverability · `nav-state-active` current location visually highlighted (color, weight, indicator) · `nav-hierarchy` primary (tabs/bottom bar) vs secondary (drawer/settings) clearly separated · `modal-escape` modals/sheets offer clear close/dismiss; swipe-down on mobile · `search-accessible` search easily reachable (top bar or tab); recent/suggested queries · `breadcrumb-web` breadcrumbs for 3+ level deep hierarchies · `state-preservation` back restores scroll position, filter state, input · `gesture-nav-support` support system gesture nav (iOS swipe-back, Android predictive back) without conflict · `tab-badge` badges sparingly for unread/pending; clear after visit · `overflow-menu` overflow/more menu instead of cramming · `bottom-nav-top-level` bottom nav for top-level screens only, never nested sub-nav · `adaptive-navigation` ≥1024px prefer sidebar; small screens bottom/top nav · `back-stack-integrity` never silently reset nav stack or jump to home · `navigation-consistency` nav placement same across all pages · `avoid-mixed-patterns` don't mix Tab + Sidebar + Bottom Nav at same hierarchy level · `modal-vs-navigation` modals must not be used for primary nav flows · `focus-on-route-change` after page transition, move focus to main content region · `persistent-nav` core nav reachable from deep pages · `destructive-nav-separation` dangerous actions (delete account, logout) visually + spatially separated from normal nav · `empty-nav-state` unavailable nav destination explains why instead of silently hiding.
+
+**10. Charts & Data (LOW)** — `chart-type` match chart to data (trend→line, comparison→bar, proportion→pie/donut) · `color-guidance` accessible palettes; avoid red/green-only pairs · `data-table` table alternative for accessibility; charts alone aren't screen-reader friendly · `pattern-texture` supplement color with patterns/textures/shapes · `legend-visible` always show legend, near chart, not below a scroll fold · `tooltip-on-interact` tooltips/data labels on hover (web) or tap (mobile) with exact values · `axis-labels` label axes with units + readable scale; no truncated/rotated labels on mobile · `responsive-chart` reflow/simplify on small screens · `empty-data-state` meaningful empty state ("No data yet" + guidance), never blank chart · `loading-chart` skeleton/shimmer while loading, never empty axis frame · `animation-optional` chart entrance animations respect prefers-reduced-motion; data readable immediately · `large-dataset` 1000+ points: aggregate/sample + drill-down · `number-formatting` locale-aware numbers/dates/currencies · `touch-target-chart` interactive chart elements ≥44pt tap area or expand on touch · `no-pie-overuse` no pie/donut for >5 categories; use bar · `contrast-data` data lines/bars vs background ≥3:1; data text ≥4.5:1 · `legend-interactive` legends clickable to toggle series · `direct-labeling` small datasets: label values directly on chart · `tooltip-keyboard` tooltip content keyboard-reachable, never hover-only · `sortable-table` data tables support sorting with `aria-sort` · `axis-readability` axis ticks not cramped; auto-skip on small screens · `data-density` limit info density per chart; split if needed · `trend-emphasis` emphasize trends over decoration; no heavy gradients/shadows obscuring data · `gridline-subtle` gridlines low-contrast (e.g. gray-200) · `focusable-elements` interactive chart elements keyboard-navigable · `screen-reader-summary` text summary/aria-label of the chart's key insight · `error-state-chart` load failure shows error + retry, never broken/empty chart · `export-option` CSV/image export for data-heavy products · `drill-down-consistency` drill-down keeps clear back-path + breadcrumb · `time-scale-clarity` time series label granularity (day/week/month) + allow switching.
+
+### The workflow — how the skill is used
+*Source: SKILL.md*
+
+- **Query contract:** one dominant intent per query, 2–5 meaningful terms + one constraint (product/platform/interaction). Verify returned domain/category, top result identity, and fit before applying. Retry once with narrower rewrite or explicit domain/stack; if still empty, say no verified match was found and label general guidance as fallback. Never present a 0-result search as if it returned data. Never persist unverified output.
+- **Step 1 — Analyze:** extract product type (SaaS, e-commerce, portfolio, dashboard, entertainment, tool, productivity, hybrid), audience/context, style keywords, stack (detect from `package.json`, `pubspec.yaml`, Xcode/`Package.swift`, `composer.json`, React Native markers). **Never assume a stack.**
+- **Step 2 — Design system (REQUIRED for new pages/projects):** `--design-system` aggregates product/style/color/landing/typography + `ui-reasoning.csv` rules; returns pattern, style, colors, typography, effects, anti-patterns.
+- **Step 2b — Persist (Master + Overrides):** `--persist` + always `--output-dir <project-root>`; writes `design-system/<slug>/MASTER.md` (source of truth) + `pages/<page>.md` overrides. If MASTER.md exists, `--persist` skips unless `--force` — and `--force` needs explicit user authorization. Retrieval: read MASTER.md first, then page override if it exists (override wins).
+- **Step 2c — Design dials (1–10):** `--variance` (1–3 minimal/centered, 4–7 balanced, 8–10 bold/asymmetric), `--motion` (1–3 subtle micro-interactions, 4–7 standard, 8–10 complex choreography), `--density` (1–3 spacious 24–96px spacing, 4–7 standard 16–64px, 8–10 dense/dashboard 8–32px).
+- **Step 3 — Supplement:** `--domain` per concern (`product`, `style`, `color`, `typography`, `google-fonts`, `chart`, `ux`, `landing`, `icons`, `gsap`, `react`, `web`). For accessibility, search one observable outcome at a time with explicit outcome terms (e.g. `"error summary validation" --domain ux`); never accept a generic accessibility result for a specific interaction/WCAG criterion. For text-layout bugs, search the semantic UX outcome first, then the stack. RTL: add `--rtl` to style/product searches; `full` = safe, `partial` = mirror + per-component checks, `caveats` = style encodes reading direction, say so and propose a mirrorable alternative.
+- **Step 4 — Stacks (22):** react, nextjs, vue, svelte, astro, nuxtjs, nuxt-ui, angular, laravel, swiftui, react-native, flutter, jetpack-compose, html-tailwind, shadcn, threejs, javafx, wpf, winui, avalonia, uno, uwp.
+- **Before delivering app UI:** read `references/pro-rules.md` and run its canonical Pre-Delivery Checklist (scoped to native/mobile app UI).
+
+### Pro-rules + pre-delivery checklist (native/mobile app UI)
+*Source: references/pro-rules.md. The checklist is canonical — run it before delivering app UI.*
+
+Icons & visual: no emoji as structural icons (vector/Lucide only) · vector-only assets (SVG, no raster PNG icons) · icon semantics from use, not glyph · press states via color/opacity/elevation, never layout-shifting transforms · official brand assets, correct proportions/clear space · icon sizes as tokens (e.g. icon-md = 24pt) · consistent stroke width per layer (1.5px or 2px) · one icon style (filled vs outline) per hierarchy level · touch target ≥44pt iOS / 48dp Android, expand hit area · icons aligned to text baseline, consistent padding · meaningful icons/control boundaries ≥3:1 contrast.
+Interaction (app): tap feedback within 80–150ms · shared animation tokens, never one duration everywhere · screen-reader focus order = visual order · disabled = reduced emphasis + no tap action, never looks-tappable-but-dead · one primary gesture per region, no nested tap/drag conflicts · prefer native controls (`Button`, `Pressable`) with accessibility roles.
+Light/dark: body text ≥4.5:1 in both themes (3:1 only for large text/non-text) · dividers/borders visible in both themes · state contrast parity across themes · semantic color tokens per theme, never hardcoded per-screen hex · scrim measured against real background.
+Layout & spacing: respect safe areas (notch, status bar, gesture area) · system bar clearance · consistent content width per device class · 4/8dp spacing rhythm · vertical rhythm tiers (e.g. 16/24/32/48) · adaptive gutters by breakpoint · bottom/top insets so lists aren't hidden behind fixed bars.
+Pre-delivery checklist: process (relevant searches only; re-read quick-reference §1–§3; test 375px + landscape; reduced-motion + largest Dynamic Type; dark-mode contrast independently; touch targets ≥44pt; no content behind safe areas) + visual quality + interaction + light/dark + layout + accessibility checkboxes — full list in pro-rules.md L137–236 (31 checkboxes).
+
+### Edsiel's rules (local — not from the source)
 - Frontend team = `design-taste-frontend` + `ui-ux-pro-max` (+ `ux-edge-states`, `ub-mode`).
 - "Improve" means polish existing visuals — never add features (unless he asks).
 - Picture-first: show a mockup before asking approval on visual changes.
-- His triage principle: "ayaw ayoha ang dili guba" — present what's real, what's
-  polish, what's not worth fixing; let him pick.
+- Triage principle: "ayaw ayoha ang dili guba" — present what's real, what's polish, what's not worth fixing; let him pick (he rejected a full 15-fix plan and trusted the 3-fix subset).
+- First full DevPilotAI audit scored 8.4/10 (history, not a source rule).
+
+### Learn more
+- ui-ux-pro-max skill (source): https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+- Skill file: https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude/skills/ui-ux-pro-max/SKILL.md
+- Quick reference (120 guidelines): https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude/skills/ui-ux-pro-max/references/quick-reference.md
+- Pro rules + checklist: https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude/skills/ui-ux-pro-max/references/pro-rules.md
 
 ## Skill: vengeance-ui
 
