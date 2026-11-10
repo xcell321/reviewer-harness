@@ -22,6 +22,7 @@ Use everyday comparisons the user already knows:
 - A database is like a filing cabinet — organized drawers, one place per record.
 - A migration is like moving house with a checklist — every item listed, nothing left behind.
 - A cache is like a sticky note — fast to read, but it can go stale, so check the source when it matters.
+- A session/refresh token is like a spare house key the app keeps for you — it lets you back in without knocking (no password again); if it's stolen, change the locks (revoke it) and get a new one.
 
 ### Quick glossary (English term → simple Bisaya)
 - bug = sayop sa code; deploy = i-live ang app; database = tipiganan sa data; API = paagi nga mag-storya ang duha ka app; cache = temporary nga kopya para paspas; migration = pagbalhin/pag-update sa database structure; test = pagsulay kung mo-gana ba gyud.
