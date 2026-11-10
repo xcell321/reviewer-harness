@@ -4,7 +4,7 @@
 // Commands: status | sync | init | validate | memory | skills | agents | commands | global
 
 import { parseArgs } from "node:util";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { loadConfig } from "../lib/config.js";
@@ -17,13 +17,27 @@ import { listBundledSkills, addSkill, removeSkill, loadBundledSkills, skillComma
 import { listBundledAgents, addAgent } from "../lib/agents.js";
 import { listBundledCommands, addCommand } from "../lib/commands.js";
 
-const { values, positionals } = parseArgs({
-  allowPositionals: true,
-  options: {
-    "dry-run": { type: "boolean", default: false },
-    target: { type: "string", default: process.cwd() },
-  },
-});
+// Parse CLI flags. parseArgs throws for unknown options (--help, --version,
+// or a typo like --targt) — catch it here so the user gets a clean error +
+// usage hint instead of a raw Node stack (the throw happens at module load,
+// outside main()'s catch).
+let values;
+let positionals;
+try {
+  ({ values, positionals } = parseArgs({
+    allowPositionals: true,
+    options: {
+      "dry-run": { type: "boolean", default: false },
+      target: { type: "string", default: process.cwd() },
+      help: { type: "boolean", default: false },
+      version: { type: "boolean", default: false },
+    },
+  }));
+} catch (err) {
+  console.error(`Error: ${err.message}`);
+  console.error(`Run "reviewer-harness --help" for usage.`);
+  process.exit(1);
+}
 const [command, sub, arg] = positionals;
 const targetDir = values.target;
 const dryRun = values["dry-run"];
@@ -32,6 +46,8 @@ function help() {
   console.log(`reviewer-harness — your own AI harness
 
 Usage (run inside your project):
+  reviewer-harness --help                   Show this help
+  reviewer-harness --version                Show the version
   reviewer-harness init                     Create harness.config.json (one-time setup)
   reviewer-harness validate                 Check the config: quality + secret scanning
   reviewer-harness sync [--dry-run]         Sync the rules to every runtime (--dry-run = preview only)
@@ -53,6 +69,11 @@ Usage (run inside your project):
 
 Every command accepts --target <dir> (default: the current directory).
 `);
+}
+
+function version() {
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
+  console.log(`reviewer-harness ${pkg.version}`);
 }
 
 function cmdStatus() {
@@ -259,6 +280,8 @@ function cmdGlobal() {
 }
 
 async function main() {
+  if (values.help) { help(); return; }
+  if (values.version) { version(); return; }
   if (!command || command === "status") cmdStatus();
   else if (command === "sync") cmdSync();
   else if (command === "init") cmdInit();
