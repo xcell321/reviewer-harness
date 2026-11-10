@@ -35,7 +35,13 @@
     "frontend-performance",
     "system-design",
     "nodejs-quality",
-    "audit-team"
+    "audit-team",
+    "ub-mode",
+    "design-taste-frontend",
+    "ui-ux-pro-max",
+    "vengeance-ui",
+    "brainstorming",
+    "writing-plans"
   ],
   "version": "1.13.0"
 }
