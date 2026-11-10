@@ -1,6 +1,6 @@
 ---
 name: frontend-performance
-description: Frontend performance rules distilled from Front-End Checklist (thedaviddias/Front-End-Checklist) — GPU-composited animations, layout-thrashing prevention, resource hints, and performance budgets. Makes laggy sites smooth without breaking design.
+description: Frontend performance rules distilled from Front-End Checklist (thedaviddias/Front-End-Checklist) — GPU-composited animations, layout-thrashing prevention, resource hints, performance budgets, script loading, lazy loading, and image dimensions. Makes laggy sites smooth without breaking design.
 ---
 
 ## Skill: frontend-performance
@@ -85,12 +85,84 @@ Without automated enforcement, performance degrades gradually — each PR adds a
 - Measure with Lighthouse (GoogleChrome/lighthouse) — track LCP ≤ 2.5s, CLS ≤ 0.1, INP ≤ 200ms.
 - Test animations on a real mid-range device, not just the dev machine. Target 95th-percentile frame time < 16.6ms.
 
+### 5. Load scripts with defer, async, or type=module — never render-blocking scripts
+Source: [defer-async](https://frontendchecklist.io/rules/html/defer-async) (priority: high)
+
+A plain `<script>` in the head blocks HTML parsing until it downloads and runs — the browser cannot continue building the DOM. `defer` downloads in parallel and runs after parsing, in order. `async` downloads in parallel and runs as soon as it arrives (order not guaranteed — only for independent scripts). `type="module"` defers by default.
+
+```html
+<!-- ❌ Bad: blocks parsing -->
+<script src="/app.js"></script>
+
+<!-- ✅ Good: parses while downloading, runs after -->
+<script src="/app.js" defer></script>
+<script src="/analytics.js" async></script>
+<script type="module" src="/main.js"></script>
+```
+
+### 6. Lazy-load offscreen content — never lazy-load the hero
+Source: [lazy-loading](https://frontendchecklist.io/rules/performance/lazy-loading) (priority: high), [lazy-above-fold](https://frontendchecklist.io/rules/performance/lazy-above-fold) (priority: medium), [offscreen-lazy](https://frontendchecklist.io/rules/images/offscreen-lazy) (priority: high)
+
+Images and heavy resources below the fold must not download on initial load — they compete with the LCP candidate for bandwidth. But lazy-loading the hero image delays LCP instead of helping it.
+
+```html
+<!-- ❌ Bad: hero image lazy-loaded — LCP waits for the scroll observer -->
+<img src="/hero.webp" loading="lazy" alt="Hero">
+
+<!-- ✅ Good: hero loads eagerly, below-fold images lazy -->
+<img src="/hero.webp" fetchpriority="high" alt="Hero">
+<img src="/gallery-3.webp" loading="lazy" alt="Gallery photo 3">
+```
+
+- Below the fold: `loading="lazy"` on images and heavy media. Above the fold: eager load, and use `fetchpriority="high"` on the LCP candidate (see rule 3 — preload only the LCP candidate and one critical font).
+- Lazy-load non-hero components too (dynamic import / route splitting) — same principle, applied to code.
+
+### 7. Set explicit width and height on images — and serve them at display size
+Source: [dimensions](https://frontendchecklist.io/rules/images/dimensions) (priority: high), [responsive-size](https://frontendchecklist.io/rules/images/responsive-size) (priority: high)
+
+Without dimensions, the browser cannot reserve space before the image loads — content jumps when it arrives (CLS). And serving a 2000px image into a 400px container wastes bandwidth and hurts LCP.
+
+```html
+<!-- ❌ Bad: no dimensions — layout shifts when the image loads -->
+<img src="/photo.webp" alt="Photo">
+
+<!-- ✅ Good: space reserved, correct size served -->
+<img src="/photo-800.webp" srcset="/photo-400.webp 400w, /photo-800.webp 800w"
+     sizes="(max-width: 600px) 400px, 800px" width="800" height="600" alt="Photo">
+```
+
+- Every `<img>` gets explicit `width` and `height` (or an `aspect-ratio` in CSS) so the browser reserves space.
+- Serve responsive sizes (`srcset`/`sizes`); never serve an image significantly larger than its display dimensions.
+
+### 8. Load non-critical code on user interaction
+Source: [import-on-interaction](https://frontendchecklist.io/rules/performance/import-on-interaction) (priority: high)
+
+JavaScript modules, widgets, and third-party code that the user may never touch should not load on initial page load — defer them until the user signals intent (click, focus, hover).
+
+```javascript
+// ❌ Bad: chat widget + heavy editor load on every page view
+import { ChatWidget } from './chat.js';
+import { Editor } from './editor.js';
+
+// ✅ Good: load on first intent
+document.querySelector('#chat-button').addEventListener('click', async () => {
+  const { ChatWidget } = await import('./chat.js');
+  new ChatWidget().open();
+}, { once: true });
+```
+
+- Third-party scripts: `async`/`defer`, and audit regularly — remove the ones nobody uses (see rule 3 for the hint mechanics; this rule is about *when* code loads at all).
+
 ### When to apply
 
 - A page feels laggy or janky → check rule 1 first (are animations using transform/opacity?)
 - Animations stutter during JS execution → check rule 2 (layout thrashing? rAF?)
 - Slow initial load / poor LCP → check rule 3 (resource hints, preload LCP image)
 - Performance degrading over time → check rule 4 (budgets in CI)
+- Scripts block rendering → check rule 5 (defer/async/module?)
+- Below-fold images compete with the hero → check rule 6 (lazy offscreen, eager hero)
+- Layout jumps as images load → check rule 7 (width/height + display size?)
+- Heavy widgets load before anyone uses them → check rule 8 (load on interaction?)
 
 ### Verification
 

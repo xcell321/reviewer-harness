@@ -1,6 +1,6 @@
 ---
 name: nodejs-quality
-description: 59 Node.js quality rules distilled from nodebestpractices (105k stars) — error handling, project structure, code style, testing, production, Node-specific security, and Docker. Everything backend-performance, devops-basics, system-design, api-security, and owasp-top10 already cover is left out.
+description: 62 Node.js quality rules distilled from nodebestpractices (105k stars) — error handling, project structure, code style, testing, production, Node-specific security, and Docker. Everything backend-performance, devops-basics, system-design, api-security, and owasp-top10 already cover is left out.
 ---
 
 ## Skill: nodejs-quality
@@ -193,6 +193,18 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 59. **Lint the Dockerfile** (e.g. hadolint). A linter catches root-as-production-user, unknown-source base images, and other best-practice violations before they ship.
 *Source: goldbergyoni/nodebestpractices — `sections/docker/lint-dockerfile.md` (§8.15)*
 
+### Gaps the test found (added 2026-11-10 — the effectiveness test caught real code these rules did not cover)
+
+60. **Always send a response — never leave a request hanging.** Every code path, success AND error, must end the HTTP response. A handler that returns without responding leaves the client waiting until it times out — from the user's side the app looks dead, and no error is ever logged. The centralized error handler (rule 3) exists precisely so every failure still produces a response.
+*Source: goldbergyoni/nodebestpractices — `sections/errorhandling/centralizedhandling.md` (§2.4) (the handler "will send a response") — the always-respond discipline itself is general practice, grounded in that rule*
+*General practice: set server and request timeouts (e.g. `server.timeout`, per-route timeouts) so a hung handler fails loudly with a 503 instead of hanging forever — the repo has no timeout rule of its own.*
+
+61. **Keep functions small — one job per function.** A function you cannot describe in one sentence is too big: split it until each piece does one thing. Giant functions hide bugs, cannot be unit-tested in isolation, and make every change risky.
+*Source: NOT in nodebestpractices — labeled general practice. Cross-reference: `ub-mode` (CRAP < 10 per function, "one decision lives in one place").*
+
+62. **No magic numbers — name every constant.** A bare `86400000` or `3` in code means nothing to the next reader and breaks silently when the value must change in one place but not another. Give it a named constant (`const MS_PER_DAY = 86_400_000`) at the top of its scope — the same discipline as rule 19's `MS_PER_DAY` example.
+*Source: goldbergyoni/nodebestpractices — `sections/codestylepractices/eslint_prettier.md` (§3.1) (run ESLint; enable the `no-magic-numbers` rule) — the named-constants discipline itself is general practice.*
+
 ### Also apply (general practice — NOT in the repo, labeled honestly)
 - **CI/CD:** the repo has no CI section (its `citools.md` exists only in translations; `bumpversion.md` is an empty stub — "Title here", "Text", "code here"). Automate typecheck → lint → test → build on every push; red build blocks the merge. See `devops-basics` ("Also apply") for the same guidance.
 - **Rate limiting:** lives in `api-security` rule 8 (repo §6.2) — not re-distilled here.
@@ -210,6 +222,7 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 - [ ] Deps locked (`npm ci`); Node LTS pinned; `NODE_ENV=production`; zero-downtime deploys
 - [ ] Logs to stdout only; no `eval`/dynamic `require()`; `node:` protocol on built-ins
 - [ ] Multi-stage Docker build; `.dockerignore` set; image scanned and linted; no `latest` tag
+- [ ] Every code path sends a response (no hung requests); functions do one job; no magic numbers (rules 60–62)
 
 ### Learn more (official sources)
 - Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices

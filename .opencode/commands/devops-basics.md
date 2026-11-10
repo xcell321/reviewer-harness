@@ -1,5 +1,5 @@
 ---
-description: 10 DevOps rules distilled from nodebestpractices (105k stars) — Docker images, graceful shutdown, health checks, smart logging, and memory guards. Ship reliably instead of deploying by hand and hoping.
+description: 12 DevOps rules distilled from nodebestpractices (105k stars) — Docker images, graceful shutdown, health checks, smart logging, and memory guards. Ship reliably instead of deploying by hand and hoping.
 ---
 
 ## Skill: devops-basics
@@ -41,6 +41,12 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 
 10. **Monitor the four golden signals; save APM for scale.** Track error rate, latency, throughput, and saturation — plus Node specifics (process RAM, errors per minute, restarts). Full APM suites trace transactions end-to-end but carry a price tag: justified for large complex systems, overkill for a small app where the four signals plus good logs suffice.
 *Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`, `sections/production/apmproducts.md`*
+**Checkable criteria (general practice — thresholds are starting points, tune per product):** error rate — alert if 5xx > 1% of requests over 5 min; latency — p95 < 500ms on key routes; throughput — requests/min tracked, alert on a sudden drop vs the same hour last week; saturation — CPU or memory > 80% sustained 10 min. If a signal has no number and no alert, it isn't monitored.
+
+11. **Pin the base image — never `FROM x:latest`.** `latest` is a moving pointer: the same Dockerfile builds a different image tomorrow, and a breaking upstream change ships silently. Pin a specific version (`FROM node:20.11.0-alpine`) — or a digest (`FROM node:20.11.0-alpine@sha256:…`) for production — and bump it intentionally after testing.
+*Source: Docker best practices (docs.docker.com/build/building/best-practices); nodebestpractices examples pin versions (`FROM node:14.8.0-alpine`, `sections/docker/install-for-production.md`).*
+
+12. **Cache dependencies in CI — don't reinstall the world on every push (general practice).** Cache `node_modules` keyed on the lockfile and Docker layers (BuildKit cache) so a green build takes minutes, not a full reinstall. A cache miss must still produce a correct build — never depend on the cache for correctness. (Note: nodebestpractices has no CI-caching rule — its `sections/docker/clean-cache.md` is about removing the cache from images, the opposite direction.)
 
 ### Also apply (general practice, beyond these repos)
 - **Automate build + test on every push (CI)** — red build blocks the merge; nobody merges without green checks.
@@ -57,6 +63,8 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 - [ ] Logs are JSON with timestamps and context; no secrets logged
 - [ ] Memory is capped for the machine size; leak-hunting path is known
 - [ ] Four golden signals are monitored with alerts on user-facing symptoms
+- [ ] Base image pinned to a specific version/digest, never `latest`
+- [ ] CI caches dependencies (lockfile-keyed) and Docker layers; a cache miss still builds correctly
 
 ### Learn more (official sources)
 - Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
