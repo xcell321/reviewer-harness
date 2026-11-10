@@ -44,7 +44,8 @@ npx shadcn@latest add @vengeanceui/<component-name>
 
 - `<component-name>` is the **registry filename stem (`componentName`)**, NOT the catalog slug — they usually match, but not always: Animated Button's catalog slug is `my-animated-button` while its registry file is `animated-button.json` (source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `{ name: "Animated Button", slug: "my-animated-button", componentName: "animated-button" }`). If an install 404s, check the filename in `public/r/` first.
 - pnpm/bun/yarn: swap `npx` for `pnpm dlx` / `bunx` / `yarn dlx` (same `registry.ts`).
-- Prerequisite: a shadcn/ui project (Next.js + Tailwind). The CLI drops the `.tsx` file into your components folder.
+- Prerequisite: a shadcn/ui project — Next.js + Tailwind, or Vite + React + Tailwind (verified in re-test 3: the registry workflow runs identically on Vite). The CLI drops the `.tsx` file into your components folder.
+- Strict Vite templates: the registry files as shipped fail `tsc` under `verbatimModuleSyntax` — two one-line fixups: import `MotionProps` as a type-only import, and remove the unused `useState` import in `aurora-hero`. (Verified in re-test 2/3; §1 copy-paste ownership covers editing the copied file.)
 
 ### 3. Pick by family, not by scrolling
 Source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `COMPONENT_CATEGORIES` (79 components, 9 families; counts verified against live main 2026-11-10)
@@ -125,7 +126,7 @@ Source: [LICENSE](https://github.com/Ashutoshx7/VengeanceUI/blob/main/LICENSE) �
 ### 10. Stack prerequisite — React/Next.js home required
 Source: [package.json](https://github.com/Ashutoshx7/VengeanceUI/blob/main/package.json) — React 19, Next.js 16, Tailwind CSS 4, Framer Motion 13
 
-- Vengeance components live in React/Next.js + Tailwind 4 + Framer Motion. If the target project is plain HTML/CSS/JS (like a static portfolio `index.html`), the components don't drop in directly — either port the effect by hand with GSAP/CSS, or build that section in a React home.
+- Vengeance components live in React (Next.js or Vite) + Tailwind 4 + Framer Motion. If the target project is plain HTML/CSS/JS (like a static portfolio `index.html`), the components don't drop in directly — either port the effect by hand with GSAP/CSS, or build that section in a React home.
 - Before recommending a component, check the project's stack. Recommending `aurora-hero` for a vanilla HTML page without flagging the React requirement is a miss.
 - For Edsiel's React projects (DevPilotAI web app, Next.js work), the components apply directly.
 

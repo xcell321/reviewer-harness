@@ -38,6 +38,11 @@ When to use: every time you write new code or reach for a library/API.
 - If you are unsure of a name or signature, look it up first — never guess.
 - If something does not exist, say so immediately — never invent a substitute.
 - After coding, verify: does it actually run, or does it only *look* right?
+- **Check the claim against the code, not the docs (general practice).** A README, comment, or error message can lie or go stale — the implementation is the truth. If docs and code contradict, report the contradiction; never smooth it over by quoting the docs.
+- **Check config is alive (general practice).** Every config value, env var, flag, and setting the code reads must actually exist and be used. A setting nothing reads is dead config — flag it, don't assume it works.
+- **Record what you could not verify (general practice).** If a claim can't be checked (no access, no docs, no run), write it down as UNKNOWN with the reason. Never upgrade an unknown into a fact by rephrasing it.
+
+*Examples:* README says `getUser()` returns a Promise — run it. If it returns the user directly, the README is wrong, not the code. `config.json` sets `maxRetries: 5` but nothing reads `maxRetries` — dead config, flag it.
 
 ## Skill: debug-first
 
@@ -57,6 +62,21 @@ When to use: after every task, before declaring it done.
 - Avoid heavy jargon; if you use an English technical term, define it in one sentence.
 - List the files that changed and, if any, what the user should check themselves.
 - If something is unfinished or uncertain, say so plainly — never cover it up.
+
+### Say it like this (examples)
+- Done: "Human na, dawg — [what finished]. Ang gi-usab kay [files], kay [why]."
+- Fixed: "Ang bug kay [what was wrong]. Gi-ayo nako pinaagi sa [how]. I-test nako: [result]."
+- Unsure: "Dili pa ko sure ani nga bahin — [what is unverified]. Akong i-check pa."
+
+### Analogies (when a technical idea needs one)
+Use everyday comparisons the user already knows:
+- An API key is like a house key — don't share it, and change it if it's lost.
+- A database is like a filing cabinet — organized drawers, one place per record.
+- A migration is like moving house with a checklist — every item listed, nothing left behind.
+- A cache is like a sticky note — fast to read, but it can go stale, so check the source when it matters.
+
+### Quick glossary (English term → simple Bisaya)
+- bug = sayop sa code; deploy = i-live ang app; database = tipiganan sa data; API = paagi nga mag-storya ang duha ka app; cache = temporary nga kopya para paspas; migration = pagbalhin/pag-update sa database structure; test = pagsulay kung mo-gana ba gyud.
 
 ## Skill: clone
 
@@ -127,6 +147,7 @@ When to use: the user wants to understand how a feature works inside an app, bin
 - Retained references belong to one connection: `{"kind":"retained-evidence","evidence_id":"ev_<64 lowercase hex>"}` (versions before 4.1.0 accept only full inline Evidence). Opening another target or restarting the current target preserves retained records; `close_binary` clears them — export a bundle before closing if the investigation needs it later. A missing reference reports its exact ID and `details.reason: "missing"`; never invent an ID.
 - If a result cannot fit the response budget, REA returns `resource_constraint` with `details.resource: "transport"` and an `evidence_reference` in `details.reported_limits` — call `inspect_analysis_view` with that reference for a summary, section, or stable page, or `export_evidence_bundle` to a path. The stdio budget is 10 MiB; `REA_MCP_MAX_RESPONSE_BYTES` (≥10485760, read at startup, restart to apply) raises it only when the client raised its own buffer too. A client-side truncation without a REA error is a display limit: treat the preview as incomplete, never parse it as canonical JSON, and recover the full record from the parent ID or an export.
 - View kinds for `inspect_analysis_view` (pick the kind the parent supports; all page from retained Evidence without re-running the producer): `summary`, `page`, `item`, `native` (procedure, pseudocode, assembly, basic blocks, comments, callers/callees, references, unresolved calls, strings/names, native API record, value-flow facets), `native-inventory`, `native-observation`, `native-context`, `native-exports`, `native-load-image`, `javascript` (modules, routes, occurrences, sources, unknowns, facts), `javascript-routes`, `web-bundle` (endpoints, inferences, summary), `capture`, `protobuf`, `browser-scenario`, `desktop-application`, `apk-signature`, `model-artifact`, `managed`, `managed-members`, `macho`, `wasm`, `interface-builder`, `inventory`, `api-surface`, `environment-manifest`, `environment-state`, `environment-coverage`, `function-matches`.
+- Call shape (verified against rea-agents@6.8.0 MCP, 2026-11-10): `{"parent_evidence_id": "<evidence-id>", "view": {"kind": "summary"}}` — the same object serves every view kind.
 - Comparisons need complete, compatible inputs: `compare_artifacts` (matching scopes, complete members, complete traversal coverage); `compare_functions` (explicit function Evidence, never fuzzy whole-binary matches; pseudocode/assembly compared as exact provider text — `changed` means textual difference, not behavior change; addresses and generated names are not normalized); `compare_bundles` (canonical membership + unknown history); `compare_application_versions` (analyze each version once; accept only digest, source-map, structural fingerprint, or non-module semantic matches; module ordinals and minified names are not persistent identity); `compare_javascript_export_shapes` (explicit module paths + export names; variant pairing only through the tool's unique exact literal discriminant); `compare_source_to_bundle` (committed graph inline or `reference: {"kind":"file","path":...}`); `compare_wasm_interfaces` (two complete inspection Evidence records, explicit scope); `compare_web_captures` (exactly one shape: passive `before`/`after` inspections, or scenario `before_scenario`/`after_scenario`); `compare_process_captures` (compatible recorded inputs; comparing retained captures executes nothing); `find_changed_behavior` (static differences are candidates, not causal proof); `correlate_static_and_runtime` (explicit mappings only; matching patterns are hypotheses, never causality); `verify_reconstruction` (finite typed specification; a pass covers only declared comparable claims, never global equivalence); `match_native_functions` (unique exact names plus, when supplied, complete observed body bytes; unpaired observations never prove additions/removals; for a representation refusal, raise `native.matching_representation_bytes` — default 96 MiB, range 1 byte–1 GiB, seed `REA_NATIVE_MATCHING_REPRESENTATION_BYTES` — before retrying). Coordinate equality needs equal artifact digests and formats, a known equal architecture, and matching provider-owned native coordinate commitments (exact Mach-O slice where available + loader mapping digest); Hopper's default profile and Ghidra's deterministic imports publish them, while loader overrides, attached databases, IDA profiles, and universal-image imports without an exact slice commitment leave coordinate identity unknown.
 - Unknowns are first-class: `record_unknown` tracks unresolved questions with supporting and contradicting Evidence IDs (duplicate creation is nonretryable `invalid_request`); `update_unknown` needs the current revision (stale → retryable `revision_conflict`); `list_unknowns` pages current heads. A delivery failure never undoes a committed revision — recover it from `details.reported_limits.committed_unknown`, an export, or `list_unknowns`, never by repeating the mutation.
 - Evidence discipline, always: every conclusion distinguishes observations, inferences, and unknowns. Cite Evidence IDs, preserve limitations and incomplete coverage, and never imply static analysis observed execution. Coverage is producer-owned: `coverage.scope` (`root`/`container-entries`) and `coverage.status` (`complete`/`unknown`) are independent of diagnostic wording; limitations explain but never supply coverage. Missing graph members yield `truncated`; unknown traversal coverage or unavailable hashes retain uncertainty. Integrity fails closed by default: `integrity_policy=record-and-continue` quarantines contradictory bytes (declared + observed hashes recorded) and lets verified siblings continue — for JavaScript (`--integrity-policy`) and extraction alike; unpacked ASAR companions whose declared hashes no longer match name that cause explicitly. Artifact equality never establishes unchanged runtime behavior.
@@ -213,7 +234,7 @@ Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
 12. **Inventory endpoints.** You can't guard what you forgot. Keep a list of every route; audit it when adding features. Remove dead endpoints.
 
 ### Configuration & Queries (added 2026-11-10 — the effectiveness test caught real flaws these rules did not cover)
-13. **Restrict CORS to named origins — never `*`, never `*` with credentials.** A wildcard CORS policy lets any website read your users' authenticated responses. Name the exact origins the API serves; `Access-Control-Allow-Origin: *` combined with `Access-Control-Allow-Credentials: true` is a fail on sight. Test it in CI: send `Origin: https://evil.example` and fail if that origin is reflected.
+13. **Restrict CORS to named origins — never `*`, never `*` with credentials.** A wildcard CORS policy lets any website read your users' authenticated responses. Name the exact origins the API serves; `Access-Control-Allow-Origin: *` combined with `Access-Control-Allow-Credentials: true` is a fail on sight. Test it in CI: send `Origin: https://evil.example` and fail if that origin is reflected. Note: the browser enforces this too — for a credentialed request the server must name an explicit origin, never `*`; if it sends `*` anyway, the browser blocks the response entirely (MDN CORS / Fetch Standard).
 *Source: OWASP API Security Top 10 2023, API8:2023 Security Misconfiguration — "CORS accepting any origin with credentials" is a named example of the risk.*
 14. **Use parameterized queries — never build queries by string concatenation.** Concatenating user input into a query string lets an attacker inject SQL (or NoSQL/OS/LDAP commands) as code. Use prepared statements / parameterized queries for every database call so input is always data, never syntax. The same ban covers ORM raw-query escape hatches (`sequelize.query()`, `.raw()`, `find_by_sql`) that accept a plain string.
 *Source: OWASP Top 10 2021, A03:2021 Injection — parameterized queries (prepared statements) are the primary prevention for injection.*
@@ -401,6 +422,12 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 
 10. **Monitor the four golden signals; save APM for scale.** Track error rate, latency, throughput, and saturation — plus Node specifics (process RAM, errors per minute, restarts). Full APM suites trace transactions end-to-end but carry a price tag: justified for large complex systems, overkill for a small app where the four signals plus good logs suffice.
 *Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`, `sections/production/apmproducts.md`*
+**Checkable criteria (general practice — thresholds are starting points, tune per product):** error rate — alert if 5xx > 1% of requests over 5 min; latency — p95 < 500ms on key routes; throughput — requests/min tracked, alert on a sudden drop vs the same hour last week; saturation — CPU or memory > 80% sustained 10 min. If a signal has no number and no alert, it isn't monitored.
+
+11. **Pin the base image — never `FROM x:latest`.** `latest` is a moving pointer: the same Dockerfile builds a different image tomorrow, and a breaking upstream change ships silently. Pin a specific version (`FROM node:20.11.0-alpine`) — or a digest (`FROM node:20.11.0-alpine@sha256:…`) for production — and bump it intentionally after testing.
+*Source: Docker best practices (docs.docker.com/build/building/best-practices); nodebestpractices examples pin versions (`FROM node:14.8.0-alpine`, `sections/docker/install-for-production.md`).*
+
+12. **Cache dependencies in CI — don't reinstall the world on every push (general practice).** Cache `node_modules` keyed on the lockfile and Docker layers (BuildKit cache) so a green build takes minutes, not a full reinstall. A cache miss must still produce a correct build — never depend on the cache for correctness. (Note: nodebestpractices has no CI-caching rule — its `sections/docker/clean-cache.md` is about removing the cache from images, the opposite direction.)
 
 ### Also apply (general practice, beyond these repos)
 - **Automate build + test on every push (CI)** — red build blocks the merge; nobody merges without green checks.
@@ -417,6 +444,8 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 - [ ] Logs are JSON with timestamps and context; no secrets logged
 - [ ] Memory is capped for the machine size; leak-hunting path is known
 - [ ] Four golden signals are monitored with alerts on user-facing symptoms
+- [ ] Base image pinned to a specific version/digest, never `latest`
+- [ ] CI caches dependencies (lockfile-keyed) and Docker layers; a cache miss still builds correctly
 
 ### Learn more (official sources)
 - Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
@@ -1387,7 +1416,7 @@ When to use: build, design, redesign, restyle, polish, or review a landing page,
 
 26. **The interface stays 90–95% neutral;** colour comes from photographs, the product, the work, and real logos. One near-black ink, often warm, never `#000`, for text, hairlines (12–15% of it), button borders, glyphs, and the mark.
 27. **One accent at most,** from the client (product, shopfront paint, tiles, a bag label): the primary button (the only filled accent), focus ring, links, state in visuals, small marks, one brand band; under 3% of a screen elsewhere; its label 4.5:1 on it, it 3:1 on the ground.
-28. **Violet/lavender is banned in the page's own design** — accent, ground, gradient, effect colour, or tint. A token whose OKLCH hue falls between ~270° and ~330° is turned to 255 (blue) or 345 (rose), whichever is nearer; a deal that returns violet is dealt again. A real third-party logo keeps its own colours.
+28. **Violet/lavender is banned in the page's own design** — accent, ground, gradient, effect colour, or tint. A token whose OKLCH hue falls between ~270° and ~330° is turned to 255 (blue) or 345 (rose), whichever is nearer; a deal that returns violet is dealt again. A real third-party logo keeps its own colours. Canonical check: `#7c3aed` (Tailwind violet-600) is OKLCH hue ~293° — inside the band, banned. If your tool reports HSL hue instead, `#7c3aed` reads 262° — also banned; never pass a token just because its HSL hue falls below 270°. (Hues verified by computation 2026-11-10: OKLCH 293.0°, HSL 262.1°.)
 29. **Grounds:** three tokens (`--g-main`, `--g-alt`, `--g-dark`) + one brand band on product/place. Dark pages/heroes are tech-only. The grade (light/evening) is chosen once on load or by click, never by scrolling.
 30. **Contrast:** body text in `--ink` at 7:1 or more; `--muted` (4.5:1+) only for labels, dates, meta, and a heading's grey run-on. Large text (24px+) in a muted half 3:1 minimum. On a place every text is 4.5:1+ and every word on the brand band 7:1. Never 14px paragraphs or 15px grey card text.
 31. **No scrim or gradient over a photograph;** words on a photograph only in the hero and one closing band, on a crop whose calm part is dark and empty at the phone crop too, or on a solid box; never on a place. **Highlight by contrast, never by colour:** no marker highlights or coloured bars behind words; colour inside a word once a page at most, never on a place.
@@ -1469,8 +1498,8 @@ Includes the family: ui-ux-pro-max, design, design-system, ui-styling, brand, ba
 | 9 | Navigation Patterns | HIGH | Predictable back, bottom nav ≤5, deep linking | Overloaded nav; broken back behavior; no deep links |
 | 10 | Charts & Data | LOW | Legends, tooltips, accessible colors | Relying on color alone to convey meaning |
 
-### The 120 guidelines — rule IDs verbatim, grouped by category
-*Source: references/quick-reference.md. Check each ID against the UI; a failed ID is a finding, named by its ID.*
+### The 224 guidelines — rule IDs verbatim, grouped by category
+*Source: references/quick-reference.md. Check each ID against the UI; a failed ID is a finding, named by its ID. (Count recounted 2026-11-10: 224 unique guideline IDs in the 10 categories below. The upstream quick-reference.md lists 120 — the two "120" mentions that describe that source file are correct and stay.)*
 
 **1. Accessibility (CRITICAL)** — `color-contrast` 4.5:1 normal text, 3:1 large text · `focus-states` visible focus rings 2–4px · `alt-text` descriptive alt for meaningful images · `aria-labels` aria-label for icon-only buttons / accessibilityLabel in native · `icon-context` decorative icons beside visible text hidden from a11y tree; meaningful icons need text alternative; icon controls need accessible name + state · `keyboard-nav` tab order = visual order, full keyboard support · `form-labels` label with `for` · `skip-links` skip to main content · `heading-hierarchy` sequential h1→h6, no level skip · `color-not-only` never convey info by color alone (add icon/text) · `dynamic-type` support system text scaling, no truncation as text grows · `reduced-motion` respect `prefers-reduced-motion` · `voiceover-sr` meaningful accessibilityLabel/Hint, logical reading order · `escape-routes` cancel/back in modals and multi-step flows · `keyboard-shortcuts` preserve system/a11y shortcuts; keyboard alternative for drag-and-drop · `focus-not-obscured` sticky UI/overlays/banners must not hide the focused control (WCAG 2.2 AA) · `focus-not-obscured-enhanced` entire focused component visible (AAA) · `focus-appearance` focus indicator area + 3:1 state contrast (AAA) · `dragging-alternative` every author-controlled drag needs single-pointer + keyboard alternative (AA) · `web-target-size` web pointer targets 24×24 CSS px or documented exception (AA) · `consistent-help` repeated help mechanisms in same relative order (A) · `redundant-entry` reuse already-supplied info unless re-entry essential (A) · `accessible-authentication` allow password managers + paste; non-cognitive auth path (AA) · `auto-rotation-controls` carousels/moving content need pause/stop, stop on focus or reduced motion · `contextual-live-badge-updates` announce changed count/status as one complete contextual phrase without moving focus.
 
@@ -1567,7 +1596,8 @@ npx shadcn@latest add @vengeanceui/<component-name>
 
 - `<component-name>` is the **registry filename stem (`componentName`)**, NOT the catalog slug — they usually match, but not always: Animated Button's catalog slug is `my-animated-button` while its registry file is `animated-button.json` (source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `{ name: "Animated Button", slug: "my-animated-button", componentName: "animated-button" }`). If an install 404s, check the filename in `public/r/` first.
 - pnpm/bun/yarn: swap `npx` for `pnpm dlx` / `bunx` / `yarn dlx` (same `registry.ts`).
-- Prerequisite: a shadcn/ui project (Next.js + Tailwind). The CLI drops the `.tsx` file into your components folder.
+- Prerequisite: a shadcn/ui project — Next.js + Tailwind, or Vite + React + Tailwind (verified in re-test 3: the registry workflow runs identically on Vite). The CLI drops the `.tsx` file into your components folder.
+- Strict Vite templates: the registry files as shipped fail `tsc` under `verbatimModuleSyntax` — two one-line fixups: import `MotionProps` as a type-only import, and remove the unused `useState` import in `aurora-hero`. (Verified in re-test 2/3; §1 copy-paste ownership covers editing the copied file.)
 
 ### 3. Pick by family, not by scrolling
 Source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `COMPONENT_CATEGORIES` (79 components, 9 families; counts verified against live main 2026-11-10)
@@ -1648,7 +1678,7 @@ Source: [LICENSE](https://github.com/Ashutoshx7/VengeanceUI/blob/main/LICENSE) �
 ### 10. Stack prerequisite — React/Next.js home required
 Source: [package.json](https://github.com/Ashutoshx7/VengeanceUI/blob/main/package.json) — React 19, Next.js 16, Tailwind CSS 4, Framer Motion 13
 
-- Vengeance components live in React/Next.js + Tailwind 4 + Framer Motion. If the target project is plain HTML/CSS/JS (like a static portfolio `index.html`), the components don't drop in directly — either port the effect by hand with GSAP/CSS, or build that section in a React home.
+- Vengeance components live in React (Next.js or Vite) + Tailwind 4 + Framer Motion. If the target project is plain HTML/CSS/JS (like a static portfolio `index.html`), the components don't drop in directly — either port the effect by hand with GSAP/CSS, or build that section in a React home.
 - Before recommending a component, check the project's stack. Recommending `aurora-hero` for a vanilla HTML page without flagging the React requirement is a miss.
 - For Edsiel's React projects (DevPilotAI web app, Next.js work), the components apply directly.
 
