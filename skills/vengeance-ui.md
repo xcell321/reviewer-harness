@@ -1,11 +1,11 @@
 ---
 name: vengeance-ui
-description: Modern animated React components distilled from VengeanceUI (Ashutoshx7) — 77 copy-paste components across 9 families for landing pages, portfolios, and SaaS sites. Use when designing a modern UI, hero section, or landing page and you want premium motion without building from scratch.
+description: Modern animated React components distilled from VengeanceUI (Ashutoshx7) — 79 copy-paste components across 9 families for landing pages, portfolios, and SaaS sites. Use when designing a modern UI, hero section, or landing page and you want premium motion without building from scratch.
 ---
 
 ## Skill: vengeance-ui
 
-*Distilled from [VengeanceUI](https://github.com/Ashutoshx7/VengeanceUI) (Ashutoshx7, MIT licensed, backed by the Vercel Open Source Program) — 77 animated React/Next.js components, verified against clone HEAD `298075b` = live GitHub HEAD. Every rule below cites its repo source.*
+*Distilled from [VengeanceUI](https://github.com/Ashutoshx7/VengeanceUI) (Ashutoshx7, MIT licensed, backed by the Vercel Open Source Program) — 79 animated React/Next.js components. Counts re-verified against live `components-catalog.ts` 2026-11-10 (was 77 at clone HEAD `298075b`; Buttons +1, Layout & Cards +1 since). Every rule below cites its repo source.*
 
 When to use: any modern design ask — landing page, portfolio section, SaaS hero, marketing site — where the UI should look premium and move, not sit static.
 
@@ -18,30 +18,43 @@ VengeanceUI is NOT an npm package you install and import. Each component's sourc
 - If a component doesn't fit, edit its Tailwind classes and motion props directly. Copied code is yours.
 
 ### 2. Install via the shadcn CLI
-Source: [src/lib/registry.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/registry.ts) — `getShadcnAddCommand()`; site shorthand from [vengeanceui.com](https://www.vengeanceui.com/)
+Source: [src/lib/registry.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/registry.ts) — `getShadcnAddCommand()`; site shorthand from [vengeanceui.com](https://www.vengeanceui.com/); namespace registration from [shadcn Namespaced Registries](https://ui.shadcn.com/docs/registry/namespace) — "Namespaced registries are configured in your `components.json` file under the `registries` field" and "The CLI never automatically adds registries"
 
+The always-works method — install by raw registry URL:
 ```bash
 npx shadcn@latest add https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/<component-name>.json
 ```
 
-Or the site's shorthand:
+The site's shorthand works ONLY after the namespace is registered in the project — the CLI does not know `@vengeanceui` on its own (on shadcn 4.23.0 an unregistered shorthand fails with "Unknown registry"). Register it once, either in `components.json`:
+```json
+{
+  "registries": {
+    "@vengeanceui": "https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/{name}.json"
+  }
+}
+```
+or with the CLI:
+```bash
+npx shadcn@latest registry add @vengeanceui=https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/{name}.json
+```
+then:
 ```bash
 npx shadcn@latest add @vengeanceui/<component-name>
 ```
 
-- `<component-name>` is the kebab-case slug from the catalog (e.g. `aurora-hero`, `spotlight-navbar`, `expandable-bento-grid`).
+- `<component-name>` is the **registry filename stem (`componentName`)**, NOT the catalog slug — they usually match, but not always: Animated Button's catalog slug is `my-animated-button` while its registry file is `animated-button.json` (source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `{ name: "Animated Button", slug: "my-animated-button", componentName: "animated-button" }`). If an install 404s, check the filename in `public/r/` first.
 - pnpm/bun/yarn: swap `npx` for `pnpm dlx` / `bunx` / `yarn dlx` (same `registry.ts`).
 - Prerequisite: a shadcn/ui project (Next.js + Tailwind). The CLI drops the `.tsx` file into your components folder.
 
 ### 3. Pick by family, not by scrolling
-Source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `COMPONENT_CATEGORIES` (77 components, 9 families)
+Source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `COMPONENT_CATEGORIES` (79 components, 9 families; counts verified against live main 2026-11-10)
 
 | Family | Count | For |
 |---|---|---|
-| Buttons | 9 | CTAs that demand a click (Animated, Candy, Pop, Generate, Radial Glow, Social Flip, Liquid Metal, Creepy, Corner) |
+| Buttons | 10 | CTAs that demand a click (Animated, Candy, Pop, Generate, Radial Glow, Social Flip, Liquid Metal, Creepy, Corner, Liquid Button) |
 | Text & Motion | 9 | Headlines and numbers that move (Flip Text, Morph Text, Stagger Text, Animated Number, Stats Counter) |
 | Interactive | 19 | Showpieces (3D carousels, Model Viewer, Image Trail, Ripple Displacement Slider, Solar System) |
-| Layout & Cards | 11 | Page structure (Bento Grids, Testimonials, Pricing Section, Team Reveal) |
+| Layout & Cards | 12 | Page structure (Bento Grids, Testimonials, Pricing Section, Pricing Tiers, Team Reveal) |
 | Tooltip & Marquee | 9 | Social proof and navigation aids (Logo Slider, FAQ Accordion, Image Reveal List) |
 | Loaders | 1 | Kinetic Text Loader |
 | Navbar & Docs | 8 | Navigation (Glass Dock, Spotlight Navbar, Notch Navbar, Mega Menu, Awwwards Nav) |
@@ -105,7 +118,7 @@ Source: cross-reference — `motion-design` skill (GSAP); this skill's catalog
 ### 9. Free and MIT — no paywall, no attribution required
 Source: [LICENSE](https://github.com/Ashutoshx7/VengeanceUI/blob/main/LICENSE) — MIT License, Copyright (c) 2025-2026 Ashutoshx7
 
-- All 77 components are free and open source. No Pro tier, no account, no card.
+- All 79 components are free and open source. No Pro tier, no account, no card.
 - The paid libraries in the same space (Animmaster Lib, Skiper UI Pro) are NOT substitutes — Vengeance covers the same premium look for free.
 - MIT means you can ship copied components in commercial work. Keep the license file in the repo root if you redistribute the library itself.
 

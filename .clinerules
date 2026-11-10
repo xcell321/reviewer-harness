@@ -1452,7 +1452,7 @@ Includes the family: ui-ux-pro-max, design, design-system, ui-styling, brand, ba
 | # | Category | Impact | Key checks | Anti-patterns |
 |---|---|---|---|---|
 | 1 | Accessibility | CRITICAL | Contrast 4.5:1, alt text, keyboard nav, aria-labels | Removing focus rings; icon-only buttons without labels |
-| 2 | Touch & Interaction | CRITICAL | Min size 44×44px, 8px+ spacing, loading feedback | Hover-only reliance; instant state changes (0ms) |
+| 2 | Touch & Interaction | CRITICAL | Min size 24×24 CSS px (AA 2.5.8); design target 44×44 (AAA 2.5.5 / Apple) / 48×48dp (Material); 8px+ spacing, loading feedback | Hover-only reliance; instant state changes (0ms) |
 | 3 | Performance | HIGH | WebP/AVIF, lazy loading, reserve space (CLS < 0.1) | Layout thrashing; cumulative layout shift |
 | 4 | Style Selection | HIGH | Match product type, consistency, SVG icons (no emoji) | Mixing flat & skeuomorphic randomly; emoji as icons |
 | 5 | Layout & Responsive | HIGH | Mobile-first breakpoints, viewport meta, no horizontal scroll | Horizontal scroll; fixed px container widths; disable zoom |
@@ -1467,7 +1467,7 @@ Includes the family: ui-ux-pro-max, design, design-system, ui-styling, brand, ba
 
 **1. Accessibility (CRITICAL)** — `color-contrast` 4.5:1 normal text, 3:1 large text · `focus-states` visible focus rings 2–4px · `alt-text` descriptive alt for meaningful images · `aria-labels` aria-label for icon-only buttons / accessibilityLabel in native · `icon-context` decorative icons beside visible text hidden from a11y tree; meaningful icons need text alternative; icon controls need accessible name + state · `keyboard-nav` tab order = visual order, full keyboard support · `form-labels` label with `for` · `skip-links` skip to main content · `heading-hierarchy` sequential h1→h6, no level skip · `color-not-only` never convey info by color alone (add icon/text) · `dynamic-type` support system text scaling, no truncation as text grows · `reduced-motion` respect `prefers-reduced-motion` · `voiceover-sr` meaningful accessibilityLabel/Hint, logical reading order · `escape-routes` cancel/back in modals and multi-step flows · `keyboard-shortcuts` preserve system/a11y shortcuts; keyboard alternative for drag-and-drop · `focus-not-obscured` sticky UI/overlays/banners must not hide the focused control (WCAG 2.2 AA) · `focus-not-obscured-enhanced` entire focused component visible (AAA) · `focus-appearance` focus indicator area + 3:1 state contrast (AAA) · `dragging-alternative` every author-controlled drag needs single-pointer + keyboard alternative (AA) · `web-target-size` web pointer targets 24×24 CSS px or documented exception (AA) · `consistent-help` repeated help mechanisms in same relative order (A) · `redundant-entry` reuse already-supplied info unless re-entry essential (A) · `accessible-authentication` allow password managers + paste; non-cognitive auth path (AA) · `auto-rotation-controls` carousels/moving content need pause/stop, stop on focus or reduced motion · `contextual-live-badge-updates` announce changed count/status as one complete contextual phrase without moving focus.
 
-**2. Touch & Interaction (CRITICAL)** — `touch-target-size` min 44×44pt (Apple) / 48×48dp (Material); extend hit area beyond visual bounds · `touch-spacing` min 8px/8dp gap between targets · `hover-vs-tap` click/tap for primary interactions, never hover alone · `loading-buttons` disable button during async ops; show spinner/progress · `error-feedback` clear error near problem · `cursor-pointer` cursor-pointer on clickable elements (web) · `gesture-conflicts` no horizontal swipe on main content; prefer vertical scroll · `tap-delay` `touch-action: manipulation` to cut 300ms delay · `standard-gestures` platform-standard gestures, don't redefine (swipe-back, pinch-zoom) · `system-gestures` don't block system gestures (Control Center, back swipe) · `press-feedback` visual feedback on press (ripple/highlight; MD state layers) · `haptic-feedback` haptic for confirmations/important actions, avoid overuse · `gesture-alternative` never gesture-only; visible controls for critical actions · `safe-area-awareness` primary touch targets away from notch, Dynamic Island, gesture bar, screen edges · `no-precision-required` no pixel-perfect taps on small icons/thin edges · `swipe-clarity` swipe actions show affordance/hint (chevron, label, tutorial) · `drag-threshold` movement threshold before drag starts.
+**2. Touch & Interaction (CRITICAL)** — `touch-target-size` WCAG 2.2 AA floor 24×24 CSS px (SC 2.5.8); design target 44×44pt (Apple) / 48×48dp (Material) — 44 is AAA 2.5.5, not AA; extend hit area beyond visual bounds (Source: W3C WCAG 2.2 SC 2.5.8 AA / SC 2.5.5 AAA — corrected 2026-11-10: 44/48 are the AAA/platform design targets, not the AA minimum; the skill's own `web-target-size` already says 24×24) · `touch-spacing` min 8px/8dp gap between targets · `hover-vs-tap` click/tap for primary interactions, never hover alone · `loading-buttons` disable button during async ops; show spinner/progress · `error-feedback` clear error near problem · `cursor-pointer` cursor-pointer on clickable elements (web) · `gesture-conflicts` no horizontal swipe on main content; prefer vertical scroll · `tap-delay` `touch-action: manipulation` to cut 300ms delay · `standard-gestures` platform-standard gestures, don't redefine (swipe-back, pinch-zoom) · `system-gestures` don't block system gestures (Control Center, back swipe) · `press-feedback` visual feedback on press (ripple/highlight; MD state layers) · `haptic-feedback` haptic for confirmations/important actions, avoid overuse · `gesture-alternative` never gesture-only; visible controls for critical actions · `safe-area-awareness` primary touch targets away from notch, Dynamic Island, gesture bar, screen edges · `no-precision-required` no pixel-perfect taps on small icons/thin edges · `swipe-clarity` swipe actions show affordance/hint (chevron, label, tutorial) · `drag-threshold` movement threshold before drag starts.
 
 **3. Performance (HIGH)** — `image-optimization` WebP/AVIF, responsive images (srcset/sizes), lazy-load non-critical · `image-dimension` declare width/height or aspect-ratio to prevent layout shift (CLS) · `font-loading` `font-display: swap/optional`, reserve space (no FOIT) · `font-preload` preload only critical fonts · `critical-css` prioritize above-the-fold CSS · `lazy-loading` lazy-load non-hero components (dynamic import / route splitting) · `bundle-splitting` split by route/feature (Suspense / Next.js dynamic) · `third-party-scripts` async/defer; audit and remove unnecessary ones · `reduce-reflows` batch DOM reads then writes · `content-jumping` reserve space for async content (CLS) · `lazy-load-below-fold` `loading="lazy"` for below-fold images/heavy media · `virtualize-lists` virtualize lists with 50+ items · `main-thread-budget` per-frame work under ~16ms for 60fps; heavy tasks off main thread · `progressive-loading` skeleton/shimmer, not long blocking spinners, for >1s operations · `input-latency` input latency under ~100ms · `tap-feedback-speed` visual feedback within 100ms of tap · `debounce-throttle` debounce/throttle scroll/resize/input · `offline-support` offline state messaging + basic fallback · `network-fallback` degraded modes for slow networks (lower-res images, fewer animations).
 
@@ -1521,7 +1521,7 @@ Pre-delivery checklist: process (relevant searches only; re-read quick-reference
 
 ## Skill: vengeance-ui
 
-*Distilled from [VengeanceUI](https://github.com/Ashutoshx7/VengeanceUI) (Ashutoshx7, MIT licensed, backed by the Vercel Open Source Program) — 77 animated React/Next.js components, verified against clone HEAD `298075b` = live GitHub HEAD. Every rule below cites its repo source.*
+*Distilled from [VengeanceUI](https://github.com/Ashutoshx7/VengeanceUI) (Ashutoshx7, MIT licensed, backed by the Vercel Open Source Program) — 79 animated React/Next.js components. Counts re-verified against live `components-catalog.ts` 2026-11-10 (was 77 at clone HEAD `298075b`; Buttons +1, Layout & Cards +1 since). Every rule below cites its repo source.*
 
 When to use: any modern design ask — landing page, portfolio section, SaaS hero, marketing site — where the UI should look premium and move, not sit static.
 
@@ -1534,30 +1534,43 @@ VengeanceUI is NOT an npm package you install and import. Each component's sourc
 - If a component doesn't fit, edit its Tailwind classes and motion props directly. Copied code is yours.
 
 ### 2. Install via the shadcn CLI
-Source: [src/lib/registry.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/registry.ts) — `getShadcnAddCommand()`; site shorthand from [vengeanceui.com](https://www.vengeanceui.com/)
+Source: [src/lib/registry.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/registry.ts) — `getShadcnAddCommand()`; site shorthand from [vengeanceui.com](https://www.vengeanceui.com/); namespace registration from [shadcn Namespaced Registries](https://ui.shadcn.com/docs/registry/namespace) — "Namespaced registries are configured in your `components.json` file under the `registries` field" and "The CLI never automatically adds registries"
 
+The always-works method — install by raw registry URL:
 ```bash
 npx shadcn@latest add https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/<component-name>.json
 ```
 
-Or the site's shorthand:
+The site's shorthand works ONLY after the namespace is registered in the project — the CLI does not know `@vengeanceui` on its own (on shadcn 4.23.0 an unregistered shorthand fails with "Unknown registry"). Register it once, either in `components.json`:
+```json
+{
+  "registries": {
+    "@vengeanceui": "https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/{name}.json"
+  }
+}
+```
+or with the CLI:
+```bash
+npx shadcn@latest registry add @vengeanceui=https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/{name}.json
+```
+then:
 ```bash
 npx shadcn@latest add @vengeanceui/<component-name>
 ```
 
-- `<component-name>` is the kebab-case slug from the catalog (e.g. `aurora-hero`, `spotlight-navbar`, `expandable-bento-grid`).
+- `<component-name>` is the **registry filename stem (`componentName`)**, NOT the catalog slug — they usually match, but not always: Animated Button's catalog slug is `my-animated-button` while its registry file is `animated-button.json` (source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `{ name: "Animated Button", slug: "my-animated-button", componentName: "animated-button" }`). If an install 404s, check the filename in `public/r/` first.
 - pnpm/bun/yarn: swap `npx` for `pnpm dlx` / `bunx` / `yarn dlx` (same `registry.ts`).
 - Prerequisite: a shadcn/ui project (Next.js + Tailwind). The CLI drops the `.tsx` file into your components folder.
 
 ### 3. Pick by family, not by scrolling
-Source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `COMPONENT_CATEGORIES` (77 components, 9 families)
+Source: [src/lib/components-catalog.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/components-catalog.ts) — `COMPONENT_CATEGORIES` (79 components, 9 families; counts verified against live main 2026-11-10)
 
 | Family | Count | For |
 |---|---|---|
-| Buttons | 9 | CTAs that demand a click (Animated, Candy, Pop, Generate, Radial Glow, Social Flip, Liquid Metal, Creepy, Corner) |
+| Buttons | 10 | CTAs that demand a click (Animated, Candy, Pop, Generate, Radial Glow, Social Flip, Liquid Metal, Creepy, Corner, Liquid Button) |
 | Text & Motion | 9 | Headlines and numbers that move (Flip Text, Morph Text, Stagger Text, Animated Number, Stats Counter) |
 | Interactive | 19 | Showpieces (3D carousels, Model Viewer, Image Trail, Ripple Displacement Slider, Solar System) |
-| Layout & Cards | 11 | Page structure (Bento Grids, Testimonials, Pricing Section, Team Reveal) |
+| Layout & Cards | 12 | Page structure (Bento Grids, Testimonials, Pricing Section, Pricing Tiers, Team Reveal) |
 | Tooltip & Marquee | 9 | Social proof and navigation aids (Logo Slider, FAQ Accordion, Image Reveal List) |
 | Loaders | 1 | Kinetic Text Loader |
 | Navbar & Docs | 8 | Navigation (Glass Dock, Spotlight Navbar, Notch Navbar, Mega Menu, Awwwards Nav) |
@@ -1621,7 +1634,7 @@ Source: cross-reference — `motion-design` skill (GSAP); this skill's catalog
 ### 9. Free and MIT — no paywall, no attribution required
 Source: [LICENSE](https://github.com/Ashutoshx7/VengeanceUI/blob/main/LICENSE) — MIT License, Copyright (c) 2025-2026 Ashutoshx7
 
-- All 77 components are free and open source. No Pro tier, no account, no card.
+- All 79 components are free and open source. No Pro tier, no account, no card.
 - The paid libraries in the same space (Animmaster Lib, Skiper UI Pro) are NOT substitutes — Vengeance covers the same premium look for free.
 - MIT means you can ship copied components in commercial work. Keep the license file in the repo root if you redistribute the library itself.
 
