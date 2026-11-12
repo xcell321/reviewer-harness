@@ -187,7 +187,7 @@ Expected output when everything is fine:
 
 `validate` checks for empty or duplicate rules and scans the config for leaked API keys and tokens — secrets must never be synced into instruction files (they would leak into Git).
 
-**Step 3 — Add the skills you want.** Pick from the 27 bundled skills (full list below):
+**Step 3 — Add the skills you want.** Pick from the 28 bundled skills (full list below):
 
 ```bash
 reviewer-harness skills add safe-editing
@@ -237,12 +237,12 @@ npx reviewer-harness skills add no-hallucination
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer-harness skills list            # see all 27 bundled skills (+ which are enabled)
+reviewer-harness skills list            # see all 28 bundled skills (+ which are enabled)
 reviewer-harness skills add <name>      # install into the project and enable it in the config
 reviewer-harness skills remove <name>   # disable it in the config and remove it
 ```
 
-All 27 bundled skills (v1.15.0):
+All 28 bundled skills:
 
 | Skill | What it does |
 |---|---|
@@ -255,7 +255,7 @@ All 27 bundled skills (v1.15.0):
 | `api-security` | 14 API security rules — apply to every backend endpoint you build or review. |
 | `ux-edge-states` | 10 UX states beyond the happy path — empty, loading, error, offline, success. |
 | `owasp-top10` | OWASP Top 10 web security risks — the industry standard check before shipping. |
-| `backend-performance` | 10 backend performance rules from nodebestpractices and system-design-primer. |
+| `backend-performance` | 19 backend performance rules from nodebestpractices, system-design-primer, the PostgreSQL concurrency docs, and the OWASP Business Logic cheat sheet. |
 | `devops-basics` | 12 DevOps rules from nodebestpractices — Docker, graceful shutdown, health checks, logging. |
 | `motion-design` | Animation principles from GSAP (GreenSock) — easing, sequencing, stagger, performance. |
 | `frontend-performance` | Frontend performance rules from the Front-End Checklist — animations, resource hints, budgets, lazy loading. |
@@ -273,6 +273,7 @@ All 27 bundled skills (v1.15.0):
 | `instruction_registers` | Name the user's target and action registers before building, pushing, or planning, and ask one clarifying question when they are ambiguous. |
 | `verify_provider_claims` | Check a provider's live documentation or the user's verified setup before asserting its current availability, free tier, pricing, endpoints, or retired status. |
 | `verify_publish_install_surface` | Verify a published version on each surface the user can see (commit/tag, registry, installed file) before claiming it is installed or live. |
+| `playwright-cli` | Browser automation and real web-app testing for coding agents, from Microsoft's Playwright CLI — drive the app, turn the session into Playwright tests, attach screenshot evidence. |
 
 Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
@@ -400,7 +401,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness skills list` | List all 27 bundled skills (+ which are enabled) |
+| `reviewer-harness skills list` | List all 28 bundled skills (+ which are enabled) |
 | `reviewer-harness skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer-harness skills remove <name>` | Disable a skill and remove it |
 | `reviewer-harness agents list` | List the bundled sub-agents |
