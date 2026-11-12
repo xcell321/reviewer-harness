@@ -10,7 +10,7 @@ import { homedir } from "node:os";
 import { loadConfig } from "../lib/config.js";
 import { adapters, supportedRuntimes } from "../lib/adapters/index.js";
 import { sync, writeSafe } from "../lib/sync.js";
-import { initProject } from "../lib/init.js";
+import { initProject, initFull } from "../lib/init.js";
 import { initMemory, buildIndex, readNotes, memoryDir } from "../lib/memory.js";
 import { validateConfig } from "../lib/validate.js";
 import { listBundledSkills, addSkill, removeSkill, loadBundledSkills, skillCommandContent, skillBundleContent } from "../lib/skills.js";
@@ -28,6 +28,8 @@ try {
     allowPositionals: true,
     options: {
       "dry-run": { type: "boolean", default: false },
+      minimal: { type: "boolean", default: false },
+      goal: { type: "string" },
       target: { type: "string", default: process.cwd() },
       help: { type: "boolean", short: "h", default: false },
       version: { type: "boolean", default: false },
@@ -62,7 +64,7 @@ function helpText() {
   return `reviewer-harness — your own AI harness
 
 Usage (run inside your project):
-  reviewer-harness init                     Create harness.config.json (one-time setup)
+  reviewer-harness init [--goal <text>]     Set up EVERYTHING in this project in one command: detect the stack + goal, create the config, install all skills, agents and commands, start the memory, and sync every runtime (--minimal = config only, the old behavior; --dry-run = preview)
   reviewer-harness validate                 Check the config: quality + secret scanning
   reviewer-harness sync [--dry-run]         Sync the rules to every runtime (--dry-run = preview only)
   reviewer-harness status                   Show the config + target files
@@ -194,9 +196,38 @@ function cmdMemory() {
   }
 }
 
+function printDetection(d) {
+  const stack = [d.stack?.language, d.stack?.framework].filter(Boolean).join(" · ");
+  console.log(`Project: ${d.name}${stack ? ` — ${stack}` : ""}`);
+  if (d.goal) console.log(`Goal   : ${d.goal}`);
+}
+
 function cmdInit() {
-  const { created, file } = initProject(targetDir);
-  console.log(created ? `Config created: ${file}` : `Already exists: ${file} (not overwritten)`);
+  // --minimal keeps the original behavior: the config file, nothing else.
+  if (values.minimal) {
+    const { created, file } = initProject(targetDir);
+    console.log(created ? `Config created: ${file}` : `Already exists: ${file} (not overwritten)`);
+    return;
+  }
+  const goal = values.goal ?? null;
+  if (dryRun) {
+    const r = initFull(targetDir, { dryRun: true, goal });
+    console.log(`(dry-run: nothing was written)\n`);
+    printDetection(r.detection);
+    console.log(`Config : ${r.configExists ? "exists — would be kept (refresh)" : "would be created"}`);
+    console.log(`Would install: ${r.planned.skills} skills, ${r.planned.agents} agents, ${r.planned.commands} commands`);
+    console.log(`Would start the local memory (if missing) and sync every runtime.`);
+    return;
+  }
+  const r = initFull(targetDir, { goal });
+  printDetection(r.detection);
+  console.log(`Config : ${r.config.created ? `created → ${r.config.file}` : "already exists — kept, installs refreshed"}`);
+  console.log(`Skills : ${r.skills.installed} installed + enabled ✓`);
+  console.log(`Agents : ${r.agents.installed} installed (${r.agents.files} runtime files) ✓`);
+  console.log(`Commands: ${r.commands.installed} installed (${r.commands.files} runtime files) ✓`);
+  console.log(`Memory : ${r.memory.created.length ? `created (${r.memory.created.join(", ")})` : "already exists"} — ${r.memory.notes} notes indexed ✓`);
+  console.log(`Sync   : ${r.sync.written} files written across ${r.sync.runtimes} runtime targets ✓`);
+  console.log(`\nDone — everything is installed. Open any runtime in this project and the harness is live.`);
 }
 
 function cmdValidate() {

@@ -159,19 +159,28 @@ If you see `Config file not found`, you are in a folder without a harness config
 
 This is the full flow, start to finish. Run the commands inside your project folder.
 
-**Step 1 — Create the master config.** One time per project:
+**Step 1 — Set up everything.** One time per project, one command:
 
 ```bash
 reviewer-harness init
 ```
 
-Expected output:
+Init reads your project first — its manifest (`package.json`, `composer.json`, `go.mod`, …) and its README — then sets up the whole harness, adapted to what it found. Expected output (counts depend on your project):
 
 ```
-Config created: /path/to/your/project/harness.config.json
+Project: your-app — TypeScript · React
+Goal   : (from your package.json description or README)
+Config : created → /path/to/your/project/harness.config.json
+Skills : 28 installed + enabled ✓
+Agents : 3 installed (6 runtime files) ✓
+Commands: 2 installed (4 runtime files) ✓
+Memory : created (project.md, decisions.md) — 2 notes indexed ✓
+Sync   : 144 files written across 9 runtime targets ✓
+
+Done — everything is installed. Open any runtime in this project and the harness is live.
 ```
 
-This creates `harness.config.json` — the one file that holds your rules, your problem statement, and your enabled skills. Open it and edit the `rules` and `problem` fields to describe your project. (Running `init` again never overwrites an existing config.)
+The `harness.config.json` it creates is already yours: your project's name and goal, its detected stack, and its real validation commands (e.g. `npm test`) written into the rules — and into the seeded memory note, so the first session already knows the project. Edit the `rules` and `problem` fields to fine-tune. (Running `init` again never overwrites an existing config; it refreshes the installs instead. `init --minimal` creates only the config — the pre-v1.17 behavior — and `init --dry-run` previews the whole setup without writing anything.)
 
 **Step 2 — Check the config.** Before anything gets written, validate it:
 
@@ -230,7 +239,7 @@ npx reviewer-harness skills add safe-editing
 npx reviewer-harness skills add no-hallucination
 ```
 
-**Full Harness Mode — one config, every runtime.** `init` creates your master config, `validate` checks it, and `sync` generates the native instruction file for every runtime you enable. This is the mode the Quick start above walks through, and the mode this README documents in detail.
+**Full Harness Mode — one config, every runtime.** `init` sets up everything in one command (config, all skills, agents, commands, memory, and a first sync), `validate` checks the config, and `sync` regenerates the native instruction file for every runtime you enable. This is the mode the Quick start above walks through, and the mode this README documents in detail.
 
 ### Skills — reusable playbooks
 
@@ -391,7 +400,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness init` | One-time: create `harness.config.json` in the project (never overwrites an existing one) |
+| `reviewer-harness init` | One command: detect the project, create the config, install every skill, agent and command, start the memory, and sync all runtimes (never overwrites an existing config; `--minimal` = config only) |
 | `reviewer-harness validate` | Check the config: rule quality + secret scanning |
 | `reviewer-harness sync --dry-run` | Preview the sync: shows what would change, writes nothing |
 | `reviewer-harness sync` | Apply the rules to every enabled runtime (with `.bak` backups) |
@@ -429,7 +438,8 @@ Running from a source checkout instead? The same commands work as `node bin/cli.
 - `lib/validate.js` — rule quality checks + secret scanning
 - `lib/sync.js` — THE SYNC ENGINE: validate gate, dry-run, backup, idempotent writes
 - `lib/frontmatter.js` — frontmatter parser (normalizes CRLF line endings, fixed in v1.14.0)
-- `lib/init.js` — creates the harness.config.json template in a new project
+- `lib/init.js` — the config template + init v2: the full one-command setup (detect → install everything → sync)
+- `lib/detect.js` — reads a project's manifests + README to detect its name, stack, goal, and validation commands
 - `lib/memory.js` — local memory: notes vault, graph builder, index generator
 - `lib/skills.js` — skills system: bundled store, install/enable, section rendering
 - `lib/agents.js` / `lib/commands.js` — one source → OpenCode + Claude formats
