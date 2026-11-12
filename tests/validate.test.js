@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { isValidName, scanSecrets, validateConfig } from "../lib/validate.js";
+
+// The installed tool version, read from package.json — never a
+// hardcoded literal — so a version bump cannot stale this test.
+const PKG_VERSION = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8")
+).version;
 
 test("validateConfig warns when config version differs from package version", () => {
   const { warnings } = validateConfig({
@@ -10,7 +17,7 @@ test("validateConfig warns when config version differs from package version", ()
   });
   const joined = warnings.join("\n");
   assert.match(joined, /1\.0\.0/);
-  assert.match(joined, /1\.14\.0/);
+  assert.match(joined, new RegExp(PKG_VERSION.replace(/\./g, "\\.")));
 });
 
 test("scanSecrets is exported and flags a key in arbitrary text", () => {

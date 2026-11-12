@@ -1,5 +1,5 @@
 ---
-description: Check defined-and-called plus remote evidence before reporting done, pushed, fixed, or working — and never present an untested guess as done.
+description: 'Check defined-and-called plus remote evidence before reporting done, pushed, fixed, or working — and never present an untested guess as done.'
 ---
 
 ## Skill: verify_before_done

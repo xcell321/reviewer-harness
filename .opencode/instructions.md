@@ -91,6 +91,7 @@ When to use: the user asks to clone a website or design, and gives a URL or refe
 - Front-end only: a clone reproduces the look, never the backend — no login, database, or dynamic data.
 - If the target is the user's own site, their own assets may be reused.
 - Afterwards, validate: compare screenshots side by side, check responsive breakpoints, audit every recorded measurement against the rebuild (sizes, spacing, fonts, colors), and audit that no third-party image, text, or brand remains. Report what was cloned, what was replaced, and any measurement that could not be verified.
+- If no browser or screenshot tooling is available in this environment, degrade honestly: run every check that does not need a rendered comparison (the measurement audit against the fetched styles and markup, the breakpoint check, the replaced-content audit) and state plainly in the report that the visual side-by-side was skipped — never imply it was done, and never report a visual match you did not actually see.
 
 ## Skill: rea
 
@@ -250,6 +251,7 @@ Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
 - [ ] Every query is parameterized (no string concatenation into SQL)
 
 ### Learn more (official sources)
+- Rules 1–12 originate from the "12 API Security Rules" reel by Code Crack — the reel is their origin; their detailed wording in this file is general practice. Rules 13–14 cite their OWASP sources inline.
 - OWASP API Security Top 10: https://owasp.org/API-Security/
 - OWASP Cheat Sheet Series (API Security): https://cheatsheetseries.owasp.org/
 - OWASP Web Security Testing Guide: https://github.com/OWASP/wstg
@@ -289,6 +291,9 @@ Your product works when everything goes right. The real test is what it does whe
 - Losing user input on error, expiry, or navigation.
 - Dead-end "no results" with no suggestions.
 
+### Learn more
+- The 10-state list: Strategy Fox — "10 UX States" reel. The states above match its list and order; the reel is the list's origin. No citable article or repo publishes the list, so the per-state guidance in this skill is general practice.
+
 ## Skill: owasp-top10
 
 When to use: building, reviewing, or auditing any web application or API.
@@ -296,16 +301,16 @@ When to use: building, reviewing, or auditing any web application or API.
 The OWASP Top 10 is the industry-standard list of the most critical web security risks. Check every app against these before shipping.
 
 ### The 10 risks (2021 edition)
-1. **Broken Access Control.** Users can act outside their permissions. Fix: deny by default; check ownership on every request; never rely on client-side hiding.
-2. **Cryptographic Failures.** Sensitive data exposed or weakly protected. Fix: encrypt in transit (TLS) and at rest; use strong algorithms; never store plain-text secrets.
-3. **Injection.** Untrusted data sent to an interpreter (SQL, NoSQL, OS, LDAP). Fix: parameterized queries; validate and sanitize all input; least-privilege DB accounts.
-4. **Insecure Design.** Missing or ineffective security controls by design. Fix: threat-model new features; use secure design patterns; write abuse cases.
-5. **Security Misconfiguration.** Default configs, open cloud storage, verbose errors, missing headers. Fix: hardened configs; remove defaults; minimal error details; security headers.
-6. **Vulnerable Components.** Outdated libraries with known CVEs. Fix: inventory dependencies; patch promptly; remove unused packages.
-7. **Authentication Failures.** Weak login, session, or credential handling. Fix: MFA where possible; strong password policy; secure session management; rate-limit logins.
-8. **Software & Data Integrity Failures.** Unverified updates, CI/CD tampering, insecure deserialization. Fix: verify signatures; secure pipelines; avoid deserializing untrusted data.
-9. **Logging & Monitoring Failures.** Breaches go undetected. Fix: log auth events, input validation failures, and access-control denials; alert on anomalies; retain logs securely.
-10. **Server-Side Request Forgery (SSRF).** App fetches attacker-chosen URLs. Fix: validate and whitelist URLs; block internal network access; disable unused URL schemas.
+1. **Broken Access Control.** Users can act outside their permissions. Fix: deny by default; check ownership on every request; never rely on client-side hiding. *Source: https://owasp.org/Top10/A01_2021-Broken_Access_Control/*
+2. **Cryptographic Failures.** Sensitive data exposed or weakly protected. Fix: encrypt in transit (TLS) and at rest; use strong algorithms; never store plain-text secrets. *Source: https://owasp.org/Top10/A02_2021-Cryptographic_Failures/*
+3. **Injection.** Untrusted data sent to an interpreter (SQL, NoSQL, OS, LDAP). Fix: parameterized queries; validate and sanitize all input; least-privilege DB accounts. *Source: https://owasp.org/Top10/A03_2021-Injection/*
+4. **Insecure Design.** Missing or ineffective security controls by design. Fix: threat-model new features; use secure design patterns; write abuse cases. *Source: https://owasp.org/Top10/A04_2021-Insecure_Design/*
+5. **Security Misconfiguration.** Default configs, open cloud storage, verbose errors, missing headers. Fix: hardened configs; remove defaults; minimal error details; security headers. *Source: https://owasp.org/Top10/A05_2021-Security_Misconfiguration/*
+6. **Vulnerable Components.** Outdated libraries with known CVEs. Fix: inventory dependencies; patch promptly; remove unused packages. *Source: https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/*
+7. **Authentication Failures.** Weak login, session, or credential handling. Fix: MFA where possible; strong password policy; secure session management; rate-limit logins. *Source: https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/*
+8. **Software & Data Integrity Failures.** Unverified updates, CI/CD tampering, insecure deserialization. Fix: verify signatures; secure pipelines; avoid deserializing untrusted data. *Source: https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/*
+9. **Logging & Monitoring Failures.** Breaches go undetected. Fix: log auth events, input validation failures, and access-control denials; alert on anomalies; retain logs securely. *Source: https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/*
+10. **Server-Side Request Forgery (SSRF).** App fetches attacker-chosen URLs. Fix: validate and whitelist URLs; block internal network access; disable unused URL schemas. *Source: https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/*
 
 ### Quick check before shipping
 - [ ] Access control tested (try accessing another user's data)
@@ -1185,7 +1190,7 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 | 5 | **system-design** | system-design | Status transitions, trust boundaries, scale (pilot city → bigger) |
 | 6 | **backend** (area) | safe-editing, debug-first, owasp-top10, nodejs-quality, rea | Code correctness and quality: surgical edits, error handling, OWASP Top 10, Node quality rules, tracing unfamiliar flows |
 | 7 | **frontend** (area) | motion-design, frontend-performance | Real animations (not static visuals), render performance, visual quality |
-| 8 | **devops** (area) | — (pipeline proof; the CI guidance in devops-basics "Also apply") | The live shipping path: CI green on this exact commit, tests (pass count AND exit code AND the "Errors" line), build, lint, typecheck, migrations idempotent + re-runnable, deploy config, no secrets in the repo |
+| 8 | **devops** (area) | devops-basics (the CI guidance in its "Also apply" section) | The live shipping path: CI green on this exact commit, tests (pass count AND exit code AND the "Errors" line), build, lint, typecheck, migrations idempotent + re-runnable, deploy config, no secrets in the repo |
 
 **Every agent also applies no-hallucination** — every finding cites a real file and line, and every claim about what runs or passes is backed by evidence the agent actually saw.
 
@@ -1235,7 +1240,7 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 **7 — frontend area agent brief:** "Audit the frontend of <repo> at <commit> as a whole. Read these skills first and apply them genuinely, not as labels: motion-design, frontend-performance. Check: animations are real motion, not static visuals; render performance (no infinite fetch loops, no jank from layout-triggering animations — transform/opacity only); visual quality (no generic purple-blue gradients, no floating orbs, no identical glass cards); contrast (WCAG AA on text over gradients). Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
-**8 — devops area agent brief:** "Audit the live shipping path of <repo> at <commit>. Check: CI is green on this exact commit (read the Actions/runs page, not the workflow file — a workflow file is not proof); tests really pass (pass count AND exit code AND the 'Errors' line); build, lint, and typecheck clean; migrations are idempotent and re-runnable (every CREATE has DROP IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE); deploy config matches the live target; no secrets in the repo. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line or run URL, evidence, and what breaks in real use."
+**8 — devops area agent brief:** "Audit the live shipping path of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics — in particular the CI guidance in its 'Also apply' section. Check: CI is green on this exact commit (read the Actions/runs page, not the workflow file — a workflow file is not proof); tests really pass (pass count AND exit code AND the 'Errors' line); build, lint, and typecheck clean; migrations are idempotent and re-runnable (every CREATE has DROP IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE); deploy config matches the live target; no secrets in the repo. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line or run URL, evidence, and what breaks in real use."
 
 ### Quick check before reporting
 - [ ] Target commit verified against the remote (agents read the right code)
@@ -1366,6 +1371,7 @@ Backend team = `ub-mode` + `safe-editing` (+ `api-security` for endpoints, `owas
 ## Skill: design-taste-frontend
 
 Distilled from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (`tasteskill 2.5.1`, HEAD `f6b7657`) — SKILL.md + references/layout-v4.md, copy.md, copy-tells.md, system.md, motion.md, library/palettes.json, library/type.json. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
+The two library files are vendored verbatim in this repo at `skills/library/palettes.json` (64 palettes) and `skills/library/type.json` (39 pairings), so the `library/…` paths in rules 32–33 resolve from this file's directory. Upstream is MIT — the license is vendored at `skills/library/LICENSE` (Copyright (c) 2026 Leonxlnx).
 
 When to use: build, design, redesign, restyle, polish, or review a landing page, company site, product page, shop, cafe, hotel, studio, SaaS, AI, devtool, or game site — or when a page looks generic, templated, or "AI-made".
 
@@ -1467,6 +1473,8 @@ When to use: build, design, redesign, restyle, polish, or review a landing page,
 59. **Tap targets:** every link/control outside running text ≥44px tall; a FAIL when another target is under 8px away. Nothing past the screen at 320.
 
 ### Edsiel's rules (local — not from the source)
+- **No green by default (2026-11-07):** never default to green or jade accents — Edsiel finds them ugly. The accent comes from the client or product (rule 27); a dealt palette that lands green-dominant with no client basis is dealt again. (A client's own green brand colour is his call, not a default.)
+- **No grid or dot-pattern backgrounds (2026-11-07):** grounds are flat colour, photographs, or the dealt effects where rule 3 allows them — never a grid or dot texture behind content.
 - Frontend team = `design-taste-frontend` + `ui-ux-pro-max` (+ `ux-edge-states`, `ub-mode`).
 - Installed on Edsiel's PC via `npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"`; location `~/.claude/skills/design-taste-frontend` (needed manual copy from `~/.agents/skills/`).
 - Paired with ui-ux-pro-max for the anti-slop check in DevPilotAI UI audits (since 2026-10-31).
@@ -1499,8 +1507,8 @@ Includes the family: ui-ux-pro-max, design, design-system, ui-styling, brand, ba
 | 9 | Navigation Patterns | HIGH | Predictable back, bottom nav ≤5, deep linking | Overloaded nav; broken back behavior; no deep links |
 | 10 | Charts & Data | LOW | Legends, tooltips, accessible colors | Relying on color alone to convey meaning |
 
-### The 224 guidelines — rule IDs verbatim, grouped by category
-*Source: references/quick-reference.md. Check each ID against the UI; a failed ID is a finding, named by its ID. (Count recounted 2026-11-10: 224 unique guideline IDs in the 10 categories below. The upstream quick-reference.md lists 120 — the two "120" mentions that describe that source file are correct and stay.)*
+### The 222 guidelines — rule IDs verbatim, grouped by category
+*Source: references/quick-reference.md. Check each ID against the UI; a failed ID is a finding, named by its ID. (Count verified 2026-11-12: 222 unique guideline IDs in the 10 categories below, each diffed against the live upstream — 0 invented. An earlier recount said 224; that was a miscount, corrected here. The upstream quick-reference.md lists 120 — the two "120" mentions that describe that source file are correct and stay.)*
 
 **1. Accessibility (CRITICAL)** — `color-contrast` 4.5:1 normal text, 3:1 large text · `focus-states` visible focus rings 2–4px · `alt-text` descriptive alt for meaningful images · `aria-labels` aria-label for icon-only buttons / accessibilityLabel in native · `icon-context` decorative icons beside visible text hidden from a11y tree; meaningful icons need text alternative; icon controls need accessible name + state · `keyboard-nav` tab order = visual order, full keyboard support · `form-labels` label with `for` · `skip-links` skip to main content · `heading-hierarchy` sequential h1→h6, no level skip · `color-not-only` never convey info by color alone (add icon/text) · `dynamic-type` support system text scaling, no truncation as text grows · `reduced-motion` respect `prefers-reduced-motion` · `voiceover-sr` meaningful accessibilityLabel/Hint, logical reading order · `escape-routes` cancel/back in modals and multi-step flows · `keyboard-shortcuts` preserve system/a11y shortcuts; keyboard alternative for drag-and-drop · `focus-not-obscured` sticky UI/overlays/banners must not hide the focused control (WCAG 2.2 AA) · `focus-not-obscured-enhanced` entire focused component visible (AAA) · `focus-appearance` focus indicator area + 3:1 state contrast (AAA) · `dragging-alternative` every author-controlled drag needs single-pointer + keyboard alternative (AA) · `web-target-size` web pointer targets 24×24 CSS px or documented exception (AA) · `consistent-help` repeated help mechanisms in same relative order (A) · `redundant-entry` reuse already-supplied info unless re-entry essential (A) · `accessible-authentication` allow password managers + paste; non-cognitive auth path (AA) · `auto-rotation-controls` carousels/moving content need pause/stop, stop on focus or reduced motion · `contextual-live-badge-updates` announce changed count/status as one complete contextual phrase without moving focus.
 
@@ -1948,7 +1956,7 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 | 5 | **system-design** | system-design | Status transitions, trust boundaries, races, idempotency |
 | 6 | **backend** (area) | safe-editing, debug-first, owasp-top10, nodejs-quality, rea, ub-mode | Code correctness and quality across the whole backend |
 | 7 | **frontend** (area) | motion-design, frontend-performance, design-taste-frontend, ui-ux-pro-max, vengeance-ui | Real animations, render performance, visual quality, anti-slop |
-| 8 | **devops** (area) | — (pipeline proof; the CI guidance in devops-basics "Also apply") | The live shipping path: tests, build, lint, typecheck, migrations, deploy config |
+| 8 | **devops** (area) | devops-basics (the CI guidance in its "Also apply" section) | The live shipping path: tests, build, lint, typecheck, migrations, deploy config |
 | 9 | **ub-mode** | ub-mode | Clean Code organization across the whole fix: TDD first, smallest edit, CRAP < 10, duplication ≥ 0.8 out, small ordered commits + log |
 | 10 | **superpowers** | writing-plans, brainstorming | The fix plan first (file map, rollback anchor, bite-sized TDD tasks, each ending in a commit) + the hard gate (no fix until the user approves the plan) |
 | 11 | **verification** | verify_before_done, instruction_registers, verify_provider_claims, verify_publish_install_surface | The fixer at the last: re-checks every fix (defined AND called, remote evidence, publish/install surfaces) and fixes what verification catches |
@@ -2007,7 +2015,7 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 **7 — frontend area fixer brief:** "Fix the frontend findings in <audit report> on <repo> at <commit> as a whole. Read these skills first and apply them genuinely, not as labels: motion-design, frontend-performance, design-taste-frontend, ui-ux-pro-max, vengeance-ui. Fix: animations are real motion, not static visuals; render performance; visual quality (no generic purple-blue gradients, no floating orbs, no identical glass cards); contrast (WCAG AA on text over gradients). Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
-**8 — devops area fixer brief:** "Fix the shipping-path findings in <audit report> on <repo> at <commit>. Fix: CI green on this exact commit, tests really passing (pass count AND exit code AND the 'Errors' line), build, lint, and typecheck clean, migrations idempotent and re-runnable, deploy config matching the live target, no secrets in the repo. Fix-only — fix what the audit found, nothing more. Every fix: finding file:line or run URL, what you changed, and the command output proving it."
+**8 — devops area fixer brief:** "Fix the shipping-path findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics — in particular the CI guidance in its 'Also apply' section. Fix: CI green on this exact commit, tests really passing (pass count AND exit code AND the 'Errors' line), build, lint, and typecheck clean, migrations idempotent and re-runnable, deploy config matching the live target, no secrets in the repo. Fix-only — fix what the audit found, nothing more. Every fix: finding file:line or run URL, what you changed, and the command output proving it."
 
 **9 — ub-mode fixer brief:** "Make the fixes in <fix run> on <repo> at <commit> clean and organized. Read this skill first and apply it genuinely, not as a label: ub-mode. Enforce across the whole fix: TDD first (failing test before the change); smallest edit that solves the problem (one decision lives in one place); sequence the work into verifiable units (finish one small unit and check it, then start the next); fix root causes, not symptoms; every function under CRAP 10; duplication ≥ 0.8 eliminated; small ordered commits, each saying why, what changed, and how it was proved; a log of every action and the reason. Where the crapper/dryer/mutator tools are not installed, apply the same thresholds by manual review and say so. Fix-only — organize what the audit found, nothing more. Every fix: finding file:line, what you changed, and the test/build output proving it."
 

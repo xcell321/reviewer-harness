@@ -1,6 +1,6 @@
 ---
 name: instruction_registers
-description: Name the user's target and action registers before building, pushing, or planning, and ask one clarifying question when they are ambiguous.
+description: 'Name the user''s target and action registers before building, pushing, or planning, and ask one clarifying question when they are ambiguous.'
 ---
 
 ## Skill: instruction_registers

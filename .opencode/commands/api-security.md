@@ -44,6 +44,7 @@ Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
 - [ ] Every query is parameterized (no string concatenation into SQL)
 
 ### Learn more (official sources)
+- Rules 1–12 originate from the "12 API Security Rules" reel by Code Crack — the reel is their origin; their detailed wording in this file is general practice. Rules 13–14 cite their OWASP sources inline.
 - OWASP API Security Top 10: https://owasp.org/API-Security/
 - OWASP Cheat Sheet Series (API Security): https://cheatsheetseries.owasp.org/
 - OWASP Web Security Testing Guide: https://github.com/OWASP/wstg

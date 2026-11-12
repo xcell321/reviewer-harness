@@ -8,6 +8,13 @@ import { fileURLToPath } from "node:url";
 
 const CLI = fileURLToPath(new URL("../bin/cli.js", import.meta.url));
 
+// The expected tool version comes from package.json — never a
+// hardcoded literal — so a version bump cannot stale these tests.
+const PKG_VERSION = JSON.parse(
+  readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8")
+).version;
+const PKG_VERSION_PATTERN = new RegExp(PKG_VERSION.replace(/\./g, "\\."));
+
 function runCli(args, cwd) {
   return spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: "utf8" });
 }
@@ -39,7 +46,7 @@ test("help and version flags work", () => {
   }
   const v = runCli(["--version"], dir);
   assert.equal(v.status, 0, `--version should exit 0 (got ${v.status}): ${v.stderr}`);
-  assert.match(v.stdout, /1\.14\.0/, "--version should print the tool version");
+  assert.match(v.stdout, PKG_VERSION_PATTERN, "--version should print the tool version");
 });
 
 test("unknown command exits 1", () => {

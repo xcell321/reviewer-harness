@@ -36,4 +36,7 @@ Your product works when everything goes right. The real test is what it does whe
 - Losing user input on error, expiry, or navigation.
 - Dead-end "no results" with no suggestions.
 
+### Learn more
+- The 10-state list: Strategy Fox — "10 UX States" reel. The states above match its list and order; the reel is the list's origin. No citable article or repo publishes the list, so the per-state guidance in this skill is general practice.
+
 Apply this playbook to the following: $ARGUMENTS

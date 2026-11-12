@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.14.0-blue)
+![version](https://img.shields.io/badge/version-1.15.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.14.0
+Harness : reviewer-harness v1.15.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -242,7 +242,7 @@ reviewer-harness skills add <name>      # install into the project and enable it
 reviewer-harness skills remove <name>   # disable it in the config and remove it
 ```
 
-All 27 bundled skills (v1.14.0):
+All 27 bundled skills (v1.15.0):
 
 | Skill | What it does |
 |---|---|
@@ -264,7 +264,7 @@ All 27 bundled skills (v1.14.0):
 | `audit-team` | Run an 8-agent parallel audit — 5 skill specialists plus 3 area agents — report-only, no edits. |
 | `ub-mode` | Uncle Bob mode — Clean Code discipline from Robert C. Martin: TDD first, CRAP < 10. |
 | `design-taste-frontend` | Anti-slop design taste from Leonxlnx/taste-skill — layout, palettes, type, heroes, copy ban lists. |
-| `ui-ux-pro-max` | Full UI/UX audit from nextlevelbuilder/ui-ux-pro-max-skill — 224 checkable guidelines across 10 categories. |
+| `ui-ux-pro-max` | Full UI/UX audit from nextlevelbuilder/ui-ux-pro-max-skill — 222 checkable guidelines across 10 categories. |
 | `vengeance-ui` | Modern animated React components from VengeanceUI — 79 copy-paste components across 9 families. |
 | `brainstorming` | Find out what you actually want — and why — before anything gets built. Design doc first, approval first. |
 | `writing-plans` | Turn an approved spec into a bite-sized TDD implementation plan. |
