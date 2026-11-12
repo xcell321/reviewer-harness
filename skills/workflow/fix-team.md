@@ -42,7 +42,7 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
    *Source: obra/superpowers — brainstorming (HARD-GATE) + writing-plans (plan header, task structure); Pantry fix rounds 4–7 all ran audit-then-fix with his pick in between.*
 
 3. **Spawn the nine fixers in parallel, each with its brief and its files.** Give each agent its findings, its skill list, the target commit, and the fix-only rule. No two agents edit the same file — the plan's file map assigns ownership, and the coordinator resolves any overlap before the run. The agent reads its skills first — a skill that was never read cannot take effect.
-   *Source: the harness skills themselves (`skills/<name>.md`); Pantry fix rounds ran parallel fixers this way.*
+   *Source: the harness skills themselves (`skills/<category>/<name>.md`); Pantry fix rounds ran parallel fixers this way.*
 
 4. **Fix-only, always.** Fixers fix what the audit found — nothing more. Never add a feature, never redesign, never "improve" beyond the finding ("ayaw ayoha ang dili guba" — don't fix what isn't broken). A finding the user did not pick is left alone, not fixed.
    *Source: the user's standing triage rule; Pantry rounds 4–7 fixed only what he picked.*

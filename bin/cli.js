@@ -253,7 +253,19 @@ function cmdSkills() {
     } catch {
       /* no config in the target — just list the bundled skills */
     }
-    for (const s of listBundledSkills()) {
+    // Grouped by category (the store's organization, v1.17.1); a
+    // skill without a category (flat in the store) lists last. The
+    // category rides on the full loadBundledSkills() objects.
+    const byCategory = [...loadBundledSkills()].sort((a, b) =>
+      (a.category ?? "￿").localeCompare(b.category ?? "￿") || a.name.localeCompare(b.name)
+    );
+    let lastCategory;
+    for (const s of byCategory) {
+      const category = s.category ?? "uncategorized";
+      if (category !== lastCategory) {
+        console.log(`\n${category}:`);
+        lastCategory = category;
+      }
       console.log(`- ${s.name}${enabled.includes(s.name) ? " ✓ enabled" : ""} — ${s.description}`);
     }
   } else if (sub === "add" && arg) {
