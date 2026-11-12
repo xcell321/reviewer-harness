@@ -126,8 +126,8 @@ test("empty, Unicode, and 300-char names are rejected", () => {
 
 test("add preserves a user-edited skill file", () => {
   const dir = makeTempDir();
-  const dest = join(dir, "skills", "safe-editing.md");
-  mkdirSync(join(dir, "skills"), { recursive: true });
+  const dest = join(dir, "skills", "quality", "safe-editing.md");
+  mkdirSync(join(dir, "skills", "quality"), { recursive: true });
   writeFileSync(dest, "MY CUSTOM EDIT\nplus the bundled text\n");
 
   let warnings;
@@ -141,7 +141,7 @@ test("add preserves a user-edited skill file", () => {
   // The destination is now the bundled copy (the install still happens).
   assert.equal(
     readFileSync(dest, "utf8"),
-    readFileSync(join(REPO_ROOT, "skills", "safe-editing.md"), "utf8")
+    readFileSync(join(REPO_ROOT, "skills", "quality", "safe-editing.md"), "utf8")
   );
 });
 
@@ -176,7 +176,7 @@ test("add preserves a user-edited command file", () => {
 test("add of an unchanged file writes nothing and warns nothing", () => {
   const dir = makeTempDir();
   addSkill("safe-editing", dir);
-  const dest = join(dir, "skills", "safe-editing.md");
+  const dest = join(dir, "skills", "quality", "safe-editing.md");
   const before = readFileSync(dest, "utf8");
   const warnings = captureWarnings(() => addSkill("safe-editing", dir));
   assert.equal(readFileSync(dest, "utf8"), before);

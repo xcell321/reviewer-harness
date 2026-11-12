@@ -6,7 +6,7 @@ description: 'Anti-slop design taste distilled from Leonxlnx/taste-skill (v2.5.1
 ## Skill: design-taste-frontend
 
 Distilled from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (`tasteskill 2.5.1`, HEAD `f6b7657`) — SKILL.md + references/layout-v4.md, copy.md, copy-tells.md, system.md, motion.md, library/palettes.json, library/type.json. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
-The two library files are vendored verbatim in this repo at `skills/library/palettes.json` (64 palettes) and `skills/library/type.json` (39 pairings), so the `library/…` paths in rules 32–33 resolve from this file's directory. Upstream is MIT — the license is vendored at `skills/library/LICENSE` (Copyright (c) 2026 Leonxlnx).
+The two library files are vendored verbatim in this repo at `skills/frontend/library/palettes.json` (64 palettes) and `skills/frontend/library/type.json` (39 pairings), so the `library/…` paths in rules 32–33 resolve from this file's directory. Upstream is MIT — the license is vendored at `skills/frontend/library/LICENSE` (Copyright (c) 2026 Leonxlnx).
 
 When to use: build, design, redesign, restyle, polish, or review a landing page, company site, product page, shop, cafe, hotel, studio, SaaS, AI, devtool, or game site — or when a page looks generic, templated, or "AI-made".
 

@@ -35,13 +35,13 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
    *Source: Pantry audit round 3 — the local clone was stale at `8c73c5f` while remote had moved; the audit ran on a fresh snapshot of remote HEAD instead.*
 
 2. **Spawn the eight agents in parallel, each with its brief.** Give each agent its area, its skill list, the target commit, and the report-only rule in its brief. The agent reads its skills first — a skill that was never read cannot take effect.
-   *Source: the harness skills themselves (`skills/<name>.md`); Pantry audit round 3 ran 5 parallel auditors this way.*
+   *Source: the harness skills themselves (`skills/<category>/<name>.md`); Pantry audit round 3 ran 5 parallel auditors this way.*
 
 3. **Report-only, always.** Auditors never edit, fix, migrate, or push. A finding that was "fixed" by an auditor without the user picking it is not a finding — it is an unapproved change.
    *Source: harness rule #1 (edit surgically, only what the task requires) + the user's standing rule that he picks what to fix.*
 
 4. **Every finding needs evidence.** File path + line number + what happens (or the exact error/output). A finding without a location is an opinion, not a finding — drop it or mark it unverified.
-   *Source: no-hallucination (`skills/no-hallucination.md`).*
+   *Source: no-hallucination (`skills/quality/no-hallucination.md`).*
 
 5. **Grade every finding: Blocker / Warning / Suggestion.** Blocker = broken, insecure, or data-losing in real use. Warning = works today, breaks or leaks under real conditions. Suggestion = polish for later. Never inflate a Suggestion into a Blocker to make the report look serious.
    *Source: Pantry audit round 3 triage (8 Blockers, 29 Warnings, 28 Suggestions).*

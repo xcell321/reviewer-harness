@@ -13,13 +13,19 @@ import {
   readFileSync,
   existsSync,
   readdirSync,
+  mkdirSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { detectProject } from "../lib/detect.js";
 import { initFull, initProject } from "../lib/init.js";
-import { listBundledSkills } from "../lib/skills.js";
+import {
+  listBundledSkills,
+  loadBundledSkills,
+  addSkill,
+  loadSkills,
+} from "../lib/skills.js";
 import { listBundledAgents } from "../lib/agents.js";
 import { listBundledCommands } from "../lib/commands.js";
 
@@ -129,10 +135,14 @@ test("initFull: React project gets EVERYTHING, adapted", () => {
     "the validation rule names the project's real test command"
   );
 
-  // Skill files on disk — one per bundled skill, fix-team included.
-  const skillFiles = readdirSync(join(dir, "skills")).filter((f) => f.endsWith(".md"));
+  // Skill files on disk — one per bundled skill, organized into the
+  // same category folders as the store (fix-team under workflow/).
+  const skillFiles = readdirSync(join(dir, "skills"), { recursive: true }).filter((f) =>
+    String(f).endsWith(".md")
+  );
   assert.equal(skillFiles.length, bundledSkills.length);
-  assert.ok(existsSync(join(dir, "skills", "fix-team.md")));
+  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team.md")));
+  assert.ok(existsSync(join(dir, "skills", "architecture", "system-design.md")));
 
   // Agents + commands in both runtime formats.
   for (const a of bundledAgents) {
@@ -166,7 +176,7 @@ test("initFull: empty folder still installs everything, generically", () => {
   assert.equal(r.config.created, true);
   const config = readConfig(dir);
   assert.equal(config.skills.length, listBundledSkills().length);
-  assert.ok(existsSync(join(dir, "skills", "fix-team.md")));
+  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team.md")));
   assert.ok(existsSync(join(dir, "memory", "INDEX.md")));
 });
 
@@ -222,6 +232,46 @@ test("CLI init --dry-run: preview only, nothing created", () => {
   assert.equal(existsSync(join(dir, "skills")), false);
 });
 
+test("store: every bundled skill carries a category (v1.17.1 organization)", () => {
+  const all = loadBundledSkills();
+  assert.equal(all.length, listBundledSkills().length);
+  assert.ok(all.length > 0);
+  for (const s of all) {
+    assert.ok(s.category, `skill "${s.name}" has a category`);
+  }
+  const byName = new Map(all.map((s) => [s.name, s.category]));
+  assert.equal(byName.get("fix-team"), "workflow");
+  assert.equal(byName.get("system-design"), "architecture");
+  assert.equal(byName.get("backend-performance"), "backend");
+  assert.equal(byName.get("design-taste-frontend"), "frontend");
+  assert.equal(byName.get("owasp-top10"), "security");
+  // The pinned public listing shape stays { name, description }.
+  for (const s of listBundledSkills()) {
+    assert.deepEqual(Object.keys(s).sort(), ["description", "name"]);
+  }
+});
+
+test("store: addSkill installs into the project's matching category folder", () => {
+  const dir = tempDir();
+  initProject(dir);
+  const r = addSkill("fix-team", dir);
+  assert.equal(r.enabled, true);
+  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team.md")));
+  assert.deepEqual(readConfig(dir).skills, ["fix-team"]);
+});
+
+test("store: loadSkills resolves a hand-organized project skills/ folder", () => {
+  const dir = tempDir();
+  mkdirSync(join(dir, "skills", "quality"), { recursive: true });
+  writeFileSync(
+    join(dir, "skills", "quality", "debug-first.md"),
+    `---\ndescription: Organized by hand\n---\n\nBody.\n`
+  );
+  const loaded = loadSkills(dir, { skills: ["debug-first"] });
+  assert.equal(loaded.length, 1);
+  assert.equal(loaded[0].description, "Organized by hand");
+});
+
 test("CLI init: full setup in one command, with a receipt", () => {
   const dir = tempDir();
   writeReactFixture(dir);
@@ -230,6 +280,6 @@ test("CLI init: full setup in one command, with a receipt", () => {
   assert.match(res.stdout, /Project: demo-app/);
   assert.match(res.stdout, /Skills : \d+ installed/);
   assert.match(res.stdout, /Done — everything is installed/);
-  assert.ok(existsSync(join(dir, "skills", "fix-team.md")));
+  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team.md")));
   assert.equal(readConfig(dir).skills.length, listBundledSkills().length);
 });

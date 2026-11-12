@@ -20,8 +20,8 @@ Every rule below is distilled from obra/superpowers — `skills/brainstorming/SK
 3. **Two exceptions only.** If Edsiel opts out of the questions ("just dive in"), the skill is done and the gate goes with it — state any significant how-it-gets-made choice in one plain line, then do what he asked. A spike he said yes to may be built, but it stays labeled throwaway; keeping what it produced is a new request that comes back through the gate.
 *Source: obra/superpowers — `skills/brainstorming/SKILL.md`, "HARD-GATE" and "Your First Message"*
 
-4. **After approval, the next step is writing-plans — and no other skill.** The approved design doc becomes the spec the plan implements.
-*Source: obra/superpowers — `skills/brainstorming/SKILL.md`, "HARD-GATE"*
+4. **After approval, go straight to writing-plans — automatically, in the same session, and to no other skill.** The moment the design is approved and the design doc is written, invoke the writing-plans skill yourself, with the approved doc as its spec. Do NOT stop to summarize-and-wait, and do NOT make him type `/writing-plans` — the handoff is part of this skill, not a new request. The approved design doc becomes the spec the plan implements.
+*Source: obra/superpowers — `skills/brainstorming/SKILL.md`, "HARD-GATE" (writing-plans is the next and only step). The automatic same-session handoff is [Edsiel] — general practice, Edsiel's standing preference (2026-11-13): after brainstorming, writing-plans runs on its own.*
 
 ### Look before you ask
 

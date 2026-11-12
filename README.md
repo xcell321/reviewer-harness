@@ -444,7 +444,7 @@ Running from a source checkout instead? The same commands work as `node bin/cli.
 - `lib/skills.js` — skills system: bundled store, install/enable, section rendering
 - `lib/agents.js` / `lib/commands.js` — one source → OpenCode + Claude formats
 - `lib/adapters/` — registry + one adapter per runtime (opencode, claude, gemini, cline, freebuff, copilot, antigravity, qoder)
-- `skills/` — bundled skills · `agents/` — bundled sub-agents · `commands/` — bundled slash commands
+- `skills/` — bundled skills, organized by category (`backend/`, `frontend/`, `security/`, `quality/`, `workflow/`, `architecture/`, `devops/`, `ai-engineering/`) — installs mirror the same folders in your project · `agents/` — bundled sub-agents · `commands/` — bundled slash commands
 - `docs/superpowers/specs/` — design docs for releases and big changes
 
 ## Troubleshooting
