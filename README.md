@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.15.0-blue)
+![version](https://img.shields.io/badge/version-1.16.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.15.0
+Harness : reviewer-harness v1.16.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
