@@ -46,7 +46,8 @@
     "verify_before_done",
     "instruction_registers",
     "verify_provider_claims",
-    "verify_publish_install_surface"
+    "verify_publish_install_surface",
+    "playwright-cli"
   ],
   "version": "1.15.1"
 }
