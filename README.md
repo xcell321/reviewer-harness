@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.16.0-blue)
+![version](https://img.shields.io/badge/version-1.17.1-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -43,7 +43,7 @@ AI coding assistants are powerful, but anyone who vibe-codes with them daily run
 
 ### Who it is for
 
-Anyone who codes with an AI assistant and is tired of re-explaining the same rules, re-fixing the same breakage, and re-teaching the same project every session. It was built by a student vibe-coder for daily use across eight different AI CLIs — and it works just as well if you only use one.
+Anyone who codes with an AI assistant and is tired of re-explaining the same rules, re-fixing the same breakage, and re-teaching the same project every session. It was built by a student agentic coder for daily use across eight different AI CLIs — and it works just as well if you only use one.
 
 ## Requirements
 
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.16.0
+Harness : reviewer-harness v1.17.1
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -182,13 +182,15 @@ Done — everything is installed. Open any runtime in this project and the harne
 
 The `harness.config.json` it creates is already yours: your project's name and goal, its detected stack, and its real validation commands (e.g. `npm test`) written into the rules — and into the seeded memory note, so the first session already knows the project. Edit the `rules` and `problem` fields to fine-tune. (Running `init` again never overwrites an existing config; it refreshes the installs instead. `init --minimal` creates only the config — the pre-v1.17 behavior — and `init --dry-run` previews the whole setup without writing anything.)
 
-**Step 2 — Check the config.** Before anything gets written, validate it:
+**Step 2 — Open your AI tool.** That is it — the setup is done. Open the project in Claude Code, OpenCode, Gemini CLI, Cline, or any of the other runtimes, and the AI reads your rules, your skills, and your project memory before it writes a single line. (New idea to build? The everyday flow below starts with `/brainstorming`.)
+
+**That's the whole setup.** Everything after this is optional, for later — when you want to change something:
+
+**Fine-tune the config.** Edit the `rules` and `problem` fields in `harness.config.json`, then check it:
 
 ```bash
 reviewer-harness validate
 ```
-
-Expected output when everything is fine:
 
 ```
 ✓ Config is clean — no problems, no secrets.
@@ -196,39 +198,40 @@ Expected output when everything is fine:
 
 `validate` checks for empty or duplicate rules and scans the config for leaked API keys and tokens — secrets must never be synced into instruction files (they would leak into Git).
 
-**Step 3 — Add the skills you want.** Pick from the 28 bundled skills (full list below):
+**Add or remove a skill.** `init` installed all 28; trim or extend the set any time (full list below):
 
 ```bash
-reviewer-harness skills add safe-editing
-reviewer-harness skills add no-hallucination
-reviewer-harness skills add debug-first
+reviewer-harness skills list             # everything bundled, grouped by category
+reviewer-harness skills remove clone     # disable + remove one
+reviewer-harness skills add clone        # bring it back
 ```
 
-Each `skills add` copies the skill into your project and enables it in the config. See what is available first with `reviewer-harness skills list`.
-
-**Step 4 — Preview the sync.** See exactly what would change, without writing anything:
+**Re-sync after edits.** Preview first if you like — sync writes a `.bak` backup before overwriting any instruction file, and leaves unchanged files untouched:
 
 ```bash
-reviewer-harness sync --dry-run
+reviewer-harness sync --dry-run   # preview: what would change, writes nothing
+reviewer-harness sync             # apply it to every runtime
 ```
 
-**Step 5 — Sync.** Write the instruction files for every runtime:
+One file changes, every runtime follows.
 
-```bash
-reviewer-harness sync
-```
+## The everyday flow — from idea to shipped
 
-Before overwriting any existing instruction file, sync saves a `.bak` backup copy. Files that would not change are left untouched — running sync twice in a row writes nothing the second time.
+With the harness live in a project, building something new is one conversation:
 
-**Step 6 — Open your AI tool.** That is it. Open the project in Claude Code, OpenCode, Gemini CLI, Cline, or any of the other runtimes, and the AI reads your rules, your skills, and your problem statement before it writes a single line.
+1. **`/brainstorming <your idea>`** — the AI asks one question at a time, proposes 2–3 approaches, and writes a design doc. **Nothing is built until you approve the design** — that approval is a hard gate, not a courtesy.
+2. **Planning starts itself.** The moment the design is approved, brainstorming hands off to `writing-plans` automatically, in the same session — you never type the next command. You get a bite-sized, TDD-shaped implementation plan.
+3. **Build.** You (or the AI, task by task) work the plan under the harness's guardrails — safe editing, no invented APIs, your project's real validation commands.
+4. **`/audit-team`** — 8 agents audit the result in parallel, report-only: what is broken, risky, or fake, with evidence.
+5. **`/fix-team`** — 11 agents fix the audit's findings, and a verification agent re-checks every fix last.
 
-**Step 7 — Repeat when rules change.** Edit `harness.config.json`, then run `validate` and `sync` again. One file changes, every runtime follows.
+Design → plan → build → audit → fix, with your approval at the one gate that matters and no command-juggling in between.
 
 ## How to use
 
 ### Two ways to use it
 
-**Modular Mode — one skill, zero setup.** Copy a single skill straight into any project, no config needed. The skill lands in `./skills/` as a playbook your AI can follow:
+**Modular Mode — one skill, zero setup.** Copy a single skill straight into any project, no config needed. The skill lands in `./skills/<category>/` as a playbook your AI can follow:
 
 ```bash
 # Browse the bundled skills first
@@ -246,10 +249,12 @@ npx reviewer-harness skills add no-hallucination
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer-harness skills list            # see all 28 bundled skills (+ which are enabled)
+reviewer-harness skills list            # see all 28 bundled skills, grouped by category (+ which are enabled)
 reviewer-harness skills add <name>      # install into the project and enable it in the config
 reviewer-harness skills remove <name>   # disable it in the config and remove it
 ```
+
+The skills are organized into **8 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (7), `quality` (7), `backend` (2), `security` (2), `ai-engineering` (2), `architecture` (1), `devops` (1).
 
 All 28 bundled skills:
 
@@ -275,8 +280,8 @@ All 28 bundled skills:
 | `design-taste-frontend` | Anti-slop design taste from Leonxlnx/taste-skill — layout, palettes, type, heroes, copy ban lists. |
 | `ui-ux-pro-max` | Full UI/UX audit from nextlevelbuilder/ui-ux-pro-max-skill — 222 checkable guidelines across 10 categories. |
 | `vengeance-ui` | Modern animated React components from VengeanceUI — 79 copy-paste components across 9 families. |
-| `brainstorming` | Find out what you actually want — and why — before anything gets built. Design doc first, approval first. |
-| `writing-plans` | Turn an approved spec into a bite-sized TDD implementation plan. |
+| `brainstorming` | Find out what you actually want — and why — before anything gets built. Design doc first, approval first — then it hands off to writing-plans automatically, in the same session. |
+| `writing-plans` | Turn an approved spec into a bite-sized TDD implementation plan. (Brainstorming invokes it for you after approval.) |
 | `fix-team` | Run an 11-agent fix over an audit report's findings — 8 domain fixers plus ub-mode, superpowers, and a verification agent that runs last. Fix plan first, user approves, verification re-checks every fix. |
 | `verify_before_done` | Check defined-and-called plus remote evidence before reporting done, pushed, fixed, or working — never present an untested guess as done. |
 | `instruction_registers` | Name the user's target and action registers before building, pushing, or planning, and ask one clarifying question when they are ambiguous. |
@@ -323,7 +328,7 @@ Four guardrails run before any file is written:
 
 Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured at audit (22 skills): **266,198 bytes** of skill source → **2,660,559 bytes** of generated output across 124 files (**10×** amplification); `CLAUDE.md` alone is **262,243 bytes** today. Growth is linear: at 10× skills (220), each instruction file would be ≈ 2.6 MB and total output ≈ 26.6 MB. The binding constraint is the AI runtime's context window, not disk.
 
-**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 4× today's skills (≈ 80 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 3× today's 28 skills (≈ 90 skills) at the current amplification. Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
 
 Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling.
 
@@ -410,7 +415,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness skills list` | List all 28 bundled skills (+ which are enabled) |
+| `reviewer-harness skills list` | List all 28 bundled skills, grouped by category (+ which are enabled) |
 | `reviewer-harness skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer-harness skills remove <name>` | Disable a skill and remove it |
 | `reviewer-harness agents list` | List the bundled sub-agents |
@@ -477,6 +482,11 @@ Check that you edited the config in the same folder you are syncing (`--target` 
 6. ✅ Polish and publish — v1.0.0, LICENSE, publish-ready for GitHub/npx
 7. ✅ v1.1.0 — all-English repo, validate-and-report rule, self-governing repo, modular skills, one-liner installers, Docker
 8. ✅ v1.14.0 — the working peak: 27 skills (audit-team + fix-team, ub-mode, design-taste-frontend, ui-ux-pro-max, vengeance-ui, brainstorming, writing-plans, verification skills), Qoder as 8th runtime, system-design, nodejs-quality, all fix rounds verified WORKS, CRLF frontmatter fix (Windows sync without manual LF conversion), --help/--version flags fixed
+9. ✅ v1.15.0 — 22 pre-tested commits merged, CI on GitHub, full 27-skill re-test (every skill graded WORKS/PARTIAL with evidence)
+10. ✅ v1.15.1 — audit fix round F1–F8: vendored design libraries shipped with the harness, durable version tests, suite green on a fresh clone
+11. ✅ v1.16.0 — playwright-cli skill (28 skills): real browser testing for coding agents
+12. ✅ v1.17.0 — init v2: one command sets up everything — project detection (name, stack, goal, real validation commands) → adapted config → all skills, agents, commands → seeded memory → sync, with a receipt; re-running init refreshes instead of overwriting
+13. ✅ v1.17.1 — less hassle edition: brainstorming hands off to writing-plans automatically after design approval, and the skills are organized into 8 category folders — in the harness and mirrored in every project it sets up
 
 ## Contributing & Security
 
