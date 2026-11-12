@@ -6,6 +6,7 @@ description: Anti-slop design taste distilled from Leonxlnx/taste-skill (v2.5.1)
 ## Skill: design-taste-frontend
 
 Distilled from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (`tasteskill 2.5.1`, HEAD `f6b7657`) — SKILL.md + references/layout-v4.md, copy.md, copy-tells.md, system.md, motion.md, library/palettes.json, library/type.json. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
+The two library files are vendored verbatim in this repo at `skills/library/palettes.json` (64 palettes) and `skills/library/type.json` (39 pairings), so the `library/…` paths in rules 32–33 resolve from this file's directory. Upstream is MIT — the license is vendored at `skills/library/LICENSE` (Copyright (c) 2026 Leonxlnx).
 
 When to use: build, design, redesign, restyle, polish, or review a landing page, company site, product page, shop, cafe, hotel, studio, SaaS, AI, devtool, or game site — or when a page looks generic, templated, or "AI-made".
 
@@ -107,6 +108,8 @@ When to use: build, design, redesign, restyle, polish, or review a landing page,
 59. **Tap targets:** every link/control outside running text ≥44px tall; a FAIL when another target is under 8px away. Nothing past the screen at 320.
 
 ### Edsiel's rules (local — not from the source)
+- **No green by default (2026-11-07):** never default to green or jade accents — Edsiel finds them ugly. The accent comes from the client or product (rule 27); a dealt palette that lands green-dominant with no client basis is dealt again. (A client's own green brand colour is his call, not a default.)
+- **No grid or dot-pattern backgrounds (2026-11-07):** grounds are flat colour, photographs, or the dealt effects where rule 3 allows them — never a grid or dot texture behind content.
 - Frontend team = `design-taste-frontend` + `ui-ux-pro-max` (+ `ux-edge-states`, `ub-mode`).
 - Installed on Edsiel's PC via `npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"`; location `~/.claude/skills/design-taste-frontend` (needed manual copy from `~/.agents/skills/`).
 - Paired with ui-ux-pro-max for the anti-slop check in DevPilotAI UI audits (since 2026-10-31).

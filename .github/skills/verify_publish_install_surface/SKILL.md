@@ -1,6 +1,6 @@
 ---
 name: verify_publish_install_surface
-description: Verify a published version on each surface the user can see (commit/tag, registry, installed file) before claiming it is installed or live.
+description: 'Verify a published version on each surface the user can see (commit/tag, registry, installed file) before claiming it is installed or live.'
 ---
 
 ## Skill: verify_publish_install_surface

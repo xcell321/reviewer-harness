@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.14.0-blue)
+![version](https://img.shields.io/badge/version-1.16.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.14.0
+Harness : reviewer-harness v1.16.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -187,7 +187,7 @@ Expected output when everything is fine:
 
 `validate` checks for empty or duplicate rules and scans the config for leaked API keys and tokens — secrets must never be synced into instruction files (they would leak into Git).
 
-**Step 3 — Add the skills you want.** Pick from the 27 bundled skills (full list below):
+**Step 3 — Add the skills you want.** Pick from the 28 bundled skills (full list below):
 
 ```bash
 reviewer-harness skills add safe-editing
@@ -237,12 +237,12 @@ npx reviewer-harness skills add no-hallucination
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer-harness skills list            # see all 27 bundled skills (+ which are enabled)
+reviewer-harness skills list            # see all 28 bundled skills (+ which are enabled)
 reviewer-harness skills add <name>      # install into the project and enable it in the config
 reviewer-harness skills remove <name>   # disable it in the config and remove it
 ```
 
-All 27 bundled skills (v1.14.0):
+All 28 bundled skills:
 
 | Skill | What it does |
 |---|---|
@@ -255,7 +255,7 @@ All 27 bundled skills (v1.14.0):
 | `api-security` | 14 API security rules — apply to every backend endpoint you build or review. |
 | `ux-edge-states` | 10 UX states beyond the happy path — empty, loading, error, offline, success. |
 | `owasp-top10` | OWASP Top 10 web security risks — the industry standard check before shipping. |
-| `backend-performance` | 10 backend performance rules from nodebestpractices and system-design-primer. |
+| `backend-performance` | 19 backend performance rules from nodebestpractices, system-design-primer, the PostgreSQL concurrency docs, and the OWASP Business Logic cheat sheet. |
 | `devops-basics` | 12 DevOps rules from nodebestpractices — Docker, graceful shutdown, health checks, logging. |
 | `motion-design` | Animation principles from GSAP (GreenSock) — easing, sequencing, stagger, performance. |
 | `frontend-performance` | Frontend performance rules from the Front-End Checklist — animations, resource hints, budgets, lazy loading. |
@@ -264,7 +264,7 @@ All 27 bundled skills (v1.14.0):
 | `audit-team` | Run an 8-agent parallel audit — 5 skill specialists plus 3 area agents — report-only, no edits. |
 | `ub-mode` | Uncle Bob mode — Clean Code discipline from Robert C. Martin: TDD first, CRAP < 10. |
 | `design-taste-frontend` | Anti-slop design taste from Leonxlnx/taste-skill — layout, palettes, type, heroes, copy ban lists. |
-| `ui-ux-pro-max` | Full UI/UX audit from nextlevelbuilder/ui-ux-pro-max-skill — 224 checkable guidelines across 10 categories. |
+| `ui-ux-pro-max` | Full UI/UX audit from nextlevelbuilder/ui-ux-pro-max-skill — 222 checkable guidelines across 10 categories. |
 | `vengeance-ui` | Modern animated React components from VengeanceUI — 79 copy-paste components across 9 families. |
 | `brainstorming` | Find out what you actually want — and why — before anything gets built. Design doc first, approval first. |
 | `writing-plans` | Turn an approved spec into a bite-sized TDD implementation plan. |
@@ -273,6 +273,7 @@ All 27 bundled skills (v1.14.0):
 | `instruction_registers` | Name the user's target and action registers before building, pushing, or planning, and ask one clarifying question when they are ambiguous. |
 | `verify_provider_claims` | Check a provider's live documentation or the user's verified setup before asserting its current availability, free tier, pricing, endpoints, or retired status. |
 | `verify_publish_install_surface` | Verify a published version on each surface the user can see (commit/tag, registry, installed file) before claiming it is installed or live. |
+| `playwright-cli` | Browser automation and real web-app testing for coding agents, from Microsoft's Playwright CLI — drive the app, turn the session into Playwright tests, attach screenshot evidence. |
 
 Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
@@ -308,6 +309,14 @@ Four guardrails run before any file is written:
 2. **DRY-RUN** — `sync --dry-run`: preview only, writes nothing.
 3. **BACKUP** — before overwriting an existing file, sync writes a `.bak` copy first.
 4. **IDEMPOTENT** — if nothing changed, sync touches nothing. Safe to run repeatedly.
+
+### Scale limit — instruction files grow linearly with skills
+
+Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured at audit (22 skills): **266,198 bytes** of skill source → **2,660,559 bytes** of generated output across 124 files (**10×** amplification); `CLAUDE.md` alone is **262,243 bytes** today. Growth is linear: at 10× skills (220), each instruction file would be ≈ 2.6 MB and total output ≈ 26.6 MB. The binding constraint is the AI runtime's context window, not disk.
+
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 4× today's skills (≈ 80 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
+
+Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling.
 
 ### Validate + secret scanning
 
@@ -392,7 +401,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness skills list` | List all 27 bundled skills (+ which are enabled) |
+| `reviewer-harness skills list` | List all 28 bundled skills (+ which are enabled) |
 | `reviewer-harness skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer-harness skills remove <name>` | Disable a skill and remove it |
 | `reviewer-harness agents list` | List the bundled sub-agents |

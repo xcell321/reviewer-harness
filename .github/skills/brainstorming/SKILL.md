@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Find out what Edsiel actually wants — and why — before anything gets built. Ask before you build, lay out the approaches, write a design doc, and get his approval first. Nothing is built until he approves it.
+description: 'Find out what Edsiel actually wants — and why — before anything gets built. Ask before you build, lay out the approaches, write a design doc, and get his approval first. Nothing is built until he approves it.'
 ---
 
 ## Skill: brainstorming

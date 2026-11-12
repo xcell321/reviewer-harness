@@ -1,6 +1,6 @@
 ---
 name: ub-mode
-description: Uncle Bob mode — Clean Code discipline from Robert C. Martin (author of Clean Code): TDD first, CRAP < 10, duplication ≥ 0.8 eliminated, mutation-tested. Use on backend/logic changes, bug fixes, and refactors.
+description: 'Uncle Bob mode — Clean Code discipline from Robert C. Martin (author of Clean Code): TDD first, CRAP < 10, duplication ≥ 0.8 eliminated, mutation-tested. Use on backend/logic changes, bug fixes, and refactors.'
 ---
 
 ## Skill: ub-mode

@@ -1,6 +1,6 @@
 ---
 name: verify_provider_claims
-description: Check a provider's live documentation or the user's verified setup before asserting its current availability, free tier, pricing, endpoints, or retired status.
+description: 'Check a provider''s live documentation or the user''s verified setup before asserting its current availability, free tier, pricing, endpoints, or retired status.'
 ---
 
 ## Skill: verify_provider_claims

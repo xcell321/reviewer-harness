@@ -1,6 +1,6 @@
 ---
 name: safe-editing
-description: Surgical editing — the smallest possible diff, no collateral damage, always seasoned senior-developer quality and well structured.
+description: 'Surgical editing — the smallest possible diff, no collateral damage, always seasoned senior-developer quality and well structured.'
 ---
 
 ## Skill: safe-editing

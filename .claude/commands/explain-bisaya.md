@@ -1,5 +1,5 @@
 ---
-description: After each task, explain the changes in simple Bisaya (Cebuano).
+description: 'After each task, explain the changes in simple Bisaya (Cebuano).'
 ---
 
 ## Skill: explain-bisaya

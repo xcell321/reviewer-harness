@@ -57,6 +57,14 @@ description: One line — when should the AI use this?
 
 No code changes needed — the CLI discovers files in these folders automatically.
 
+## Scale limit — instruction files grow linearly with skills
+
+Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured at audit (22 skills): **266,198 bytes** of skill source → **2,660,559 bytes** of generated output across 124 files (**10×** amplification); `CLAUDE.md` alone is **262,243 bytes** today. Growth is linear: at 10× skills (220), each instruction file would be ≈ 2.6 MB and total output ≈ 26.6 MB. The binding constraint is the AI runtime's context window, not disk.
+
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 4× today's skills (≈ 80 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime (memoized in `lib/sync.js` — do not rebuild per-skill content in a loop over runtimes).
+
+Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling. If you add a skill, remember: it grows every generated file, so keep skill bodies tight.
+
 ## House rules
 
 - **Zero dependencies.** The harness must run on a bare Node.js install. Pull requests that add a dependency will be declined — if Node's standard library can do it, use that.

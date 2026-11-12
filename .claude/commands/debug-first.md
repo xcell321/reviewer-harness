@@ -1,5 +1,5 @@
 ---
-description: Root-cause debugging — reproduce first, fix the cause, not the symptom.
+description: 'Root-cause debugging — reproduce first, fix the cause, not the symptom.'
 ---
 
 ## Skill: debug-first

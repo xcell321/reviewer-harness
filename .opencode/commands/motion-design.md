@@ -1,5 +1,5 @@
 ---
-description: Animation principles distilled from GSAP (GreenSock) — easing, sequencing, stagger, and performance. Make UI motion feel premium, not flashy. For any task involving CSS/JS animations, transitions, or micro-interactions.
+description: 'Animation principles distilled from GSAP (GreenSock) — easing, sequencing, stagger, and performance. Make UI motion feel premium, not flashy. For any task involving CSS/JS animations, transitions, or micro-interactions.'
 ---
 
 ## Skill: motion-design

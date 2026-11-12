@@ -1,6 +1,6 @@
 ---
 name: ux-edge-states
-description: 10 UX states beyond the happy path — design every screen for empty, loading, error, offline, and success. The real test is what the UI does when nothing goes right.
+description: '10 UX states beyond the happy path — design every screen for empty, loading, error, offline, and success. The real test is what the UI does when nothing goes right.'
 ---
 
 ## Skill: ux-edge-states
@@ -35,5 +35,8 @@ Your product works when everything goes right. The real test is what it does whe
 - Spinners that never resolve and can't be cancelled.
 - Losing user input on error, expiry, or navigation.
 - Dead-end "no results" with no suggestions.
+
+### Learn more
+- The 10-state list: Strategy Fox — "10 UX States" reel. The states above match its list and order; the reel is the list's origin. No citable article or repo publishes the list, so the per-state guidance in this skill is general practice.
 
 Apply this playbook to the following: $ARGUMENTS

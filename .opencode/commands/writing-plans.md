@@ -1,5 +1,5 @@
 ---
-description: Turn an approved spec or design doc into an implementation plan for an engineer who hasn't seen the codebase — bite-sized TDD tasks, each ending in a testable deliverable and a commit.
+description: 'Turn an approved spec or design doc into an implementation plan for an engineer who hasn''t seen the codebase — bite-sized TDD tasks, each ending in a testable deliverable and a commit.'
 ---
 
 ## Skill: writing-plans
