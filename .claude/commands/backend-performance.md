@@ -1,5 +1,5 @@
 ---
-description: '10 backend performance rules distilled from nodebestpractices (105k stars) and system-design-primer — event loop, caching, idempotency, backpressure, and the latency numbers that tell you what''s actually slow.'
+description: '19 backend performance rules distilled from nodebestpractices (105k stars), system-design-primer, the PostgreSQL concurrency docs, and the OWASP Business Logic cheat sheet — event loop, caching, idempotency, backpressure, race conditions, and the latency numbers that tell you what''s actually slow.'
 ---
 
 ## Skill: backend-performance
@@ -42,6 +42,34 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 10. **Watch the four golden signals.** Error rate (users feel it immediately), latency (directly affects business), throughput (gives context to the other two), and saturation (90% CPU = no headroom). Node-specific: keep process RAM under ~1.4GB, track errors per minute and restarts.
 *Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`*
 
+### Survive concurrent requests
+11. **Treat every check-then-act as a race.** Any operation that reads a value, decides, then writes — check balance then debit, check the coupon is unused then redeem it, check the slot is free then book it — lets two concurrent requests both read the old value, both pass the check, and both write. Loyalty points get drained, balances go negative, single-use coupons get redeemed many times. If two requests can race, assume they will; the check and the act must be one atomic operation. (Idempotency keys, rule 5, cover retries — this rule covers simultaneous first attempts.)
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, "Prevent Race Conditions on Sensitive Operations"*
+
+12. **Lock the row when you read-then-write it.** In PostgreSQL, `SELECT ... FOR UPDATE` inside a transaction locks the row until commit — other writers and lockers wait, then see the updated row. Use `FOR NO KEY UPDATE` when you don't change key columns (weaker, blocks less). A plain `SELECT` takes no such lock: under MVCC it reads a snapshot and stops nobody.
+*Source: PostgreSQL documentation — Chapter 13 "Concurrency Control", §13.3.2 "Row-Level Locks"*
+
+13. **Prefer a conditional update over read-modify-write.** `UPDATE ... SET stock = stock - 1 WHERE stock > 0` makes the predicate part of the write itself — there is no window between check and act. Check the affected-row count: 0 rows means the condition no longer held at write time, so return the conflict error instead of writing.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, pattern reference (conditional decrement)*
+
+14. **Back "exactly once" with a unique constraint.** One claim per donation, one redemption per coupon, one bonus per user: put a UNIQUE constraint on the natural key (e.g. `(user_id, bonus_type)`) and let the database reject the loser of the race. Application-level checks alone always leave a window — the constraint is the last line of defense.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, pattern reference (one-per-user bonus)*
+
+15. **Know your isolation level — the default is weaker than you think.** PostgreSQL defaults to Read Committed: every statement sees a fresh snapshot, so invariants that span rows or statements can break under concurrency even though each statement looks correct. Repeatable Read gives one stable snapshot per transaction; Serializable additionally detects dangerous read/write patterns and aborts one side. Choose per invariant, not by habit.
+*Source: PostgreSQL documentation — Chapter 13 "Concurrency Control", §13.2 "Transaction Isolation"*
+
+16. **Retry serialization failures and deadlocks — they are normal outcomes, not bugs.** Repeatable Read and Serializable transactions can abort with SQLSTATE 40001 ("could not serialize access…"), and PostgreSQL automatically detects deadlocks and aborts one transaction to let the others finish. Wrap the whole transaction in a bounded retry loop; never surface a 40001 or a deadlock abort to the user as a 500.
+*Source: PostgreSQL documentation — Chapter 13, §13.2.2–13.2.3 (SQLSTATE 40001) and §13.3.4 "Deadlocks"*
+
+17. **Lock rows in a consistent order to prevent deadlocks.** When every transaction that touches multiple rows or tables locks them in the same order, circular waits mostly disappear. PostgreSQL detects the deadlocks that remain and aborts one side — which is why rule 16's retry loop must exist wherever explicit locking is used.
+*Source: PostgreSQL documentation — Chapter 13, §13.3.4 "Deadlocks"*
+
+18. **Use advisory locks when the resource isn't a row.** `pg_advisory_xact_lock` gives an application-defined lock for resources MVCC doesn't model — a job name, an external system, a whole workflow — and releases it automatically at transaction end. Advisory locks are cooperative: every code path that touches the resource must take the same lock, or it protects nothing.
+*Source: PostgreSQL documentation — Chapter 13, §13.3.5 "Advisory Locks"*
+
+19. **Write a test that races.** If two requests can race, a sequential test suite will never see the bug. Fire the same request concurrently (parallel calls against the real database) and assert the end state: the balance never goes negative, the coupon is redeemed exactly once, exactly one claim wins. The test documents the invariant as much as it verifies it.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, "Test Concurrency"*
+
 ### Also apply (general practice, beyond these repos)
 - **Kill N+1 queries** — never query inside a loop; fetch related data with JOIN or `IN (...)`.
 - **Index hot columns** — foreign keys, `WHERE` and `ORDER BY` columns; verify with `EXPLAIN`.
@@ -53,6 +81,8 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 - [ ] No Lodash where a native method does the job
 - [ ] Repeated reads are cached with a TTL and an invalidation plan
 - [ ] Write endpoints are idempotent or carry idempotency keys
+- [ ] Check-then-act operations are atomic — row lock, conditional update, or unique constraint, never a bare read-then-write
+- [ ] Serialization failures (40001) and deadlocks are retried with a bounded loop, not surfaced as 500s
 - [ ] Retries use backoff; queues have caps with 503 on overflow
 - [ ] Connections come from a sized pool, released on every path
 - [ ] Slowest path measured against the latency scale — biggest number attacked first
@@ -63,5 +93,7 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 - System design primer: https://github.com/donnemartin/system-design-primer
 - Don't block the event loop (Node.js docs): https://nodejs.org/en/docs/guides/dont-block-the-event-loop/
 - Latency numbers: https://github.com/donnemartin/system-design-primer#latency-numbers-every-programmer-should-know
+- PostgreSQL concurrency control (official docs, Ch. 13): https://www.postgresql.org/docs/current/mvcc.html
+- OWASP Business Logic Security Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html
 
 Apply this playbook to the following: $ARGUMENTS
