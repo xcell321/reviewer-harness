@@ -1,5 +1,5 @@
 ---
-description: 12 DevOps rules distilled from nodebestpractices (105k stars) — Docker images, graceful shutdown, health checks, smart logging, and memory guards. Ship reliably instead of deploying by hand and hoping.
+description: '12 DevOps rules distilled from nodebestpractices (105k stars) — Docker images, graceful shutdown, health checks, smart logging, and memory guards. Ship reliably instead of deploying by hand and hoping.'
 ---
 
 ## Skill: devops-basics

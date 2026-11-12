@@ -6,10 +6,11 @@
 # The CLI itself is copied to /app; your project is mounted at
 # /workspace and used as the target (the CLI's default target is the
 # working directory).
-FROM node:20-alpine
+FROM node:20.20.2-alpine
 
 WORKDIR /app
 COPY . .
+USER node
 WORKDIR /workspace
 
 ENTRYPOINT ["node", "/app/bin/cli.js"]

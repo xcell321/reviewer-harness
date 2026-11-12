@@ -1,5 +1,5 @@
 ---
-description: 10 backend performance rules distilled from nodebestpractices (105k stars) and system-design-primer — event loop, caching, idempotency, backpressure, and the latency numbers that tell you what's actually slow.
+description: '10 backend performance rules distilled from nodebestpractices (105k stars) and system-design-primer — event loop, caching, idempotency, backpressure, and the latency numbers that tell you what''s actually slow.'
 ---
 
 ## Skill: backend-performance

@@ -1,6 +1,6 @@
 ---
 name: rea
-description: Reverse-engineer a shipped app, binary, or website with REA: inspect it without source code, get evidence for how a feature works, and rebuild it as your own code.
+description: 'Reverse-engineer a shipped app, binary, or website with REA: inspect it without source code, get evidence for how a feature works, and rebuild it as your own code.'
 ---
 
 ## Skill: rea

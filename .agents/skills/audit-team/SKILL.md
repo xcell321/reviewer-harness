@@ -1,6 +1,6 @@
 ---
 name: audit-team
-description: Run an 8-agent parallel audit — 5 skill specialists (api-security, devops, ux-edge-states, backend-performance, system-design) plus 3 area agents (backend, frontend, DevOps) — over a target repo, each applying the relevant reviewer-harness skills, report-only, no edits. Merged triage with severities; the user picks what to fix.
+description: 'Run an 8-agent parallel audit — 5 skill specialists (api-security, devops, ux-edge-states, backend-performance, system-design) plus 3 area agents (backend, frontend, DevOps) — over a target repo, each applying the relevant reviewer-harness skills, report-only, no edits. Merged triage with severities; the user picks what to fix.'
 ---
 
 ## Skill: audit-team

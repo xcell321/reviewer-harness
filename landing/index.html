@@ -38,9 +38,14 @@
       .copy-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--hair);color:var(--muted);border-radius:7px;font-family:var(--mono);font-size:12px;padding:5px 10px;cursor:pointer;transition:color .15s,border-color .15s}
       .copy-btn:hover{color:var(--white);border-color:rgba(255,255,255,.4)}
       .copy-btn.copied{color:var(--amber);border-color:var(--coral)}
+      .copy-btn.copy-failed{color:var(--coral);border-color:var(--coral)}
+      .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+      .skip-link{position:absolute;left:-9999px;top:0;background:var(--white);color:#07080a;font-family:var(--sans);font-size:14px;font-weight:600;padding:10px 16px;border-radius:8px;z-index:1000;text-decoration:none}
+      .skip-link:focus{position:fixed;left:16px;top:16px}
+      .mobile-nav{display:none}
 
       /* ---------- HERO + AURORA ---------- */
-      .hero{position:relative;overflow:hidden;padding:22px 0 72px;text-align:center;isolation:isolate}
+      .hero{position:relative;overflow:hidden;padding:16px 0 24px;text-align:center;isolation:isolate}
       .aurora{position:absolute;inset:0;z-index:-2;overflow:hidden;background:var(--bg)}
       .blade{position:absolute;border-radius:50%;mix-blend-mode:screen;filter:blur(58px);will-change:transform,opacity}
       .blade-1{width:980px;height:300px;left:-12%;top:2%;background:linear-gradient(100deg,transparent 0%,rgba(255,47,58,.0) 8%,rgba(255,47,58,.75) 38%,rgba(255,107,74,.65) 62%,rgba(255,179,71,.5) 84%,transparent 100%);transform:rotate(-24deg);animation:drift1 18s ease-in-out infinite alternate}
@@ -57,7 +62,7 @@
       .hero-inner{position:relative;z-index:2}
 
       /* Floating pill nav */
-      .pill-nav{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:9px 10px 9px 18px;border-radius:999px;background:rgba(12,13,15,.58);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--hair);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 18px 50px rgba(0,0,0,.45)}
+      .pill-nav{position:relative;max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:9px 10px 9px 18px;border-radius:999px;background:rgba(12,13,15,.58);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--hair);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 18px 50px rgba(0,0,0,.45)}
       .brand{display:inline-flex;align-items:center;gap:9px;font-size:15px;font-weight:600;color:var(--white);text-decoration:none;letter-spacing:-.02em;white-space:nowrap}
       .diamond{width:11px;height:11px;flex:none;transform:rotate(45deg);border-radius:2px;background:linear-gradient(135deg,#ffb347 0%,#ff6b4a 55%,#ff2f3a 100%);box-shadow:0 0 12px rgba(255,107,74,.75)}
       .nav-links{display:flex;gap:28px}
@@ -69,15 +74,15 @@
       .nav-cta{background:#f2f2f2;color:#111214;font-size:13.5px;font-weight:600;padding:7px 15px;border-radius:999px}
       .nav-cta:hover{background:#fff}
 
-      .eyebrow{display:inline-flex;align-items:center;gap:8px;margin-top:56px;padding:6px 14px;border-radius:999px;border:1px solid var(--hair);background:rgba(12,13,15,.5);backdrop-filter:blur(10px);font-size:12.5px;font-weight:500;color:var(--muted2);letter-spacing:.01em}
+      .eyebrow{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 14px;border-radius:999px;border:1px solid var(--hair);background:rgba(12,13,15,.5);backdrop-filter:blur(10px);font-size:12.5px;font-weight:500;color:var(--muted2);letter-spacing:.01em}
       .eyebrow .spark{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px rgba(255,179,71,.9);flex:none}
-      .hero-title{font-size:64px !important;font-weight:600 !important;line-height:1.1 !important;letter-spacing:-.03em;color:var(--white);margin:26px auto 20px;max-width:860px;text-shadow:0 4px 40px rgba(0,0,0,.6)}
+      .hero-title{font-size:56px !important;font-weight:600 !important;line-height:1.1 !important;letter-spacing:-.03em;color:var(--white);margin:20px auto 12px;max-width:860px;text-shadow:0 4px 40px rgba(0,0,0,.6)}
       .grad-word{background:linear-gradient(92deg,var(--amber) 0%,var(--coral) 52%,var(--crimson) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
-      .hero-sub{font-size:18px;font-weight:400;letter-spacing:.2px;line-height:1.6;color:rgba(255,255,255,.78);max-width:640px;margin:0 auto;text-shadow:0 2px 22px rgba(0,0,0,.75)}
+      .hero-sub{font-size:18px;font-weight:400;letter-spacing:.2px;line-height:1.5;color:rgba(255,255,255,.78);max-width:640px;margin:0 auto;text-shadow:0 2px 22px rgba(0,0,0,.75)}
       .hero-sub strong{color:#fff;font-weight:600}
 
       /* Keycap buttons */
-      .keycap-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+      .keycap-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:24px}
       .keycap{display:inline-flex;align-items:center;gap:10px;background:#e6e6e6;color:#2f3031;font-family:var(--sans);font-size:14px;font-weight:500;padding:12px 20px;border-radius:8px;border:0;outline:none;cursor:pointer;text-decoration:none;
         box-shadow:0 0 0 1px rgba(255,255,255,.28),0 0 14px rgba(255,255,255,.19),inset 0 1px 0 rgba(255,255,255,.95),0 8px 20px rgba(0,0,0,.35);
         transition:transform .1s,box-shadow .15s}
@@ -86,19 +91,19 @@
       .keycap:active{transform:translateY(1px)}
       .keycap svg{flex:none;display:block}
       .keycap.copied{color:#8a2b12}
-      .install-caption{margin:18px auto 0;font-family:var(--mono);font-size:12px;color:var(--muted)}
+      .install-caption{margin:12px auto 0;font-family:var(--mono);font-size:12px;color:var(--muted)}
       .install-caption b{color:var(--muted2);font-weight:400}
 
       /* Command bar mockup */
-      .cmdbar{max-width:700px;margin:44px auto 0;text-align:left;border-radius:14px;background:rgba(13,14,17,.72);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--hair);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 30px 80px rgba(0,0,0,.65),0 0 90px rgba(255,47,58,.13);overflow:hidden}
-      .cmdbar-input{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--hair2)}
+      .cmdbar{max-width:700px;margin:24px auto 0;text-align:left;border-radius:14px;background:rgba(13,14,17,.72);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--hair);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 30px 80px rgba(0,0,0,.65),0 0 90px rgba(255,47,58,.13);overflow:hidden}
+      .cmdbar-input{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--hair2)}
       .cmdbar-input svg{flex:none}
       .cmd-query{font-size:15.5px;color:var(--white);font-weight:500;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .caret{display:inline-block;width:2px;height:18px;background:var(--coral);vertical-align:-3px;margin-left:2px;box-shadow:0 0 8px rgba(255,107,74,.9);animation:blink 1.05s steps(1) infinite}
       @keyframes blink{50%{opacity:0}}
       .mode-pill{margin-left:auto;flex:none;font-size:11.5px;font-weight:600;color:var(--muted2);border:1px solid var(--hair);background:rgba(255,255,255,.04);padding:4px 11px;border-radius:999px;letter-spacing:.02em}
-      .cmd-rows{padding:8px}
-      .cmd-row{display:flex;align-items:center;gap:13px;padding:11px 12px;border-radius:9px}
+      .cmd-rows{padding:6px}
+      .cmd-row{display:flex;align-items:center;gap:13px;padding:8px 12px;border-radius:9px}
       .cmd-row .ric{width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--hair2);color:var(--muted2)}
       .cmd-row .rlabel{font-size:14.5px;color:var(--muted2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .cmd-row .rlabel b{color:var(--white);font-weight:600;font-family:var(--mono);font-size:13.5px}
@@ -106,11 +111,11 @@
       .cmd-row.active{background:linear-gradient(90deg,rgba(255,47,58,.20),rgba(255,107,74,.10) 60%,rgba(255,179,71,.05));box-shadow:inset 0 0 0 1px rgba(255,107,74,.28)}
       .cmd-row.active .ric{background:rgba(255,107,74,.18);border-color:rgba(255,107,74,.35);color:#ffd9c9}
       .cmd-row.active .kbd{color:#ffd9c9;border-color:rgba(255,107,74,.4)}
-      .cmdbar-foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:11px 18px;border-top:1px solid var(--hair2);font-family:var(--mono);font-size:11px;color:var(--muted)}
+      .cmdbar-foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:8px 18px;border-top:1px solid var(--hair2);font-family:var(--mono);font-size:11px;color:var(--muted)}
       .cmdbar-foot .wm{display:inline-flex;align-items:center;gap:7px;color:var(--muted2)}
       .cmdbar-foot .diamond{width:7px;height:7px}
 
-      .ghost-pill{display:inline-flex;align-items:center;gap:8px;margin-top:30px;padding:9px 20px;border-radius:999px;background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);font-size:14px;font-weight:500;text-decoration:none;transition:border-color .15s,color .15s}
+      .ghost-pill{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:8px 20px;border-radius:999px;background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);font-size:14px;font-weight:500;text-decoration:none;transition:border-color .15s,color .15s}
       .ghost-pill:hover{border-color:rgba(255,255,255,.45);color:#fff}
 
       .ph-badge{position:absolute;right:26px;bottom:26px;z-index:3;display:flex;align-items:center;gap:12px;text-align:left;background:rgba(12,13,15,.78);backdrop-filter:blur(14px);border:1px solid var(--hair);border-radius:12px;padding:12px 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 18px 44px rgba(0,0,0,.55)}
@@ -304,10 +309,6 @@
       .does-cell{color:var(--muted2)}
       .when-cell{color:var(--muted);white-space:nowrap}
 
-      /* Scroll reveal — hidden state is added by JS only, so content is visible if JS fails */
-      .rv{opacity:0;transform:translateY(16px)}
-      .rv-in{opacity:1;transform:none;transition:opacity .65s ease,transform .65s ease}
-
       @media (max-width:900px){
         .problem-grid,.vs-grid,.tree-wrap{grid-template-columns:1fr}
         .steps,.skills-grid{grid-template-columns:repeat(2,1fr)}
@@ -322,6 +323,12 @@
       }
       @media (max-width:680px){
         .nav-links,.nav-login{display:none}
+        .mobile-nav{display:block}
+        .mobile-nav summary{list-style:none;cursor:pointer;font-size:13.5px;font-weight:600;color:#111214;background:#f2f2f2;padding:7px 15px;border-radius:999px;white-space:nowrap}
+        .mobile-nav summary::-webkit-details-marker{display:none}
+        .mobile-nav .mobile-links{position:absolute;top:calc(100% + 8px);left:0;right:0;display:flex;flex-direction:column;gap:2px;padding:8px;border-radius:14px;background:rgba(12,13,15,.95);border:1px solid var(--hair);box-shadow:0 18px 50px rgba(0,0,0,.45)}
+        .mobile-nav .mobile-links a{color:var(--muted2);text-decoration:none;font-size:14px;font-weight:500;padding:10px 12px;border-radius:8px}
+        .mobile-nav .mobile-links a:hover{color:var(--white)}
         .pill-nav{padding:8px 8px 8px 14px}
         .hero{padding-top:14px}
         .eyebrow{margin-top:40px}
@@ -359,7 +366,9 @@
     </style>
   </head>
   <body>
-    <main id="top">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="copy-status" class="visually-hidden" aria-live="polite"></div>
+    <main id="main">
       <!-- ================= HERO ================= -->
       <div class="hero">
         <div class="aurora" aria-hidden="true">
@@ -372,7 +381,7 @@
         <div class="wrap hero-inner">
           <!-- Floating pill nav -->
           <nav class="pill-nav" aria-label="Main">
-            <a class="brand" href="#top"><span class="diamond"></span>reviewer-harness</a>
+            <a class="brand" href="#main"><span class="diamond"></span>reviewer-harness</a>
             <div class="nav-links">
               <a href="#install">Install</a><a href="#usage">How to use</a><a href="#skills">Skills</a><a href="#rules">Rules</a><a href="#faq">FAQ</a><a href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">GitHub</a>
             </div>
@@ -380,6 +389,12 @@
               <a class="nav-login" href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">GitHub</a>
               <a class="btn nav-cta" href="#install">Install — free</a>
             </div>
+            <details class="mobile-nav">
+              <summary>Menu</summary>
+              <div class="mobile-links">
+                <a href="#install">Install</a><a href="#usage">How to use</a><a href="#skills">Skills</a><a href="#rules">Rules</a><a href="#faq">FAQ</a><a href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">GitHub</a>
+              </div>
+            </details>
           </nav>
 
           <span class="eyebrow"><span class="spark"></span>FREE FOREVER — MIT LICENSED · v1.14.0 · 27 skills · 8 runtimes</span>
@@ -590,17 +605,17 @@ $stmt = $pdo-&gt;prepare("SELECT … WHERE id = ?");
             <div class="step">
               <span class="step-no">1</span><h3>Install the CLI</h3>
               <p>One global install. Zero dependencies — if you have Node.js 18+, you're ready.</p>
-              <div class="codeblock"><code><span class="p">$</span> npm install -g reviewer-harness</code><button class="copy-btn" type="button" data-copy="npm install -g reviewer-harness">⧉ copy</button></div>
+              <div class="codeblock"><code><span class="p">$</span> npm install -g reviewer-harness</code><button class="copy-btn" type="button" data-copy="npm install -g reviewer-harness" aria-label="Copy: npm install -g reviewer-harness">⧉ copy</button></div>
             </div>
             <div class="step">
               <span class="step-no">2</span><h3>Go to your project</h3>
               <p>Every command works on the current directory — the harness lives inside your project, next to your code.</p>
-              <div class="codeblock"><code><span class="p">$</span> cd your-project</code><button class="copy-btn" type="button" data-copy="cd your-project">⧉ copy</button></div>
+              <div class="codeblock"><code><span class="p">$</span> cd your-project</code><button class="copy-btn" type="button" data-copy="cd your-project" aria-label="Copy: cd your-project">⧉ copy</button></div>
             </div>
             <div class="step">
               <span class="step-no">3</span><h3>Init, then sync</h3>
               <p><code>init</code> creates your master config. <code>sync</code> pushes the rules, skills and prompts into every runtime you enable.</p>
-              <div class="codeblock"><code><span class="p">$</span> reviewer-harness sync</code><button class="copy-btn" type="button" data-copy="reviewer-harness init && reviewer-harness sync">⧉ copy</button></div>
+              <div class="codeblock"><code><span class="p">$</span> reviewer-harness init && reviewer-harness sync</code><button class="copy-btn" type="button" data-copy="reviewer-harness init && reviewer-harness sync" aria-label="Copy: reviewer-harness init && reviewer-harness sync">⧉ copy</button></div>
             </div>
           </div>
           <div class="install-note">
@@ -822,7 +837,7 @@ $stmt = $pdo-&gt;prepare("SELECT … WHERE id = ?");
             <p>Every rule, every skill, every runtime — free. MIT licensed, zero dependencies, no API key, nothing to buy. Install it once and it just works.</p>
             <div class="cta-cmd">
               <code><span class="p">$</span> npm install -g reviewer-harness</code>
-              <button class="copy-btn" type="button" data-copy="npm install -g reviewer-harness">⧉ copy</button>
+              <button class="copy-btn" type="button" data-copy="npm install -g reviewer-harness" aria-label="Copy: npm install -g reviewer-harness">⧉ copy</button>
             </div>
             <div class="cta-links">
               <a class="btn btn-white btn-lg" href="https://github.com/xcell321/reviewer-harness" target="_blank" rel="noopener">Get it on GitHub</a>
@@ -845,9 +860,10 @@ $stmt = $pdo-&gt;prepare("SELECT … WHERE id = ?");
     </main>
     <script>
       (function(){
-        function flashCopied(btn){var o=btn.textContent;btn.textContent="✓ copied";btn.classList.add("copied");setTimeout(function(){btn.textContent=o;btn.classList.remove("copied")},1600)}
-        function fallbackCopy(t,btn){var ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");flashCopied(btn)}catch(e){}document.body.removeChild(ta)}
-        function copyText(t,btn){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){flashCopied(btn)},function(){fallbackCopy(t,btn)})}else{fallbackCopy(t,btn)}}
+        function announce(msg){var s=document.getElementById("copy-status");if(s)s.textContent=msg}
+        function flashCopied(btn,ok,t){var o=btn.textContent;if(ok){btn.textContent="✓ copied";btn.classList.add("copied");announce("Copied: "+t)}else{btn.textContent="Copy failed — select the text manually";btn.classList.add("copy-failed");announce("Copy failed — select the text manually")}setTimeout(function(){btn.textContent=o;btn.classList.remove("copied");btn.classList.remove("copy-failed")},ok?1600:4000)}
+        function fallbackCopy(t,btn){var ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand("copy")}catch(e){ok=false}document.body.removeChild(ta);flashCopied(btn,ok,t)}
+        function copyText(t,btn){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){flashCopied(btn,true,t)},function(){fallbackCopy(t,btn)})}else{fallbackCopy(t,btn)}}
         document.querySelectorAll("[data-copy]").forEach(function(btn){btn.addEventListener("click",function(){copyText(btn.getAttribute("data-copy"),btn)})});
         document.querySelectorAll(".cmdtable tbody tr").forEach(function(row){row.style.cursor="pointer";row.addEventListener("click",function(e){if(e.target.closest("[data-copy]"))return;var b=row.querySelector("[data-copy]");if(b)b.click()})});
       })();
@@ -881,15 +897,6 @@ $stmt = $pdo-&gt;prepare("SELECT … WHERE id = ?");
         document.querySelectorAll(".skill-chip[data-demo]").forEach(function(c){c.addEventListener("click",function(){activate(c.getAttribute("data-demo"),false)})});
         document.querySelectorAll(".cmd-card[data-demo]").forEach(function(c){c.addEventListener("click",function(){activate(c.getAttribute("data-demo"),true)})});
         runDemo("audit-team");
-      })();
-      (function(){
-        var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        if(reduce||!("IntersectionObserver" in window))return;
-        var els=document.querySelectorAll(".fail-card,.vs-panel,.tree,.tree-note,.step,.usage-card,.cmd-card,.cmdtable,.skill-card,.rule,.runtime,.faq,.metric,.install-note,.cta-band");
-        var io=new IntersectionObserver(function(entries){
-          entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add("rv-in");io.unobserve(en.target)}});
-        },{threshold:.12,rootMargin:"0px 0px -40px 0px"});
-        els.forEach(function(el,i){el.classList.add("rv");el.style.transitionDelay=Math.min((i%3)*70,140)+"ms";io.observe(el)});
       })();
     </script>
   </body>

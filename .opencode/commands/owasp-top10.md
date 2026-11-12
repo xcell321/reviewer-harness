@@ -1,5 +1,5 @@
 ---
-description: OWASP Top 10 web security risks — check every app against these before shipping. The industry standard for web security.
+description: 'OWASP Top 10 web security risks — check every app against these before shipping. The industry standard for web security.'
 ---
 
 ## Skill: owasp-top10

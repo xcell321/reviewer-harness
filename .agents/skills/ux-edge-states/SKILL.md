@@ -1,6 +1,6 @@
 ---
 name: ux-edge-states
-description: 10 UX states beyond the happy path — design every screen for empty, loading, error, offline, and success. The real test is what the UI does when nothing goes right.
+description: '10 UX states beyond the happy path — design every screen for empty, loading, error, offline, and success. The real test is what the UI does when nothing goes right.'
 ---
 
 ## Skill: ux-edge-states

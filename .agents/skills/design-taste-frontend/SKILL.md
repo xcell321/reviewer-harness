@@ -1,6 +1,6 @@
 ---
 name: design-taste-frontend
-description: Anti-slop design taste distilled from Leonxlnx/taste-skill (v2.5.1) — kind-first layout, dealt palettes/type/heroes, house rules with exact numbers, copy ban lists, motion tokens. Use when building, redesigning, or reviewing a landing/company/product/shop/cafe/hotel/studio/SaaS/AI/devtool/game site, or when a page looks generic, templated, or "AI-made".
+description: 'Anti-slop design taste distilled from Leonxlnx/taste-skill (v2.5.1) — kind-first layout, dealt palettes/type/heroes, house rules with exact numbers, copy ban lists, motion tokens. Use when building, redesigning, or reviewing a landing/company/product/shop/cafe/hotel/studio/SaaS/AI/devtool/game site, or when a page looks generic, templated, or "AI-made".'
 ---
 
 ## Skill: design-taste-frontend

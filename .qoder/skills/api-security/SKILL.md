@@ -1,6 +1,6 @@
 ---
 name: api-security
-description: 14 API security rules — apply to every backend endpoint you build or review. No anonymous backdoors, no leaked secrets.
+description: '14 API security rules — apply to every backend endpoint you build or review. No anonymous backdoors, no leaked secrets.'
 ---
 
 ## Skill: api-security

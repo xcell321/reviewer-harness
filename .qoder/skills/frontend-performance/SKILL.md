@@ -1,6 +1,6 @@
 ---
 name: frontend-performance
-description: Frontend performance rules distilled from Front-End Checklist (thedaviddias/Front-End-Checklist) — GPU-composited animations, layout-thrashing prevention, resource hints, performance budgets, script loading, lazy loading, and image dimensions. Makes laggy sites smooth without breaking design.
+description: 'Frontend performance rules distilled from Front-End Checklist (thedaviddias/Front-End-Checklist) — GPU-composited animations, layout-thrashing prevention, resource hints, performance budgets, script loading, lazy loading, and image dimensions. Makes laggy sites smooth without breaking design.'
 ---
 
 ## Skill: frontend-performance

@@ -1,6 +1,6 @@
 ---
 name: nodejs-quality
-description: 62 Node.js quality rules distilled from nodebestpractices (105k stars) — error handling, project structure, code style, testing, production, Node-specific security, and Docker. Everything backend-performance, devops-basics, system-design, api-security, and owasp-top10 already cover is left out.
+description: '62 Node.js quality rules distilled from nodebestpractices (105k stars) — error handling, project structure, code style, testing, production, Node-specific security, and Docker. Everything backend-performance, devops-basics, system-design, api-security, and owasp-top10 already cover is left out.'
 ---
 
 ## Skill: nodejs-quality

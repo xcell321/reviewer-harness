@@ -1,5 +1,5 @@
 ---
-description: 68 system design rules distilled from system-design-primer (377k stars) — CAP tradeoffs, load balancing, database scaling, availability math, and how the pieces of a real SaaS fit together.
+description: '68 system design rules distilled from system-design-primer (377k stars) — CAP tradeoffs, load balancing, database scaling, availability math, and how the pieces of a real SaaS fit together.'
 ---
 
 ## Skill: system-design

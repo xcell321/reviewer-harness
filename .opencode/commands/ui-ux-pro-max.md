@@ -1,5 +1,5 @@
 ---
-description: Full UI/UX audit and fix planning distilled from nextlevelbuilder/ui-ux-pro-max-skill — 224 checkable UX guidelines across 10 priority categories, plus the design-system workflow and pre-delivery checklist. Use when auditing a UI systematically, planning prioritized fixes, or building a new page/project design system.
+description: 'Full UI/UX audit and fix planning distilled from nextlevelbuilder/ui-ux-pro-max-skill — 224 checkable UX guidelines across 10 priority categories, plus the design-system workflow and pre-delivery checklist. Use when auditing a UI systematically, planning prioritized fixes, or building a new page/project design system.'
 ---
 
 ## Skill: ui-ux-pro-max

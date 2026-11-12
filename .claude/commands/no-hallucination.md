@@ -1,5 +1,5 @@
 ---
-description: Make sure every library, function, and API actually exists before using it.
+description: 'Make sure every library, function, and API actually exists before using it.'
 ---
 
 ## Skill: no-hallucination

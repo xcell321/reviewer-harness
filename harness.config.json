@@ -48,5 +48,5 @@
     "verify_provider_claims",
     "verify_publish_install_surface"
   ],
-  "version": "1.14.0"
+  "version": "1.15.0"
 }

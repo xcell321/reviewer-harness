@@ -1,6 +1,6 @@
 ---
 name: vengeance-ui
-description: Modern animated React components distilled from VengeanceUI (Ashutoshx7) — 79 copy-paste components across 9 families for landing pages, portfolios, and SaaS sites. Use when designing a modern UI, hero section, or landing page and you want premium motion without building from scratch.
+description: 'Modern animated React components distilled from VengeanceUI (Ashutoshx7) — 79 copy-paste components across 9 families for landing pages, portfolios, and SaaS sites. Use when designing a modern UI, hero section, or landing page and you want premium motion without building from scratch.'
 ---
 
 ## Skill: vengeance-ui

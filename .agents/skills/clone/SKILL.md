@@ -1,6 +1,6 @@
 ---
 name: clone
-description: Fully clone a website's design — layout, components, animations, borders — while replacing all text and assets with your own.
+description: 'Fully clone a website''s design — layout, components, animations, borders — while replacing all text and assets with your own.'
 ---
 
 ## Skill: clone

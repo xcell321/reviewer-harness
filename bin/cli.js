@@ -17,10 +17,10 @@ import { listBundledSkills, addSkill, removeSkill, loadBundledSkills, skillComma
 import { listBundledAgents, addAgent } from "../lib/agents.js";
 import { listBundledCommands, addCommand } from "../lib/commands.js";
 
-// Parse CLI flags. parseArgs throws for unknown options (--help, --version,
-// or a typo like --targt) — catch it here so the user gets a clean error +
-// usage hint instead of a raw Node stack (the throw happens at module load,
-// outside main()'s catch).
+// F-B1 (full fix): the top-level parse sits outside main().catch, so
+// an unknown flag used to crash with a raw Node stack trace. Catch it
+// here: clean one-line error + help on stderr, exit 1. helpText() is a
+// hoisted function declaration, so it is callable this early.
 let values;
 let positionals;
 try {
@@ -29,25 +29,39 @@ try {
     options: {
       "dry-run": { type: "boolean", default: false },
       target: { type: "string", default: process.cwd() },
-      help: { type: "boolean", default: false },
+      help: { type: "boolean", short: "h", default: false },
       version: { type: "boolean", default: false },
+      verbose: { type: "boolean", default: false },
     },
   }));
 } catch (err) {
   console.error(`Error: ${err.message}`);
-  console.error(`Run "reviewer-harness --help" for usage.`);
+  console.error(helpText());
   process.exit(1);
 }
 const [command, sub, arg] = positionals;
 const targetDir = values.target;
 const dryRun = values["dry-run"];
 
-function help() {
-  console.log(`reviewer-harness — your own AI harness
+// devops-basics rule 4: handle SIGTERM/SIGINT gracefully — finish the
+// current write, then exit cleanly. Node runs a synchronous write to
+// completion before a signal handler executes, and writeSafe is atomic
+// (temp file + rename), so exiting here can never leave a half-written
+// file behind.
+let shuttingDown = false;
+function handleShutdownSignal(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.error(`\nReceived ${signal} — finishing the current write, then exiting.`);
+  process.exit(0);
+}
+process.on("SIGTERM", () => handleShutdownSignal("SIGTERM"));
+process.on("SIGINT", () => handleShutdownSignal("SIGINT"));
+
+function helpText() {
+  return `reviewer-harness — your own AI harness
 
 Usage (run inside your project):
-  reviewer-harness --help                   Show this help
-  reviewer-harness --version                Show the version
   reviewer-harness init                     Create harness.config.json (one-time setup)
   reviewer-harness validate                 Check the config: quality + secret scanning
   reviewer-harness sync [--dry-run]         Sync the rules to every runtime (--dry-run = preview only)
@@ -68,12 +82,15 @@ Usage (run inside your project):
   reviewer-harness memory list              List memory notes + their links
 
 Every command accepts --target <dir> (default: the current directory).
-`);
+`;
 }
 
-function version() {
-  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
-  console.log(`reviewer-harness ${pkg.version}`);
+function help() {
+  console.log(helpText());
+}
+
+function packageVersion() {
+  return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 }
 
 function cmdStatus() {
@@ -81,6 +98,7 @@ function cmdStatus() {
   console.log(`Harness : ${config.name} v${config.version}`);
   console.log(`Target  : ${targetDir}`);
   console.log(`Runtimes:`);
+  if (!config.runtimes?.length) console.log(`  (none)`);
   for (const name of config.runtimes) {
     const adapter = adapters[name];
     const target = !adapter ? "(no adapter!)"
@@ -93,8 +111,13 @@ function cmdStatus() {
 }
 
 function cmdSync() {
+  const config = loadConfig(targetDir);
   const results = sync({ targetDir, dryRun });
   if (dryRun) console.log("(dry-run: nothing was written)\n");
+  if (!config.runtimes?.length && !config.skills?.length) {
+    console.log(`Nothing to sync — no runtimes and no skills are enabled.`);
+    console.log(`Run "skills add <name>" or add a runtime to the config to enable something.`);
+  }
   for (const r of results) {
     if (r.skillCommands) {
       const written = r.skillCommands.filter((f) => f.written).length;
@@ -127,10 +150,18 @@ function cmdSync() {
     }
   }
   // If the project has a local memory, refresh its index as part of
-  // sync — so the graph the AI reads is always current.
+  // sync — so the graph the AI reads is always current. The index is
+  // a secondary artifact, so its failure is a warning, not a failed
+  // sync (system-design failure isolation): the sync already succeeded.
   if (!dryRun && existsSync(memoryDir(targetDir))) {
-    const stats = buildIndex(targetDir);
-    console.log(`- memory: index refreshed (${stats.notes} notes, ${stats.edges} links) ✓`);
+    try {
+      const stats = buildIndex(targetDir);
+      console.log(`- memory: index refreshed (${stats.notes} notes, ${stats.edges} links) ✓`);
+    } catch (err) {
+      console.error(
+        `Warning: memory index could not be updated — ${err.message} (sync itself succeeded; run "memory index" to retry.)`
+      );
+    }
   }
 }
 
@@ -158,7 +189,8 @@ function cmdMemory() {
       console.log(`- [[${n.id}]] ${n.title}${n.links.length ? ` → ${n.links.join(", ")}` : ""}`);
     }
   } else {
-    console.log(`Usage: memory <init|index|list> [--target <dir>]`);
+    console.error(`Usage: memory <init|index|list> [--target <dir>]`);
+    process.exitCode = 1;
   }
 }
 
@@ -216,7 +248,8 @@ function cmdSkills() {
         : `Skill "${arg}" was not enabled.`
     );
   } else {
-    console.log(`Usage: skills <list|add <name>|remove <name>> [--target <dir>]`);
+    console.error(`Usage: skills <list|add <name>|remove <name>> [--target <dir>]`);
+    process.exitCode = 1;
   }
 }
 
@@ -228,7 +261,8 @@ function cmdAgents() {
     console.log(`Agent "${arg}" installed:`);
     for (const f of r.written) console.log(`  → ${f}`);
   } else {
-    console.log(`Usage: agents <list|add <name>> [--target <dir>]`);
+    console.error(`Usage: agents <list|add <name>> [--target <dir>]`);
+    process.exitCode = 1;
   }
 }
 
@@ -240,7 +274,8 @@ function cmdCommands() {
     console.log(`Command "/${arg}" installed:`);
     for (const f of r.written) console.log(`  → ${f}`);
   } else {
-    console.log(`Usage: commands <list|add <name>> [--target <dir>]`);
+    console.error(`Usage: commands <list|add <name>> [--target <dir>]`);
+    process.exitCode = 1;
   }
 }
 
@@ -272,17 +307,21 @@ function cmdGlobal() {
     if (dryRun) console.log(`- ${runtime} (global): ${pending} would be written/updated, ${unchanged} unchanged → ${where}`);
     else console.log(`- ${runtime} (global): ${written} written ✓, ${unchanged} unchanged → ${where}`);
   }
-  console.log(
-    `\nDone: ${skills.map((s) => "/" + s.name).join(", ")} are now available in EVERY project.` +
-      `\n(OpenCode + Claude: "/" menu commands. Freebuff, Copilot CLI, Antigravity, Qoder: Agent Skills bundles.)` +
-      `\n(Per-project rules still come from "sync" inside a project.)`
-  );
+  if (dryRun) {
+    console.log(`Dry run complete — nothing was written. Run without --dry-run to install.`);
+  } else {
+    console.log(
+      `\nDone: ${skills.map((s) => "/" + s.name).join(", ")} are now available in EVERY project.` +
+        `\n(OpenCode + Claude: "/" menu commands. Freebuff, Copilot CLI, Antigravity, Qoder: Agent Skills bundles.)` +
+        `\n(Per-project rules still come from "sync" inside a project.)`
+    );
+  }
 }
 
 async function main() {
-  if (values.help) { help(); return; }
-  if (values.version) { version(); return; }
-  if (!command || command === "status") cmdStatus();
+  if (values.help) help();
+  else if (values.version) console.log(`reviewer-harness ${packageVersion()}`);
+  else if (!command || command === "status") cmdStatus();
   else if (command === "sync") cmdSync();
   else if (command === "init") cmdInit();
   else if (command === "validate") cmdValidate();
@@ -291,10 +330,16 @@ async function main() {
   else if (command === "agents") cmdAgents();
   else if (command === "commands") cmdCommands();
   else if (command === "global") cmdGlobal();
-  else help();
+  else if (command === "help") help();
+  else {
+    console.error(`Unknown command "${command}".`);
+    console.error(helpText());
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {
   console.error("Error:", err.message);
+  if (values.verbose) console.error(err.stack);
   process.exit(1);
 });
