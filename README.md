@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.19.0-blue)
+![version](https://img.shields.io/badge/version-1.20.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.19.0
+Harness : reviewer-harness v1.20.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -518,6 +518,7 @@ Check that you edited the config in the same folder you are syncing (`--target` 
 13. ✅ v1.17.1 — less hassle edition: brainstorming hands off to writing-plans automatically after design approval, and the skills are organized into 8 category folders — in the harness and mirrored in every project it sets up
 14. ✅ v1.18.0 — sauron-grade edition: all 34 skills retrofitted to one house template (Purpose, When to use, Rules, Validation gate, Examples, Sources, Changelog) with per-skill SemVer versions, a template validation gate in `validate` and CI, the sauron database clones and merges landed, and every skill in folder layout
 15. ✅ v1.19.0 — knowledge graph edition: the `graph` command (ported from iging/sauron's engine, MIT) maps any codebase into graph.json + graph-report.md + graph.html — dependencies, circular imports, god modules — across 11 languages, zero dependencies
+16. ✅ v1.20.0 — audit fix edition: the harness audited itself (78 findings) and fixed every non-deferred one — sync can no longer delete hand-written files or escape the project through symlinks, removed skills stay removed, the graph visualizer is truly standalone (vis-network vendored, zero network requests) and XSS-safe, the import parser no longer hangs on minified files, and the sync↔skills import cycle is dissolved (the repo's own graph now reports 0 cycles); suite 106 tests
 
 ## Contributing & Security
 

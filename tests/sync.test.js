@@ -1,12 +1,21 @@
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { writeSafe, sync } from "../lib/sync.js";
 
+// S-30: every temp dir created here is registered and removed by
+// the after() hook — no leaks.
+const madeDirs = [];
+after(() => {
+  for (const dir of madeDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 function tempDir() {
-  return mkdtempSync(join(tmpdir(), "sync-test-"));
+  const dir = mkdtempSync(join(tmpdir(), "sync-test-"));
+  madeDirs.push(dir);
+  return dir;
 }
 
 // Backup rotation scheme (picked here, implemented exactly in lib/sync.js):
@@ -59,9 +68,11 @@ test("writeSafe is atomic", () => {
 });
 
 test("writeSafe writes via temp file + rename + fsync", () => {
-  // Source-level pin: the atomic mechanism must be visible in lib/sync.js,
-  // not just behaviourally implied. A direct writeFileSync(abs) fails this.
-  const src = readFileSync(new URL("../lib/sync.js", import.meta.url), "utf8");
+  // Source-level pin: the atomic mechanism must be visible in
+  // lib/write-safe.js (writeSafe's home since the S-8 extraction from
+  // lib/sync.js), not just behaviourally implied. A direct
+  // writeFileSync(abs) fails this.
+  const src = readFileSync(new URL("../lib/write-safe.js", import.meta.url), "utf8");
   assert.match(src, /\.tmp/);
   assert.match(src, /renameSync/);
   assert.match(src, /fsyncSync/);

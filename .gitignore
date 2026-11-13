@@ -1,4 +1,5 @@
 node_modules/
 *.bak
+*.bak.*
 demo-project/
 .DS_Store

@@ -1,14 +1,22 @@
 // tests/config.test.js — Task 13, config half (F-W11, F-W20).
 // Built-in node:test only, zero dependencies. Run: node --test tests/config.test.js
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "../lib/config.js";
 
+// S-30: every temp dir created here is registered and removed by
+// the after() hook — no leaks.
+const madeDirs = [];
+after(() => {
+  for (const dir of madeDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 function dirWithConfig(content) {
   const dir = mkdtempSync(join(tmpdir(), "harness-config-"));
+  madeDirs.push(dir);
   writeFileSync(join(dir, "harness.config.json"), content);
   return dir;
 }

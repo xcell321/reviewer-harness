@@ -2,4 +2,8 @@
 demo-project
 node_modules
 *.bak
+*.bak.*
 *.zip
+.env*
+.npmrc
+.aws/

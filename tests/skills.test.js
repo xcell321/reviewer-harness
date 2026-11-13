@@ -1,6 +1,6 @@
 // tests/skills.test.js — Tasks 10–12 (agent 6, backend).
 // Built-in node:test only, zero dependencies. Run: node --test tests/skills.test.js
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import {
   mkdtempSync,
@@ -26,8 +26,17 @@ import {
 import { addAgent, listBundledAgents } from "../lib/agents.js";
 import { addCommand, listBundledCommands } from "../lib/commands.js";
 
+// S-30: every temp dir created here is registered and removed by
+// the after() hook — no leaks.
+const madeDirs = [];
+after(() => {
+  for (const dir of madeDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 function makeTempDir() {
-  return mkdtempSync(join(tmpdir(), "harness-skills-"));
+  const dir = mkdtempSync(join(tmpdir(), "harness-skills-"));
+  madeDirs.push(dir);
+  return dir;
 }
 
 // Repo root (this test file lives in <root>/tests/).

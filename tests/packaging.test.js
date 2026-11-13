@@ -1,7 +1,7 @@
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync, statSync, mkdtempSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,8 +41,16 @@ test("package has test and check scripts", () => {
   assert.ok(covered.length > 0, "expected .js files under bin/ + lib/");
 });
 
+// S-30: every temp dir created here is registered and removed by
+// the after() hook — no leaks.
+const madeDirs = [];
+after(() => {
+  for (const dir of madeDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 test("init stamps the real version", () => {
   const dir = mkdtempSync(join(tmpdir(), "init-test-"));
+  madeDirs.push(dir);
   const result = initProject(dir);
   assert.equal(result.created, true);
   const config = JSON.parse(readFileSync(join(dir, "harness.config.json"), "utf8"));
