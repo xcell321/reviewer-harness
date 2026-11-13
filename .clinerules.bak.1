@@ -11,7 +11,22 @@
 
 ## Skill: safe-editing
 
+### Purpose
+
+Governs every edit to existing code: the smallest possible diff that solves the task, with no collateral damage. It prevents unrequested changes, unrelated reformatting, and hardcoded values from sneaking into a codebase one edit at a time.
+
+### When to use
+
 When to use: every change to existing code.
+
+| Trigger | Example |
+| --- | --- |
+| Any change to existing code | "Rename `getUser` to `fetchUser`" |
+| A fix or refactor inside a file that already exists | "Fix the off-by-one in the pager" |
+
+Do NOT use when: the change needed is not yet known — `debug-first` owns reproducing and diagnosing the failure first; this skill governs the edit once the change is known.
+
+### Rules
 
 - Read the whole file (or the relevant part) before changing anything.
 - Make the **smallest diff** that solves the task — never include changes that were not asked for.
@@ -21,6 +36,31 @@ When to use: every change to existing code.
 - Never hardcode: values that can change — URLs, endpoints, file paths, credentials, API keys, user-specific data, magic numbers — must come from config, environment variables, parameters, or named constants, never buried as literals in code. Secrets must never be hardcoded, ever.
 - If another file truly must change too, say why before doing it.
 - Afterwards, show the diff and describe in one sentence what changed.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] The whole file (or the relevant part) was read before editing
+- [ ] The diff is the smallest that solves the task — nothing unasked-for is in it
+- [ ] No unrelated lines were reformatted, reordered, or renamed
+- [ ] No new hardcoded values (URLs, endpoints, paths, credentials, keys, magic numbers) — config, environment variables, parameters, or named constants instead
+- [ ] If another file changed too, the reason was stated before changing it
+- [ ] The diff is shown and the change described in one sentence
+
+### Examples
+
+**Do:** read the file, change only the lines the task needs, then show the diff with a one-sentence summary of what changed.
+
+**Do not:** reformat the whole file, rename unrelated variables, and bury a new API URL as a literal — all while fixing one bug.
+
+### Sources
+
+- No external source is cited in this skill; the rules stand as written (general practice).
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 ## Skill: no-hallucination
 
@@ -39,13 +79,52 @@ When to use: every time you write new code or reach for a library/API.
 
 ## Skill: debug-first
 
+### Purpose
+
+Root-cause debugging for any error, bug, or unexpected behavior. It prevents symptom-fixes and guessed patches by requiring a reproduction and an observed cause before any code changes.
+
+### When to use
+
 When to use: any error, bug, or unexpected behavior.
+
+| Trigger | Example |
+| --- | --- |
+| An error, bug, or unexpected behavior appears | "Checkout returns 500" |
+| A test fails and the cause is not yet known | "Expected 200, got 500" |
+
+Do NOT use when: writing new features or planned refactors — `ub-mode` owns change discipline there. Once the cause is known and the fix is a plain edit, `safe-editing` governs the edit itself.
+
+### Rules
 
 - **Reproduce the error first** before fixing anything — if you can't see it, you can't fix it.
 - Read the **entire** error message and stack trace — the answer is usually in there.
 - Never guess at a fix: add logs or a small test to observe the real state.
 - Fix the **cause**, not the symptom — never hide it under a silent try/catch.
 - Verify afterwards: re-run the reproduction and confirm the error is gone.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] The error was reproduced before any fix was attempted
+- [ ] The entire error message and stack trace were read
+- [ ] The fix is based on observed state (logs or a small test), not a guess
+- [ ] The fix targets the cause — no silent try/catch hiding the symptom
+- [ ] The reproduction was re-run after the fix and the error is gone
+
+### Examples
+
+**Do:** reproduce the 500, read the full stack trace, add a log line to observe the real state, fix the cause, then re-run the reproduction to confirm the error is gone.
+
+**Do not:** guess at a fix, or wrap the failing code in a silent try/catch so the error stops appearing.
+
+### Sources
+
+- No external source is cited in this skill; the rules stand as written (general practice).
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 ## Skill: explain-bisaya
 
@@ -807,7 +886,23 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 
 ## Skill: nodejs-quality
 
+### Purpose
+
+93 checkable rules for writing and reviewing Node.js code — error handling, project structure, code style, testing, production, Node-specific security, and Docker, plus the merged Backend Performance and DevOps Basics rule sets. It prevents swallowed errors, thin tests, spaghetti structure, and production surprises.
+
+### When to use
+
 When to use: writing or reviewing Node.js code — a new endpoint, a new service, a refactor, or any time the question is "is this code correct, testable, and shippable?" — performance and deployment questions are covered by this skill's own merged sections (Backend Performance, DevOps Basics) below. Apply when errors are swallowed, tests are thin, files are spaghetti, or production surprises keep happening.
+
+| Trigger | Example |
+| --- | --- |
+| Writing Node.js code | "Add a `GET /users/:id` endpoint" |
+| Reviewing Node.js code | "Is this service correct, testable, and shippable?" |
+| A performance or deployment question about a Node service | Covered by this skill's merged Backend Performance and DevOps Basics sections below |
+
+Do NOT use when: the question is API security design (`api-security`), an OWASP web-application audit (`owasp-top10`), or architecture and scaling design (`system-design`) — this skill excludes what those cover and points to them instead.
+
+### Rules
 
 Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rule: the `sections/` file and the README section). Nothing here is invented — if the repo doesn't cover a topic, it is labeled "general practice" instead. Rules covered by `system-design`, `api-security`, or `owasp-top10` are NOT repeated here; the skill points to them instead. (`backend-performance` and `devops-basics` were merged into this skill on 2026-11-13 — their rules are the two Merged sections at the end.)
 
@@ -1026,12 +1121,6 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 - [ ] Multi-stage Docker build; `.dockerignore` set; image scanned and linted; no `latest` tag
 - [ ] Every code path sends a response (no hung requests); functions do one job; no magic numbers (rules 60–62)
 
-### Learn more (official sources)
-- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
-- System design primer: https://github.com/donnemartin/system-design-primer
-- Twelve-factor app: https://12factor.net/
-- Semantic versioning: https://semver.org/
-
 ## Merged: backend-performance (2026-11-13)
 
 The standalone `backend-performance` skill (19 rules) was merged into this skill on 2026-11-13; it is no longer a separate skill. Its full text follows, unchanged — cross-references to "backend-performance rules N" now mean the rules in this section.
@@ -1200,6 +1289,38 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 - Graceful shutdown in Node: https://github.com/goldbergyoni/nodebestpractices/tree/master/sections/docker
 - Semantic versioning: https://semver.org/
 
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Errors use the one AppError type with `isOperational`, handled by the centralized handler (rules 2–3)
+- [ ] Every code path sends a response — no hung requests (rule 60)
+- [ ] Arguments are validated at function tops, fail fast; async errors flow through async/await, never callbacks (rules 8, 1)
+- [ ] Error flows are tested, not just happy paths (rule 7)
+- [ ] Dependencies are locked and installed with `npm ci`; Node LTS is pinned; `NODE_ENV=production` (rules 35, 39)
+- [ ] Logs go to stdout only, through a mature logger — never `console.log` (rules 41, 6)
+- [ ] No `eval`, dynamic `require()`, or hand-rolled regex on user input (rules 44–45)
+- [ ] Docker builds are multi-stage and the image is pinned — never `latest` (rules 51, 57)
+
+### Examples
+
+**Do:** `throw new AppError('user not found', 404, true)` and let the centralized handler log it and send the response.
+
+**Do not:** `throw "user not found"` inside a route, catch it in the middleware, and `console.log` it.
+
+### Sources
+
+Every rule cites its source inline (the *Source:* line under each rule).
+
+- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
+- System design primer: https://github.com/donnemartin/system-design-primer
+- Twelve-factor app: https://12factor.net/
+- Semantic versioning: https://semver.org/
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
+
 ## Skill: audit-team
 
 When to use: the user asks for a team audit, a full review, or "/audit-team" on a repo — or after a big fix round, to verify the fixes held and catch regressions. Always report-only: auditors read, never edit.
@@ -1291,9 +1412,30 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 ## Skill: ub-mode
 
-Distilled from [unclebob/ub-mode](https://github.com/unclebob/ub-mode) — by Robert C. Martin ("Uncle Bob"), author of Clean Code. The source skill is "loosely based on portions of @poteto's rules, reduced and paired with deterministic quality-gate tools" (README). Every rule below cites its source section. Anything the source does not cover is labeled "general practice".
+### Purpose
+
+Clean Code discipline for code changes: first make it work, then make it right, and keep every step provable against deterministic quality gates. It prevents changes that work by accident — untested, over-complex, duplicated — from shipping as if they were done.
+
+### When to use
 
 When to use: `/ub-mode`, or any backend/logic change, bug fix, or refactor where the code must stay clean and provable.
+
+| Trigger | Example |
+| --- | --- |
+| `/ub-mode` is invoked | "/ub-mode" |
+| A backend or logic change | "Add the refund flow to the orders service" |
+| A bug fix | "Fix the double-charge bug" |
+| A refactor | "Split this module into smaller functions" |
+
+Pairings:
+
+- Backend/logic changes (paired with safe-editing)
+- Bug fixes (paired with debug-first)
+- Refactors (paired with safe-editing + debug-first)
+
+Do NOT use when: the work is purely visual or frontend — `design-taste-frontend` and `ui-ux-pro-max` own page design. Endpoint security specifics belong to `api-security`, and security audits to `owasp-top10`.
+
+### Rules
 
 The principle: every change follows **First Make it Work → Then Make it Right → Follow Practice**.
 
@@ -1383,26 +1525,57 @@ The principle: every change follows **First Make it Work → Then Make it Right 
 ### Tools
 The source names three quality-gate tools: **crapper**, **dryer**, **mutator** (see the ub-mode repo README for the tool repos). Use them where they are installed — the gates above are the point, not the tools. *General practice:* where the tools are not installed, apply the same thresholds by manual review (estimate CRAP from complexity + coverage, flag near-duplicate blocks) and say so — a manual estimate is not a gate pass.
 
-## When to apply
-
-- Backend/logic changes (paired with safe-editing)
-- Bug fixes (paired with debug-first)
-- Refactors (paired with safe-editing + debug-first)
-
-## Edsiel's rule
+### Edsiel's rule
 
 Backend team = `ub-mode` + `safe-editing` (+ `api-security` for endpoints, `owasp-top10` for audits, `debug-first` for bugs).
 
-## Learn more
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] A failing test was written first and seen to fail for the expected reason before code changed (rule 3)
+- [ ] Every function is under CRAP 10 (rule 17)
+- [ ] Duplication at similarity ≥ 0.8 is eliminated (rule 18)
+- [ ] Mutation survivors are killed and dead code is deleted (rule 19)
+- [ ] The fix addresses the root cause — no guard that only hides the crash (rule 14)
+- [ ] A log of actions and reasons is kept and reported on completion (rule 21)
+
+### Examples
+
+**Do:** facing a bug, write the failing test first, watch it fail for the expected reason, then make the smallest change that turns it green — and split the touched function until it sits under CRAP 10.
+
+**Do not:** bolt the new requirement onto the old design, then hide the crash behind a guard so the suite goes quiet.
+
+### Sources
+
+Distilled from [unclebob/ub-mode](https://github.com/unclebob/ub-mode) — by Robert C. Martin ("Uncle Bob"), author of Clean Code. The source skill is "loosely based on portions of @poteto's rules, reduced and paired with deterministic quality-gate tools" (README). Every rule below cites its source section. Anything the source does not cover is labeled "general practice".
+
 - ub-mode skill (source): https://github.com/unclebob/ub-mode
 - Clean Code (Robert C. Martin): the book behind the discipline
 
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
+
 ## Skill: design-taste-frontend
 
-Distilled from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (`tasteskill 2.5.1`, HEAD `f6b7657`) — SKILL.md + references/layout-v4.md, copy.md, copy-tells.md, system.md, motion.md, library/palettes.json, library/type.json. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
-The two library files are vendored verbatim in this repo at `skills/frontend/library/palettes.json` (64 palettes) and `skills/frontend/library/type.json` (39 pairings), so the `library/…` paths in rules 32–33 resolve from this file's directory. Upstream is MIT — the license is vendored at `skills/frontend/library/LICENSE` (Copyright (c) 2026 Leonxlnx).
+### Purpose
+
+Anti-slop design taste for building, redesigning, or reviewing web pages: classify the business kind first, deal palette, type, and hero from the library instead of choosing by taste, and hold every choice to checkable numbers. It prevents pages that look generic, templated, or AI-made.
+
+### When to use
 
 When to use: build, design, redesign, restyle, polish, or review a landing page, company site, product page, shop, cafe, hotel, studio, SaaS, AI, devtool, or game site — or when a page looks generic, templated, or "AI-made".
+
+| Trigger | Example |
+| --- | --- |
+| Building or redesigning a page or site | "Build a landing page for a coffee shop" |
+| Restyling or polishing an existing page | "Restyle this product page" |
+| A page looks generic, templated, or AI-made | "This page looks templated — fix it" |
+
+Do NOT use when: the job is component state behaviour — `ux-edge-states` owns state *behaviour*; this skill holds the state *values* as tokens (rule 64).
+
+### Rules
 
 ### The method — classify first, deal, never choose by taste
 
@@ -1518,9 +1691,33 @@ When to use: build, design, redesign, restyle, polish, or review a landing page,
 - Installed on Edsiel's PC via `npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"`; location `~/.claude/skills/design-taste-frontend` (needed manual copy from `~/.agents/skills/`).
 - Paired with ui-ux-pro-max for the anti-slop check in DevPilotAI UI audits (since 2026-10-31).
 
-### Learn more
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] The page was checked in a real browser over HTTP at 1440, 1024, 820, 768, and 390, and the last gate line reads `GATE: PASS` or `GATE: OPEN` (rules 57–58)
+- [ ] No fixable FAIL is left after at most three rounds; any waived FAIL carries its reason (rule 58)
+- [ ] Every tap target is ≥44px, no two targets sit under 8px apart, and nothing overflows at 320 (rule 59)
+- [ ] Nothing is invented — no fake reviews, ratings, statistics, or testimonials (rule 43); no placeholders or `#` links (rule 44)
+- [ ] Components consume semantic and component tokens only — no primitives or raw values inside a component (rule 60)
+
+### Examples
+
+**Do:** classify the page kind first, deal its palette and type pairing from the library, and let the hero fill the first screen alone.
+
+**Do not:** choose a violet gradient by taste, headline it "Unlock the power of…", and add three invented stats under it.
+
+### Sources
+
+Distilled from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (`tasteskill 2.5.1`, HEAD `f6b7657`) — SKILL.md + references/layout-v4.md, copy.md, copy-tells.md, system.md, motion.md, library/palettes.json, library/type.json. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
+The two library files are vendored verbatim in this repo at `skills/frontend/library/palettes.json` (64 palettes) and `skills/frontend/library/type.json` (39 pairings), so the `library/…` paths in rules 32–33 resolve from this file's directory. Upstream is MIT — the license is vendored at `skills/frontend/library/LICENSE` (Copyright (c) 2026 Leonxlnx).
+
 - taste-skill (source): https://github.com/Leonxlnx/taste-skill
 - Skill file: https://raw.githubusercontent.com/Leonxlnx/taste-skill/main/skills/taste-skill/SKILL.md
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 ## Skill: ui-ux-pro-max
 
