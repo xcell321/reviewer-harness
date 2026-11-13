@@ -24,7 +24,7 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 5. **Subscribe to `uncaughtException` and `unhandledRejection`; crash on untrusted errors, log-and-continue on operational ones.** A promise rejection without `.catch` vanishes silently — the `unhandledRejection` handler is the safety net. On `uncaughtException`, run the centralized handler, then `process.exit(1)` unless the error is trusted/operational; run under a restarter (PM2/systemd/Kubernetes) so the crash restores clean state. **Security note:** never let invalid user input crash the process — validate first and wrap all routes with a catch, or an attacker can DoS you by sending the same crashing request repeatedly; alert at critical severity on every crash.
 *Source: goldbergyoni/nodebestpractices — `sections/errorhandling/shuttingtheprocess.md` (§2.6) + `sections/errorhandling/catchunhandledpromiserejection.md` (§2.10) + README §6.23*
 
-6. **Use a mature logger (Pino), never `console.log`.** Log frequently at levels (debug/info/error), with JSON context objects, and query/filter logs with the logger's API or a log viewer. (JSON structured format itself is covered by `devops-basics` rule 8 — this rule is about the logger choice.)
+6. **Use a mature logger (Pino), never `console.log`.** Log frequently at levels (debug/info/error), with JSON context objects, and query/filter logs with the logger's API or a log viewer. (JSON structured format itself is covered by the DevOps Basics section below, rule 8 — this rule is about the logger choice.)
 *Source: goldbergyoni/nodebestpractices — `sections/errorhandling/usematurelogger.md` (§2.7)*
 
 7. **Test error flows, not just happy paths.** Assert that the right exception type is thrown, that the API returns the right HTTP error code, and that the logger records the mandatory fields (name, status, stack, message) on failure. Also test that uncaught exceptions reach the logger.
@@ -124,7 +124,7 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 37. **Utilize all CPU cores.** A naive Node deploy uses 1 of 4+ cores (~25% of the machine). Bare metal: Node `cluster` module or PM2 to spawn a process per core; orchestrated: replicate instances (the platform won't verify core usage for you).
 *Source: goldbergyoni/nodebestpractices — `sections/production/utilizecpu.md` (§5.6)*
 
-38. **Write production-ready code from day 1: twelve-factor, no env-branching in tests, `--trace-sync-io`.** Follow the twelve-factor guide; make dev match prod (docker-compose) and run the same code in tests — never `if (isTest)` branches. Use `--trace-sync-io` to find sync APIs on the request path. (Statelessness, caching, memory, logging, and error strategy are covered by `system-design` / `devops-basics` / error-handling rules above — this rule is the twelve-factor + dev-prod parity + sync-IO detection core of §5.9.) **Note:** README §4.8 (production-like e2e env) is flagged incomplete by the repo itself ("Missed -continue here, needs content") — the docker-compose guidance above is the repo's own §5.9 wording.
+38. **Write production-ready code from day 1: twelve-factor, no env-branching in tests, `--trace-sync-io`.** Follow the twelve-factor guide; make dev match prod (docker-compose) and run the same code in tests — never `if (isTest)` branches. Use `--trace-sync-io` to find sync APIs on the request path. (Statelessness, caching, memory, logging, and error strategy are covered by `system-design` / the DevOps Basics section below / the error-handling rules above — this rule is the twelve-factor + dev-prod parity + sync-IO detection core of §5.9.) **Note:** README §4.8 (production-like e2e env) is flagged incomplete by the repo itself ("Missed -continue here, needs content") — the docker-compose guidance above is the repo's own §5.9 wording.
 *Source: goldbergyoni/nodebestpractices — `sections/production/productioncode.md` (§5.9) + README §4.8 (incomplete in source — flagged honestly)*
 
 39. **Pin the runtime: same Node version everywhere, LTS only, `NODE_ENV=production`.** One version across dev, CI, and prod (nvm/Volta/`.nvmrc`, Dockerfile, CI file); LTS releases (even versions) get ≥18 months of security/bug fixes, Current does not. Set `NODE_ENV=production` — libraries like Express change behavior (caching, diagnostics) based on it, and omitting it can badly degrade performance.
@@ -177,7 +177,7 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 54. **Strip everything the runtime doesn't need.** Install dev deps for build/test, then ship production-only (`npm ci --production` in the final stage) — dev packages have hosted real breaches (eslint-scope). Also delete the npm cache after install (`npm cache clean`) — it duplicates dependencies and adds 10–50% image weight on an immutable image that will never install again.
 *Source: goldbergyoni/nodebestpractices — `sections/docker/install-for-production.md` (§8.5) + `sections/docker/clean-cache.md` (§8.13)*
 
-55. **Set memory limits in BOTH Docker and V8.** Docker limit = placement decisions and protecting neighbors; `--max-old-space-size` slightly below the container limit = GC starts on time. Without the V8 flag, Node under-utilizes the container and can crash at ~50–60% of host memory. (`devops-basics` rule 9 covers the V8 flag alone; the Docker-side pairing is the new part.)
+55. **Set memory limits in BOTH Docker and V8.** Docker limit = placement decisions and protecting neighbors; `--max-old-space-size` slightly below the container limit = GC starts on time. Without the V8 flag, Node under-utilizes the container and can crash at ~50–60% of host memory. (The DevOps Basics section below, rule 9, covers the V8 flag alone; the Docker-side pairing is the new part.)
 *Source: goldbergyoni/nodebestpractices — `sections/docker/memory-limit.md` (§8.7)*
 
 56. **Order Dockerfile layers for caching: least-changed on top, app code at the bottom.** Dependencies first, source last — then a tiny code change rebuilds nearly instantly instead of reinstalling everything.
@@ -205,10 +205,10 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 *Source: goldbergyoni/nodebestpractices — `sections/codestylepractices/eslint_prettier.md` (§3.1) (run ESLint; enable the `no-magic-numbers` rule) — the named-constants discipline itself is general practice.*
 
 ### Also apply (general practice — NOT in the repo, labeled honestly)
-- **CI/CD:** the repo has no CI section (its `citools.md` exists only in translations; `bumpversion.md` is an empty stub — "Title here", "Text", "code here"). Automate typecheck → lint → test → build on every push; red build blocks the merge. See `devops-basics` ("Also apply") for the same guidance.
+- **CI/CD:** the repo has no CI section (its `citools.md` exists only in translations; `bumpversion.md` is an empty stub — "Title here", "Text", "code here"). Automate typecheck → lint → test → build on every push; red build blocks the merge. See the DevOps Basics section below ("Also apply") for the same guidance.
 - **Rate limiting:** lives in `api-security` rule 8 (repo §6.2) — not re-distilled here.
-- **Caching patterns:** live in `backend-performance` rules 3–4 — not re-distilled here.
-- **Twelve-factor + memory/leak testing:** the repo's §5.9 points at the twelve-factor guide and at testing memory/leaks during development — treat as pointers to `system-design` and `devops-basics`, not standalone rules.
+- **Caching patterns:** live in the Backend Performance section below, rules 3–4 — not re-distilled here.
+- **Twelve-factor + memory/leak testing:** the repo's §5.9 points at the twelve-factor guide and at testing memory/leaks during development — treat as pointers to `system-design` and the DevOps Basics section below, not standalone rules.
 
 ### Quick check before shipping
 - [ ] Errors use one AppError type with `isOperational`; centralized handler; uncaught/rejection handlers wired

@@ -172,7 +172,7 @@ The standalone `zero-downtime-table-partitioning` skill (iging/sauron, MIT) was 
 | Table size exceeds 20 million rows or vacuum causes I/O spikes | YES   | Initiate four-phase zero-downtime partitioning workflow.         |
 | Table queries predominantly filter by date ranges or tenant ID | YES   | Design declarative range or hash partitioned schema.             |
 | Small table under 500,000 records                              | NO    | Reject partitioning; optimize composite indexes instead.         |
-| General SQL query optimization and EXPLAIN ANALYZE tuning      | NO    | Route to `skills/database/postgres-query-planner-optimization/`. |
+| General SQL query optimization and EXPLAIN ANALYZE tuning      | NO    | Route to `skills/database/supabase-principles/` (its merged query-planner section). |
 
 ## 3. Execution Workflow
 

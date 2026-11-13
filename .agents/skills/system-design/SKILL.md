@@ -228,7 +228,7 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 
 ### Also apply (general practice — NOT in the primer, labeled honestly)
 - **Rate limiting:** the primer names it only as an interview-question topic ("Design an API rate limiter") with no implementation guidance. For real rules, use `nodebestpractices` §6.2 (express-rate-limit, nginx, cloud load balancers) — see `api-security`.
-- **Monitoring / observability / error tracking:** not covered in the primer. Track the four golden signals (errors, latency, throughput, saturation — see `backend-performance` rule 10) and use an APM product (Sentry free tier is a good start) to discover errors and downtime.
+- **Monitoring / observability / error tracking:** not covered in the primer. Track the four golden signals (errors, latency, throughput, saturation — see `nodejs-quality`'s Backend Performance section, rule 10) and use an APM product (Sentry free tier is a good start) to discover errors and downtime.
 - **Autoscaling:** not a named topic in the primer; only horizontal scaling and cloning are discussed. In practice: scale on CPU/requests/latency metrics, never on vibes — and keep services stateless so new instances can join safely (rule 32).
 - **CI/CD:** not covered in the primer. Automate typecheck → lint → test → build on every push so broken code never reaches main.
 

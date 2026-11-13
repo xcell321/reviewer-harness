@@ -111,4 +111,4 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 - ub-mode skill (source): https://github.com/unclebob/ub-mode
 - Vengeance UI (vengeance-ui): https://github.com/Ashutoshx7/vengeance-ui
 - Superpowers (brainstorming, writing-plans): https://github.com/obra/superpowers
-- verify_before_done, instruction_registers, verify_provider_claims, verify_publish_install_surface: reviewer-harness skills, distilled from the user's recurring work (daily skill-review loop) — no external source
+- verify_before_done (incl. its merged verify_provider_claims and verify_publish_install_surface sections), instruction_registers: reviewer-harness skills, distilled from the user's recurring work (daily skill-review loop) — no external source
