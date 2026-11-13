@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.17.1-blue)
+![version](https://img.shields.io/badge/version-1.18.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.17.1
+Harness : reviewer-harness v1.18.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -495,6 +495,7 @@ Check that you edited the config in the same folder you are syncing (`--target` 
 11. ✅ v1.16.0 — playwright-cli skill (28 skills): real browser testing for coding agents
 12. ✅ v1.17.0 — init v2: one command sets up everything — project detection (name, stack, goal, real validation commands) → adapted config → all skills, agents, commands → seeded memory → sync, with a receipt; re-running init refreshes instead of overwriting
 13. ✅ v1.17.1 — less hassle edition: brainstorming hands off to writing-plans automatically after design approval, and the skills are organized into 8 category folders — in the harness and mirrored in every project it sets up
+14. ✅ v1.18.0 — sauron-grade edition: all 34 skills retrofitted to one house template (Purpose, When to use, Rules, Validation gate, Examples, Sources, Changelog) with per-skill SemVer versions, a template validation gate in `validate` and CI, the sauron database clones and merges landed, and every skill in folder layout
 
 ## Contributing & Security
 
