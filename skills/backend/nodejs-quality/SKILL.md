@@ -1,11 +1,28 @@
 ---
 name: nodejs-quality
 description: 93 Node.js backend rules distilled from nodebestpractices (105k stars) — the 62 quality rules (error handling, project structure, code style, testing, production, Node-specific security, Docker) plus the merged backend-performance (19) and devops-basics (12) rule sets. Excludes what system-design, api-security, and owasp-top10 cover.
+version: 1.0.0
 ---
 
 ## Skill: nodejs-quality
 
+### Purpose
+
+93 checkable rules for writing and reviewing Node.js code — error handling, project structure, code style, testing, production, Node-specific security, and Docker, plus the merged Backend Performance and DevOps Basics rule sets. It prevents swallowed errors, thin tests, spaghetti structure, and production surprises.
+
+### When to use
+
 When to use: writing or reviewing Node.js code — a new endpoint, a new service, a refactor, or any time the question is "is this code correct, testable, and shippable?" — performance and deployment questions are covered by this skill's own merged sections (Backend Performance, DevOps Basics) below. Apply when errors are swallowed, tests are thin, files are spaghetti, or production surprises keep happening.
+
+| Trigger | Example |
+| --- | --- |
+| Writing Node.js code | "Add a `GET /users/:id` endpoint" |
+| Reviewing Node.js code | "Is this service correct, testable, and shippable?" |
+| A performance or deployment question about a Node service | Covered by this skill's merged Backend Performance and DevOps Basics sections below |
+
+Do NOT use when: the question is API security design (`api-security`), an OWASP web-application audit (`owasp-top10`), or architecture and scaling design (`system-design`) — this skill excludes what those cover and points to them instead.
+
+### Rules
 
 Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rule: the `sections/` file and the README section). Nothing here is invented — if the repo doesn't cover a topic, it is labeled "general practice" instead. Rules covered by `system-design`, `api-security`, or `owasp-top10` are NOT repeated here; the skill points to them instead. (`backend-performance` and `devops-basics` were merged into this skill on 2026-11-13 — their rules are the two Merged sections at the end.)
 
@@ -224,12 +241,6 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 - [ ] Multi-stage Docker build; `.dockerignore` set; image scanned and linted; no `latest` tag
 - [ ] Every code path sends a response (no hung requests); functions do one job; no magic numbers (rules 60–62)
 
-### Learn more (official sources)
-- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
-- System design primer: https://github.com/donnemartin/system-design-primer
-- Twelve-factor app: https://12factor.net/
-- Semantic versioning: https://semver.org/
-
 ## Merged: backend-performance (2026-11-13)
 
 The standalone `backend-performance` skill (19 rules) was merged into this skill on 2026-11-13; it is no longer a separate skill. Its full text follows, unchanged — cross-references to "backend-performance rules N" now mean the rules in this section.
@@ -397,3 +408,35 @@ Every rule below is distilled from a reputable open-source repo (cited per rule)
 - Docker best practices: https://docs.docker.com/build/building/best-practices/
 - Graceful shutdown in Node: https://github.com/goldbergyoni/nodebestpractices/tree/master/sections/docker
 - Semantic versioning: https://semver.org/
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Errors use the one AppError type with `isOperational`, handled by the centralized handler (rules 2–3)
+- [ ] Every code path sends a response — no hung requests (rule 60)
+- [ ] Arguments are validated at function tops, fail fast; async errors flow through async/await, never callbacks (rules 8, 1)
+- [ ] Error flows are tested, not just happy paths (rule 7)
+- [ ] Dependencies are locked and installed with `npm ci`; Node LTS is pinned; `NODE_ENV=production` (rules 35, 39)
+- [ ] Logs go to stdout only, through a mature logger — never `console.log` (rules 41, 6)
+- [ ] No `eval`, dynamic `require()`, or hand-rolled regex on user input (rules 44–45)
+- [ ] Docker builds are multi-stage and the image is pinned — never `latest` (rules 51, 57)
+
+### Examples
+
+**Do:** `throw new AppError('user not found', 404, true)` and let the centralized handler log it and send the response.
+
+**Do not:** `throw "user not found"` inside a route, catch it in the middleware, and `console.log` it.
+
+### Sources
+
+Every rule cites its source inline (the *Source:* line under each rule).
+
+- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
+- System design primer: https://github.com/donnemartin/system-design-primer
+- Twelve-factor app: https://12factor.net/
+- Semantic versioning: https://semver.org/
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
