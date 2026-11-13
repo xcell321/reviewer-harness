@@ -6,11 +6,42 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }} / node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The full Node support range (package.json engines: >=18)
+          # on Linux, plus the current Node on Windows and macOS —
+          # the platforms the installers and CRLF-sensitive paths
+          # promise to support.
+          - os: ubuntu-latest
+            node: 18
+          - os: ubuntu-latest
+            node: 20
+          - os: ubuntu-latest
+            node: 22
+          - os: windows-latest
+            node: 20
+          - os: macos-latest
+            node: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
       - run: npm test
       - run: npm run check
+      # The bundled-skill template gate, run directly so it does not
+      # depend on any single test file's survival.
+      - run: node bin/cli.js validate
+
+  docker:
+    name: docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # S-6: the Dockerfile is part of the shipping path — a broken
+      # image must fail CI, not merge green untested.
+      - run: docker build -t reviewer-harness .
