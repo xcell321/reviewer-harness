@@ -201,7 +201,7 @@ function assertQuotedDescription(content, skill) {
 
 test("generated frontmatter parses as strict YAML", () => {
   const bundled = loadBundledSkills();
-  assert.equal(bundled.length, 39);
+  assert.equal(bundled.length, 40);
   // rea + ub-mode are the two the audit proved unparseable (their
   // descriptions contain ": " — rea col 73, ub-mode col 97).
   for (const name of ["rea", "ub-mode"]) {
@@ -209,7 +209,7 @@ test("generated frontmatter parses as strict YAML", () => {
     assert.match(skill.description, /: /);
     assertQuotedDescription(skillCommandContent(skill, bundled), skill);
   }
-  // All 39 bundled skills, command + bundle form.
+  // All 40 bundled skills, command + bundle form.
   for (const skill of bundled) {
     assertQuotedDescription(skillCommandContent(skill, bundled), skill);
     const bundle = skillBundleContent(skill, bundled);

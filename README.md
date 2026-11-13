@@ -249,14 +249,14 @@ npx reviewer-harness skills add no-hallucination
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer-harness skills list            # see all 39 bundled skills, grouped by category (+ which are enabled)
+reviewer-harness skills list            # see all 40 bundled skills, grouped by category (+ which are enabled)
 reviewer-harness skills add <name>      # install into the project and enable it in the config
 reviewer-harness skills remove <name>   # disable it in the config and remove it
 ```
 
-The skills are organized into **9 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (7), `quality` (7), `backend` (3), `security` (2), `ai-engineering` (2), `architecture` (1), `devops` (1), `database` (10).
+The skills are organized into **9 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (7), `quality` (7), `backend` (3), `security` (2), `ai-engineering` (2), `architecture` (2), `devops` (1), `database` (10).
 
-All 39 bundled skills:
+All 40 bundled skills:
 
 | Skill | What it does |
 |---|---|
@@ -274,6 +274,7 @@ All 39 bundled skills:
 | `motion-design` | Animation principles from GSAP (GreenSock) — easing, sequencing, stagger, performance. |
 | `frontend-performance` | Frontend performance rules from the Front-End Checklist — animations, resource hints, budgets, lazy loading. |
 | `system-design` | 68 system design rules from system-design-primer — CAP tradeoffs, load balancing, scaling. |
+| `api-design` | REST API design patterns — resource naming, HTTP method semantics, status codes, cursor pagination, filtering, rate limiting, versioning, deterministic error envelopes. |
 | `nodejs-quality` | 62 Node.js quality rules from nodebestpractices — errors, structure, testing, production, security. |
 | `php-principles` | Modern PHP 8.x engineering rules — strict typing, PSR architecture, security hardening, error discipline, static analysis gates. |
 | `audit-team` | Run an 8-agent parallel audit — 5 skill specialists plus 3 area agents — report-only, no edits. |
@@ -300,7 +301,7 @@ All 39 bundled skills:
 | `supabase-principles` | Supabase backends done safely — Row Level Security on every table, edge functions, realtime channels. |
 | `zero-downtime-table-partitioning` | PostgreSQL range and hash partitioning migrations without exclusive table locks or downtime. |
 
-The 10 `database` skills and `php-principles` (in `backend`) are cloned verbatim from [iging/sauron](https://github.com/iging/sauron) (MIT-licensed) — the harness reviewer-harness was modeled on. Their full text is unchanged, including the original frontmatter.
+The 10 `database` skills, `php-principles` (in `backend`), and `api-design` (in `architecture`) are cloned verbatim from [iging/sauron](https://github.com/iging/sauron) (MIT-licensed) — the harness reviewer-harness was modeled on. Their full text is unchanged, including the original frontmatter.
 
 Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
@@ -341,7 +342,7 @@ Four guardrails run before any file is written:
 
 Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured at audit (22 skills): **266,198 bytes** of skill source → **2,660,559 bytes** of generated output across 124 files (**10×** amplification); `CLAUDE.md` alone is **262,243 bytes** today. Growth is linear: at 10× skills (220), each instruction file would be ≈ 2.6 MB and total output ≈ 26.6 MB. The binding constraint is the AI runtime's context window, not disk.
 
-**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 3× today's 39 skills (≈ 117 skills) at the current amplification. Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 3× today's 40 skills (≈ 120 skills) at the current amplification. Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
 
 Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling.
 
@@ -428,7 +429,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness skills list` | List all 39 bundled skills, grouped by category (+ which are enabled) |
+| `reviewer-harness skills list` | List all 40 bundled skills, grouped by category (+ which are enabled) |
 | `reviewer-harness skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer-harness skills remove <name>` | Disable a skill and remove it |
 | `reviewer-harness agents list` | List the bundled sub-agents |

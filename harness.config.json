@@ -58,7 +58,8 @@
     "sqlite-principles",
     "supabase-principles",
     "zero-downtime-table-partitioning",
-    "php-principles"
+    "php-principles",
+    "api-design"
   ],
   "version": "1.16.0"
 }
