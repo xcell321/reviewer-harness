@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // reviewer-harness — CLI: sync engine, guardrail validation, local memory,
 // skills, sub-agents, and slash commands.
-// Commands: status | sync | init | validate | memory | skills | agents | commands | global
+// Commands: status | sync | init | validate | memory | skills | agents | commands | global | graph
 
 import { parseArgs } from "node:util";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { loadConfig } from "../lib/config.js";
 import { adapters, supportedRuntimes } from "../lib/adapters/index.js";
@@ -66,6 +66,7 @@ function helpText() {
 Usage (run inside your project):
   reviewer-harness init [--goal <text>]     Set up EVERYTHING in this project in one command: detect the stack + goal, create the config, install all skills, agents and commands, start the memory, and sync every runtime (--minimal = config only, the old behavior; --dry-run = preview)
   reviewer-harness validate                 Check the config: quality + secret scanning
+  reviewer-harness graph [path]             Generate a codebase knowledge graph (graph.json, graph-report.md, graph.html) into .reviewer-harness/graph/
   reviewer-harness sync [--dry-run]         Sync the rules to every runtime (--dry-run = preview only)
   reviewer-harness status                   Show the config + target files
 
@@ -332,6 +333,30 @@ function cmdCommands() {
   }
 }
 
+// Mirrors sauron's `graph` wiring: a dynamic import keeps the engine
+// out of every other command's startup path. The target is the
+// positional path when given (`graph [path]`, sauron-style), else the
+// --target directory (which defaults to the current directory).
+async function cmdGraph() {
+  const graphTarget = sub ? resolve(process.cwd(), sub) : targetDir;
+  console.log(`[GRAPH] Analyzing AST knowledge graph for: ${graphTarget}`);
+  try {
+    const { buildCodebaseGraph } = await import("../lib/graph.js");
+    const result = buildCodebaseGraph(graphTarget);
+    const outDir = join(graphTarget, ".reviewer-harness", "graph");
+    console.log(`  [AST] Extracted ${result.nodes.length} nodes (files)`);
+    console.log(`  [AST] Extracted ${result.edges.length} edges (dependencies)`);
+    console.log(`  [AST] Detected ${result.cycles.length} circular dependency cycles`);
+    console.log(`\n[COMPLETE] Knowledge graph artifacts generated in ${outDir}`);
+    console.log(`  - ${join(outDir, "graph.json")}`);
+    console.log(`  - ${join(outDir, "graph-report.md")}`);
+    console.log(`  - ${join(outDir, "graph.html")}`);
+  } catch (err) {
+    console.error(`[ERROR] Failed to generate codebase graph: ${err.message}`);
+    process.exitCode = 1;
+  }
+}
+
 function cmdGlobal() {
   const skills = loadBundledSkills();
   const targets = [
@@ -383,6 +408,7 @@ async function main() {
   else if (command === "agents") cmdAgents();
   else if (command === "commands") cmdCommands();
   else if (command === "global") cmdGlobal();
+  else if (command === "graph") await cmdGraph();
   else if (command === "help") help();
   else {
     console.error(`Unknown command "${command}".`);

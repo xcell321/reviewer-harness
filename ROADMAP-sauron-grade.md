@@ -81,7 +81,39 @@ restructured; their content moved verbatim). Effect tests 5/5 PASS. Suite
 
 ---
 
-## Phase 5 — Closing step: squash the commit history
+## Phase 2 — Validation gate — DONE 2026-11-13
+
+`validateSkillTemplate` + `validateBundledSkills` in lib/validate.js, wired
+into the existing `validate` command; 9 new tests (suite 76). Red-proof: temp
+fixture failed with exactly its 6 defects; mid-flight the gate reported 230
+errors across exactly the 29 unretrofitted skills; final state 0 errors.
+Cross-reference checks are scoped to the When to use section by design
+(calibration showed hundreds of id-shaped non-references in Rules bodies).
+
+## Phase 3 — Full retrofit — DONE 2026-11-13
+
+All 34 skills template-compliant at version 1.0.0. Preservation: 2,271 lines
+checked this phase (2,726 total with Phase 1), 0 misses. Effect tests: 8/8
+sampled categories PASS (13/13 with Phase 1). Pushed in 3 size-split batches,
+remote tree verified identical (7316b45).
+
+## Phase 4 — Release — CODE SIDE DONE 2026-11-13
+
+v1.18.0 bumped (package.json + harness.config.json aligned — the old config
+drift warning is gone; `validate` fully clean), README changelog entry 14
+added, suite 76/76 re-verified AFTER the bump, pushed (090d67f). REMAINING
+(Edsiel's steps): GitHub Release via the web UI, and the npm publish (his
+token, one-time use via the publish helper). The release counts as complete
+only after both surfaces verify live. **COMPLETE 2026-11-13: GitHub Release
+v1.18.0 published (tag = main 090d67f, Latest) and npm registry verified
+(latest flipped to 1.18.0). Phases 0–4 are all complete; only Phase 5 (the
+history squash from Edsiel's PC) remains.**
+
+## Phase 5 — Closing step: squash the commit history — CANCELLED 2026-11-13
+
+Edsiel dropped the squash ("nvm na ang phase 5") after Phases 0–4 completed.
+The hourly watcher (`rh-roadmap-squash-watch`) was removed the same evening.
+Main's history stays as it is. The original plan, kept for the record:
 
 Decided 2026-11-13 (via the Water Refilling side chat): after Phases 0–4 are
 complete, squash main's history (160 commits at decision time) down to a clean
@@ -92,6 +124,42 @@ starting point.
   current tree as ONE commit → force-push main.
 - Tags, releases, and npm are unaffected. Other clones re-clone afterward.
 - Nothing here starts until the roadmap is otherwise complete.
+
+## Phase 6 — `graph` command (codebase knowledge graph) — PLANNED 2026-11-13, awaiting go
+
+Edsiel asked (2026-11-13): sauron has a graph, his harness does not — add it
+to the roadmap with a plan. Grounded in sauron's own README: `sauron graph .`
+emits three artifacts into `.sauron/graph/` — `graph.json` (nodes,
+dependencies, cycle metrics for agent queries), `graph-report.md` (god
+modules, circular dependencies), `graph.html` (interactive force-directed
+visualizer) — from a zero-dependency AST engine covering 11 languages. Its
+stated purpose: agents burn thousands of tokens dumping raw files to learn a
+project's topology; the graph hands them the map.
+
+His version, adapted to his stack and the harness's zero-dependency rule:
+- CLI: `reviewer-harness graph [dir]` (default: the current project).
+  Artifacts in `.reviewer-harness/graph/`: `graph.json`, `graph-report.md`,
+  `graph.html` (single self-contained file, force-directed canvas, search +
+  click-to-inspect, works offline).
+- Engine v1 scope: the JS/TS family only (harness = JS, Pantry = TS/React,
+  DevPilot = TS) — import/export/require extraction plus module resolution
+  (relative paths, index files, .js/.ts/.jsx/.tsx/.mjs/.cjs). Node = file,
+  edge = dependency. PHP and Python are a later stretch (6.5), not v1.
+- Analysis: DFS circular-dependency detection; god modules (highest fan-in /
+  fan-out); orphan files; per-file metrics in `graph.json` so agents query
+  the map instead of dumping source files.
+- Steps: 6.1 scanner + resolver with fixture tests → 6.2 graph build, cycle
+  detection, `graph.json` → 6.3 health report → 6.4 HTML visualizer → 6.5
+  dogfood on the harness repo itself and on Pantry (report the real
+  findings), README + landing docs → release as v1.19.0 by the Phase 4
+  pattern (bump, post-bump suite, GitHub Release, npm publish).
+- Test discipline: fixture projects with a known cycle, a known god module,
+  and a known orphan; the suite stays green and grows.
+- Non-goals for v1: no full AST (the contract is an import-level graph;
+  symbol-level detail is out), no new dependencies, no 11 languages.
+- Ordering: Phase 5 (the history squash) stays pending Edsiel's paste and is
+  independent of this phase — Phase 6 can land before or after it; the squash
+  carries whatever the final tree is.
 
 ## Non-goals
 

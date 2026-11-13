@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.18.0-blue)
+![version](https://img.shields.io/badge/version-1.19.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.18.0
+Harness : reviewer-harness v1.19.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -295,7 +295,7 @@ All 34 bundled skills:
 | `sqlite-principles` | SQLite production rules — WAL pragmas, single-writer discipline, Litestream backup, Turso edge replicas, Postgres graduation criteria. |
 | `supabase-principles` | Supabase backends done safely — Row Level Security on every table, edge functions, realtime channels. Includes deep PostgreSQL query-planner optimization (merged in). |
 
-The `database` skills, `php-principles` (in `backend`), and `api-design` (in `architecture`) come from [iging/sauron](https://github.com/iging/sauron) (MIT-licensed) — the harness reviewer-harness was modeled on. Eight database skills remain verbatim standalone skills with their original frontmatter; on 2026-11-13 `zero-downtime-table-partitioning` and `postgres-query-planner-optimization` were merged into `database-migration` and `supabase-principles`, so those two files now carry clearly marked merged sections.
+The `database` skills, `php-principles` (in `backend`), and `api-design` (in `architecture`) come from [iging/sauron](https://github.com/iging/sauron) (MIT-licensed) — the harness reviewer-harness was modeled on. Eight database skills remain verbatim standalone skills with their original frontmatter; on 2026-11-13 `zero-downtime-table-partitioning` and `postgres-query-planner-optimization` were merged into `database-migration` and `supabase-principles`, so those two files now carry clearly marked merged sections. The `graph` command's engine (`lib/graph.js`) is likewise a port of sauron's codebase knowledge graph generator (MIT), adapted to the harness's `.reviewer-harness/graph/` output folder and branding, with the port's changes listed in the file's header.
 
 Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
@@ -351,6 +351,25 @@ Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skil
 ```bash
 reviewer-harness validate        # check the config (quality + secret scan)
 ```
+
+### Codebase knowledge graph — see your project's shape
+
+AI agents burn thousands of tokens dumping raw source files just to understand a project's topology. `graph` maps the codebase once, into three artifacts an agent (or you) can query instead:
+
+```bash
+reviewer-harness graph           # graph the current project
+reviewer-harness graph <path>    # graph another project folder
+```
+
+What it creates (in `.reviewer-harness/graph/`):
+
+```
+graph.json       — nodes (files + their functions, classes, types), edges (imports), detected cycles — structured data for programmatic agent queries
+graph-report.md  — the health report: top hub modules (highest fan-in + fan-out), circular dependencies, isolated modules, totals
+graph.html       — an interactive visualizer: one galaxy per top-level directory, deterministic layout, live search, click any node to inspect its symbols
+```
+
+The engine is zero-dependency and polyglot — TypeScript, JavaScript, Python, Go, Rust, Java, Kotlin, PHP, Ruby, C/C++, and C# — and it resolves real imports: relative paths, index files, tsconfig path aliases, and workspace packages by name. Ported from iging/sauron's graph engine (MIT) — see the attribution under Skills.
 
 ### Sub-agents and slash commands
 
@@ -418,6 +437,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 | `reviewer-harness sync --dry-run` | Preview the sync: shows what would change, writes nothing |
 | `reviewer-harness sync` | Apply the rules to every enabled runtime (with `.bak` backups) |
 | `reviewer-harness status` | Show the config: name, version, runtimes, target files, enabled skills |
+| `reviewer-harness graph [path]` | Generate a codebase knowledge graph (`graph.json`, `graph-report.md`, `graph.html`) into `.reviewer-harness/graph/` |
 
 ### Skills, agents, commands
 
@@ -444,7 +464,7 @@ Running from a source checkout instead? The same commands work as `node bin/cli.
 
 ## File map
 
-- `bin/cli.js` — commands: `status`, `sync`, `init`, `validate`, `memory`, `skills`, `agents`, `commands`, `global`
+- `bin/cli.js` — commands: `status`, `sync`, `init`, `validate`, `memory`, `skills`, `agents`, `commands`, `global`, `graph`
 - `bin/install.sh` / `bin/install.ps1` — one-liner installers (Linux/macOS, Windows)
 - `Dockerfile` / `docker-compose.yml` — run the harness with zero local Node.js
 - `lib/config.js` — loads and validates the structure of the master spec
@@ -454,6 +474,7 @@ Running from a source checkout instead? The same commands work as `node bin/cli.
 - `lib/init.js` — the config template + init v2: the full one-command setup (detect → install everything → sync)
 - `lib/detect.js` — reads a project's manifests + README to detect its name, stack, goal, and validation commands
 - `lib/memory.js` — local memory: notes vault, graph builder, index generator
+- `lib/graph.js` — codebase knowledge graph engine (ported from iging/sauron, MIT): polyglot symbol + import extraction, cycle detection, galaxy layout, report + visualizer
 - `lib/skills.js` — skills system: bundled store, install/enable, section rendering
 - `lib/agents.js` / `lib/commands.js` — one source → OpenCode + Claude formats
 - `lib/adapters/` — registry + one adapter per runtime (opencode, claude, gemini, cline, freebuff, copilot, antigravity, qoder)
@@ -496,6 +517,7 @@ Check that you edited the config in the same folder you are syncing (`--target` 
 12. ✅ v1.17.0 — init v2: one command sets up everything — project detection (name, stack, goal, real validation commands) → adapted config → all skills, agents, commands → seeded memory → sync, with a receipt; re-running init refreshes instead of overwriting
 13. ✅ v1.17.1 — less hassle edition: brainstorming hands off to writing-plans automatically after design approval, and the skills are organized into 8 category folders — in the harness and mirrored in every project it sets up
 14. ✅ v1.18.0 — sauron-grade edition: all 34 skills retrofitted to one house template (Purpose, When to use, Rules, Validation gate, Examples, Sources, Changelog) with per-skill SemVer versions, a template validation gate in `validate` and CI, the sauron database clones and merges landed, and every skill in folder layout
+15. ✅ v1.19.0 — knowledge graph edition: the `graph` command (ported from iging/sauron's engine, MIT) maps any codebase into graph.json + graph-report.md + graph.html — dependencies, circular imports, god modules — across 11 languages, zero dependencies
 
 ## Contributing & Security
 
