@@ -57,7 +57,8 @@
     "prisma-drizzle-orm",
     "sqlite-principles",
     "supabase-principles",
-    "zero-downtime-table-partitioning"
+    "zero-downtime-table-partitioning",
+    "php-principles"
   ],
   "version": "1.16.0"
 }
