@@ -5,7 +5,25 @@ description: '68 system design rules distilled from system-design-primer (377k s
 
 ## Skill: system-design
 
+### Purpose
+
+68 system design rules for designing or reviewing a system's architecture — CAP tradeoffs, load balancing, database scaling, availability math, and how the pieces of a real SaaS fit together.
+It prevents designing without constraints and scaling by guesswork: scope first, name the trade-off, and scale last.
+
+### When to use
+
 When to use: designing or reviewing a system's architecture — a new app, a growing service, or any time the question is "how do the pieces fit and scale?" rather than "why is this endpoint slow?" Apply when choosing databases, splitting services, adding caching layers, or planning for traffic growth.
+
+| Trigger | Example |
+| --- | --- |
+| Designing a new app or service architecture | "Design the architecture for a new app" |
+| Reviewing how a growing service fits and scales | "How do the pieces fit and scale?" |
+| Choosing databases, splitting services, or adding caching layers | "Should we shard, cache, or split this service?" |
+| Planning for traffic growth | "Plan for ten times the current traffic" |
+
+Do NOT use when: the question is why this endpoint is slow — `nodejs-quality` owns backend performance patterns for that case. Security depth belongs to `owasp-top10` and `api-security`, and REST contract design belongs to `api-design`.
+
+### Rules
 
 Every rule below is distilled from donnemartin/system-design-primer (cited per rule). Nothing here is invented — if the primer doesn't cover a topic, it is labeled "general practice" instead. Pairs with `nodejs-quality` (its Backend Performance section: caching patterns, latency numbers, backpressure, golden signals) — this skill covers the architecture around it.
 
@@ -248,5 +266,38 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 - System design primer (377k stars): https://github.com/donnemartin/system-design-primer
 - CAP theorem revisited: https://robertgreiner.com/cap-theorem-revisited/
 - Node.js best practices (rate limiting, APM): https://github.com/goldbergyoni/nodebestpractices
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Constraints scoped first (users, volume, requests/sec, read-to-write ratio)
+- [ ] CAP choice named (CP vs AP) with the reason written down
+- [ ] Availability target named in 9s; single points of failure identified
+- [ ] Static content on a CDN; SSL terminated at the load balancer
+- [ ] Servers stateless; sessions in a centralized store
+- [ ] Database scaling named (replication vs federation vs sharding) with its risks
+- [ ] SQL vs NoSQL choice justified against the decision table (rule 52)
+- [ ] Slow work moved off the request path (message/task queue)
+- [ ] Internal vs public communication chosen (RPC vs REST)
+- [ ] Secrets encrypted in transit and at rest; inputs sanitized; queries parameterized
+
+### Examples
+
+**Do:** scope the constraints first (users, volume, requests/second, read-to-write ratio), sketch the high-level design and justify each component, then scale last against the bottlenecks.
+
+**Do not:** pick the stack first and design without constraints — a design without constraints is guesswork.
+
+### Sources
+
+Every rule cites its source inline (the *Source:* line under each rule).
+
+- System design primer (377k stars): https://github.com/donnemartin/system-design-primer
+- CAP theorem revisited: https://robertgreiner.com/cap-theorem-revisited/
+- Node.js best practices (rate limiting, APM): https://github.com/goldbergyoni/nodebestpractices
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

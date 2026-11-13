@@ -5,7 +5,23 @@ description: 'Frontend performance rules distilled from Front-End Checklist (the
 
 ## Skill: frontend-performance
 
-Distilled from [Front-End Checklist](https://github.com/thedaviddias/Front-End-Checklist) (`thedaviddias/Front-End-Checklist`) — the open-source frontend quality system with 385 quality-gated rules. Every rule below cites its source rule.
+### Purpose
+
+Frontend performance rules that make laggy sites smooth without breaking design: animate only compositor properties, batch DOM work, hint critical resources, and hold performance budgets.
+It prevents layout thrashing, render-blocking loads, and gradual performance decay across releases.
+
+### When to use
+
+| Trigger | Example |
+| --- | --- |
+| A page feels laggy or janky | "This page stutters when it animates" |
+| Initial load is slow or LCP is poor | "Lighthouse says LCP is 4s" |
+| Layout jumps as content loads | "The page shifts around while images load" |
+| Performance keeps degrading over time | "Every release makes the site slower" |
+
+Do NOT use when: the job is animation design and easing choreography — `motion-design` owns that; a full UX audit is `ui-ux-pro-max`.
+
+### Rules
 
 ### 1. Animate only transform and opacity
 Source: [animation-performance](https://frontendchecklist.io/rules/css/animation-performance) (priority: high)
@@ -169,5 +185,29 @@ document.querySelector('#chat-button').addEventListener('click', async () => {
 - Chrome DevTools → Performance tab → record interaction. Look for red frames and long Layout/Paint blocks. After the fix, frames should stay green at 60fps.
 - Run Lighthouse before and after — LCP, CLS, and INP should improve or stay green.
 - General practice: test on a mid-range Android device, not just desktop Chrome.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] A Chrome DevTools Performance recording shows no red frames or long Layout/Paint blocks; frames stay at 60fps
+- [ ] Lighthouse was run before and after — LCP, CLS, and INP improved or stayed green
+- [ ] Animations use only transform and opacity (rule 1)
+- [ ] Every image has explicit width and height and is served at display size (rule 7)
+- [ ] The result was tested on a real mid-range device, not just the dev machine
+
+### Examples
+
+**Do:** animate `transform: translateX(0)` for a slide-in and preload only the LCP image.
+
+**Do not:** animate `left` or `width` every frame, or lazy-load the hero image.
+
+### Sources
+
+Distilled from [Front-End Checklist](https://github.com/thedaviddias/Front-End-Checklist) (`thedaviddias/Front-End-Checklist`) — the open-source frontend quality system with 385 quality-gated rules. Every rule below cites its source rule.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

@@ -5,6 +5,24 @@ description: 'Check defined-and-called plus remote evidence before reporting don
 
 ## Skill: verify_before_done
 
+### Purpose
+
+Check defined-and-called plus remote evidence before reporting done, pushed, fixed, or working — and never present an untested guess as done.
+It also covers provider claims and publish/install surfaces, so a stale third-party claim or a version seen on the wrong surface is checked against the live evidence before it is reported.
+
+### When to use
+
+| Trigger | Example |
+| --- | --- |
+| Reporting a code fix as done | "The fix is done" |
+| Reporting a commit as pushed | "Pushed to origin" |
+| Asserting a claim about a provider | "That provider is still free and available" |
+| Checking whether a published update is live or installed | "The new version is live on my machine" |
+
+Do NOT use when: the question is whether a library, function, or API exists before it is used — `no-hallucination` owns that check. A failure that is not yet understood is reproduced first under `debug-first`, and the edit itself is governed by `safe-editing`.
+
+### Rules
+
 ### Check defined and called
 
 - Confirm every changed symbol is both defined and called, or imported and used, before you report a code fix as done.
@@ -144,5 +162,33 @@ The standalone `verify_publish_install_surface` skill was merged into this skill
 - Ask the user to paste the exact version line from the installed file when a screenshot is cropped or unclear, since that line settles the local surface faster than another restart.
 
 - Batch related changes into one publish when the user must run the full update chain, so one verification round covers all of them.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Every changed symbol is confirmed defined and called, or imported and used
+- [ ] Every affected suite was re-run after the last change — no pre-change pass was reused
+- [ ] A mock pass was treated as logic-only evidence, not proof that the live behavior works
+- [ ] A pushed commit SHA was confirmed on origin before it was reported as pushed
+- [ ] The report hands over a checkable SHA or test command, and untested work is labeled untested
+- [ ] Any provider claim was checked against the live source first, and anything that could not be verified was stated plainly
+- [ ] For a publish or install update, each surface was checked in order and the local install was confirmed before closing
+
+### Examples
+
+**Do:** re-run every affected suite after the last change, confirm the pushed SHA exists on origin, and hand over that SHA and the test command with the done report.
+
+**Do not:** report a fix as done from a report alone, or present an untested guess as done.
+
+### Sources
+
+- Distilled from the user's recurring work (daily skill-review loop); no external source is cited in this skill.
+- Merged 2026-11-13 from `verify_provider_claims` — its rules are preserved unchanged in the Rules section above.
+- Merged 2026-11-13 from `verify_publish_install_surface` — its rules are preserved unchanged in the Rules section above.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

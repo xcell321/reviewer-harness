@@ -5,6 +5,23 @@ description: 'Modern PHP 8.x engineering rules covering strict typing, PSR archi
 
 # PHP Principles
 
+### Purpose
+
+Modern PHP 8.x engineering: strictly typed, PSR-conformant code with security floors and static analysis gates.
+It prevents untyped legacy sprawl and injection-class vulnerabilities.
+
+### When to use
+
+| Trigger | Example |
+| --- | --- |
+| Building a feature in PHP | "Build this feature in PHP" |
+| Hardening a PHP codebase | "Harden this PHP codebase" |
+| The slash command is invoked | "/php-principles" |
+
+Do NOT use when: the job is a frontend UI build — use `design-taste-frontend` or `frontend-performance` instead; or the job is Node.js backend code — use `nodejs-quality` instead.
+
+### Rules
+
 ## 0. Identity
 
 - **Role:** Service Builder. Owns type-safe PHP implementation with security hardening inside scoped files.
@@ -127,5 +144,28 @@ description: 'Modern PHP 8.x engineering rules covering strict typing, PSR archi
 
 **Input:** "Harden our PHP billing module and add tests."
 **Output:** Plan with typed DTO boundaries, parameterized queries, Argon2id hashing, and Pest specs on isolated databases.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Strict types enforced per file.
+- [ ] Domain grouped by feature.
+- [ ] Security floors met per surface.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before coding.
+
+### Examples
+
+**Input:** "Harden our PHP billing module and add tests."
+**Output:** Plan with typed DTO boundaries, parameterized queries, Argon2id hashing, and Pest specs on isolated databases.
+
+### Sources
+
+- Cloned verbatim from iging/sauron (the sauron harness by iging); the Rules above are its text, unchanged.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

@@ -5,7 +5,23 @@ description: '10 UX states beyond the happy path — design every screen for emp
 
 ## Skill: ux-edge-states
 
+### Purpose
+
+Design every screen for the 10 UX states beyond the happy path — empty, loading, error, offline, success, and the rest.
+It prevents blank screens, dead ends, and lost user input when things go wrong.
+
+### When to use
+
 When to use: building or reviewing any screen, page, or component.
+
+| Trigger | Example |
+| --- | --- |
+| Building a new screen, page, or component | "Build the sessions screen" |
+| Reviewing a screen before calling it done | "Check this page before we ship it" |
+
+Do NOT use when: the job is a full 222-guideline UI/UX audit — `ui-ux-pro-max` owns that; visual design taste is `design-taste-frontend`.
+
+### Rules
 
 Your product works when everything goes right. The real test is what it does when nothing does. Run every screen through these 10 states before calling it done.
 
@@ -36,7 +52,31 @@ Your product works when everything goes right. The real test is what it does whe
 - Losing user input on error, expiry, or navigation.
 - Dead-end "no results" with no suggestions.
 
-### Learn more
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Empty state explains what's missing and gives a clear next action
+- [ ] Loading shows a skeleton or spinner immediately — no frozen UI
+- [ ] Error state states the cause and the recovery step
+- [ ] Offline and slow-network states are detected and communicated
+- [ ] No search results suggests alternatives instead of a dead end
+- [ ] Permission denied and session expired are handled without losing user work
+- [ ] Form validation is inline, immediate, and explanatory
+- [ ] Success state confirms and shows the next step
+
+### Examples
+
+**Do:** an empty sessions screen that says "No sessions yet — create one" with the create action.
+
+**Do not:** a blank page, or a generic "Something went wrong" with no recovery path.
+
+### Sources
+
 - The 10-state list: Strategy Fox — "10 UX States" reel. The states above match its list and order; the reel is the list's origin. No citable article or repo publishes the list, so the per-state guidance in this skill is general practice.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

@@ -5,7 +5,23 @@ description: 'Run an 11-agent fix — 8 domain fixers (audit-team''s eight areas
 
 ## Skill: Fix Team (fix-team)
 
+### Purpose
+
+Fix an audit report's findings with eleven agents in a fixed order: a superpowers agent writes the fix plan first and holds the gate until the user approves it, nine domain and area fixers then fix in parallel, and a verification agent runs last and fixes what verification catches. It prevents feature creep and unverified fixes — fix-only, every fix backed by the finding's file:line and test or build evidence.
+
+### When to use
+
 When to use: the user asks for a fix team, a fix run, or "/fix-team" on an audit report — or after an audit-team run, to fix what it found. Always fix-only: fixers fix the audit's findings, never add features, never redesign.
+
+| Trigger | Example |
+| --- | --- |
+| The user asks for a fix team or a fix run on an audit report | "Run /fix-team on this audit report" |
+| An audit-team run has finished and the user picked findings to fix | "Fix the Blockers and Warnings I picked" |
+| A previous fix round needs its fixes re-verified | "Verify the fixes from the last round" |
+
+Do NOT use when: no audit report exists yet or the findings still need to be found — `audit-team` owns the report-only audit. Planning a new feature belongs to `brainstorming` and `writing-plans`, not to a fix run.
+
+### Rules
 
 Every rule below is built from the harness's own skills (cited per agent) and from the fix pattern proven on the Community Pantry repo (fix rounds 4, 5, 5.1, 6, 7 — each fixed what the audit found, with central re-verification). If a rule doesn't apply, say why.
 
@@ -32,8 +48,6 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 **The report is written with explain-bisaya** — fixes in plain Bisaya, technical detail (file paths, code, SQL, test output) in English.
 
 **Not applied, on purpose: clone.** Clone is a build skill (reproduce a design from a URL) — there is nothing for it to fix. Listing it as "applied" would be a label, not a real fix. If the target itself is a clone task, run `clone` separately, not inside a fix.
-
-### Rules
 
 1. **Verify the target and the audit report before fixing.** Confirm the exact commit under fix (remote HEAD, not a stale local clone), that the tree the agents read is byte-identical to it, and that every finding being fixed has file:line + evidence. A finding without a location is not fixed — it is sent back.
    *Source: Pantry fix rounds — the local clone was stale at `8c73c5f` while remote had moved; fixes ran on a fresh snapshot of remote HEAD instead.*
@@ -89,7 +103,10 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 **11 — verification fixer brief:** "Verify the fixes in <fix run> on <repo> at <commit>, and fix what verification catches. Read these skills first and apply them genuinely, not as labels: verify_before_done (including its merged provider-claims and publish-surface sections), instruction_registers, playwright-cli. Re-check every fix: is the changed code defined AND called (or imported and used)? Re-run every affected suite after every change — do not reuse a passing result from before the change. Treat a mock pass as logic-only evidence. Get remote evidence (a pushed SHA exists on origin) before calling anything pushed. Name the target register (the agent's own workspace vs the reviewer-harness repo) and the action register (plan vs build) before touching anything; ask exactly one clarifying question when they are ambiguous. Where a fix touches a provider claim, check the live source first and quote it; where it touches a published version, check each surface in order (commit/tag, registry, installed file) and name the version on each. Where a fix touches a web UI and the app can be run (dev server or deployed URL), drive the changed flow with playwright-cli: snapshot, perform the flow, screenshot the result, and where practical leave a passing Playwright spec as the evidence; if the app cannot be run, state that and label the UI fix unverified-at-runtime. Fix what verification catches, then re-verify your own fix. Never present a guess as done — label untested work as untested and name what remains. Every result: fix file:line, what you checked, the evidence, and what you fixed if anything."
 
-### Quick check before reporting
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
 - [ ] Target commit + audit report verified (agents fixed the right code, from real findings)
 - [ ] Fix plan written (writing-plans) and approved by the user before any fix
 - [ ] All eleven agents ran in their order (superpowers first, nine fixers parallel, verification last), each read its skills first
@@ -99,7 +116,14 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 - [ ] Push manifest prepared (NUL-delimited, trailing NUL, count verified); nothing pushed
 - [ ] Report in Bisaya, technical detail in English
 
-### Learn more (sources for the skills this team applies)
+### Examples
+
+**Do:** for one picked finding, write the failing test first, watch it fail for the expected reason, make the smallest fix that turns it green, and report the finding's file:line with the test output.
+
+**Do not:** add a feature, redesign, or fix a finding the user did not pick while fixing the ones they did.
+
+### Sources
+
 - OWASP Top 10 (owasp-top10, api-security): https://owasp.org/www-project-top-ten/
 - Node.js best practices (nodejs-quality, incl. its merged backend-performance and devops-basics sections): https://github.com/goldbergyoni/nodebestpractices
 - System Design Primer (system-design): https://github.com/donnemartin/system-design-primer
@@ -112,5 +136,9 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 - Vengeance UI (vengeance-ui): https://github.com/Ashutoshx7/vengeance-ui
 - Superpowers (brainstorming, writing-plans): https://github.com/obra/superpowers
 - verify_before_done (incl. its merged verify_provider_claims and verify_publish_install_surface sections), instruction_registers: reviewer-harness skills, distilled from the user's recurring work (daily skill-review loop) — no external source
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS
