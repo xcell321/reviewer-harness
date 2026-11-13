@@ -5,7 +5,22 @@ description: 'Surgical editing — the smallest possible diff, no collateral dam
 
 ## Skill: safe-editing
 
+### Purpose
+
+Governs every edit to existing code: the smallest possible diff that solves the task, with no collateral damage. It prevents unrequested changes, unrelated reformatting, and hardcoded values from sneaking into a codebase one edit at a time.
+
+### When to use
+
 When to use: every change to existing code.
+
+| Trigger | Example |
+| --- | --- |
+| Any change to existing code | "Rename `getUser` to `fetchUser`" |
+| A fix or refactor inside a file that already exists | "Fix the off-by-one in the pager" |
+
+Do NOT use when: the change needed is not yet known — `debug-first` owns reproducing and diagnosing the failure first; this skill governs the edit once the change is known.
+
+### Rules
 
 - Read the whole file (or the relevant part) before changing anything.
 - Make the **smallest diff** that solves the task — never include changes that were not asked for.
@@ -16,13 +31,54 @@ When to use: every change to existing code.
 - If another file truly must change too, say why before doing it.
 - Afterwards, show the diff and describe in one sentence what changed.
 
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] The whole file (or the relevant part) was read before editing
+- [ ] The diff is the smallest that solves the task — nothing unasked-for is in it
+- [ ] No unrelated lines were reformatted, reordered, or renamed
+- [ ] No new hardcoded values (URLs, endpoints, paths, credentials, keys, magic numbers) — config, environment variables, parameters, or named constants instead
+- [ ] If another file changed too, the reason was stated before changing it
+- [ ] The diff is shown and the change described in one sentence
+
+### Examples
+
+**Do:** read the file, change only the lines the task needs, then show the diff with a one-sentence summary of what changed.
+
+**Do not:** reformat the whole file, rename unrelated variables, and bury a new API URL as a literal — all while fixing one bug.
+
+### Sources
+
+- No external source is cited in this skill; the rules stand as written (general practice).
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
+
 ---
 
 ## Companion playbook: no-hallucination (always paired with safe-editing)
 
 ## Skill: no-hallucination
 
+### Purpose
+
+Make sure every library, function, and API actually exists before using it.
+It prevents invented imports, guessed names or signatures, and substitutes for things that do not exist from entering code as if they were real.
+
+### When to use
+
 When to use: every time you write new code or reach for a library/API.
+
+| Trigger | Example |
+| --- | --- |
+| Writing new code | "Add a feature that calls a new API" |
+| Reaching for a library or API | "Import a package and use its functions" |
+
+Do NOT use when: the work is reporting a finished change as done — `verify_before_done` owns the defined-and-called and remote-evidence check for that report. The edit itself is governed by `safe-editing`, and a failure that is not yet understood is reproduced first under `debug-first`.
+
+### Rules
 
 - Before importing, check `package.json` (or the lockfile) that the package is really there.
 - Use only functions and APIs you have seen in the codebase or in the official docs.
@@ -33,6 +89,27 @@ When to use: every time you write new code or reach for a library/API.
 - **Check config is alive (general practice).** Every config value, env var, flag, and setting the code reads must actually exist and be used. A setting nothing reads is dead config — flag it, don't assume it works.
 - **Record what you could not verify (general practice).** If a claim can't be checked (no access, no docs, no run), write it down as UNKNOWN with the reason. Never upgrade an unknown into a fact by rephrasing it.
 
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Before importing, the package was checked in `package.json` (or the lockfile)
+- [ ] Every function and API used was seen in the codebase or in the official docs
+- [ ] Any unsure name or signature was looked up first — never guessed
+- [ ] Anything that does not exist was said so immediately — no invented substitute
+- [ ] After coding, it was verified to actually run, not only to look right
+- [ ] Claims were checked against the code, not the docs; dead config was flagged; anything that could not be verified was recorded as UNKNOWN with the reason
+
+### Examples
+
 *Examples:* README says `getUser()` returns a Promise — run it. If it returns the user directly, the README is wrong, not the code. `config.json` sets `maxRetries: 5` but nothing reads `maxRetries` — dead config, flag it.
+
+### Sources
+
+- No external source is cited in this skill; the rules stand as written (general practice).
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

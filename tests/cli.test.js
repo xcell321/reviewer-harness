@@ -1,7 +1,7 @@
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,9 +19,17 @@ function runCli(args, cwd) {
   return spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: "utf8" });
 }
 
+// S-30: every temp dir created here is registered and removed by
+// the after() hook — no leaks.
+const madeDirs = [];
 function tempDir() {
-  return mkdtempSync(join(tmpdir(), "rh-cli-"));
+  const dir = mkdtempSync(join(tmpdir(), "rh-cli-"));
+  madeDirs.push(dir);
+  return dir;
 }
+after(() => {
+  for (const dir of madeDirs) rmSync(dir, { recursive: true, force: true });
+});
 
 function writeConfig(dir, config) {
   writeFileSync(join(dir, "harness.config.json"), JSON.stringify(config, null, 2));
@@ -167,3 +175,50 @@ test("unexpected errors keep their stack with --verbose only", () => {
   assert.match(verbose.stderr, /\n\s+at sync \(/, "verbose error should include the stack trace");
 });
 
+
+// --- S-9: `skills remove` applies the sync itself when the project
+// has sync state, so a removed skill stops being live in the
+// runtimes immediately — no manual `sync` step left to forget.
+// Pre-fix behavior: the receipt only said "Run sync to update the
+// runtimes", and the skill's generated command/bundle files stayed
+// on disk (and in every AI's menu) until the user ran sync by hand.
+
+test("S-9: skills remove auto-syncs — generated command/bundle files are gone without a manual sync", () => {
+  const dir = tempDir();
+  // Full init installs + enables every bundled skill and syncs every
+  // runtime, so the project definitely has sync state.
+  const init = runCli(["init"], dir);
+  assert.equal(init.status, 0, `init should exit 0 (got ${init.status}): ${init.stderr}`);
+  const commandFile = join(dir, ".claude", "commands", "debug-first.md");
+  const bundleFile = join(dir, ".qoder", "skills", "debug-first", "SKILL.md");
+  assert.ok(existsSync(commandFile), "precondition: the skill's slash command was generated");
+  assert.ok(existsSync(bundleFile), "precondition: the skill's bundle was generated");
+
+  const r = runCli(["skills", "remove", "debug-first"], dir);
+  assert.equal(r.status, 0, `remove should exit 0 (got ${r.status}): ${r.stderr}`);
+  assert.match(r.stdout, /Skill "debug-first" disabled/, "receipt names the removal");
+  assert.match(r.stdout, /sync applied automatically/, "receipt reports the automatic sync");
+  assert.equal(existsSync(commandFile), false, "the slash command is gone without a manual sync");
+  assert.equal(existsSync(bundleFile), false, "the skill bundle is gone without a manual sync");
+  // Another skill's generated files are untouched by the removal.
+  assert.ok(
+    existsSync(join(dir, ".claude", "commands", "safe-editing.md")),
+    "other skills stay live"
+  );
+});
+
+test("S-9: skills remove without sync state prints the next step and writes no runtime files", () => {
+  const dir = tempDir();
+  // --minimal creates only the config; add installs + enables the
+  // skill. Nothing was ever synced, so there is no sync state.
+  const minimal = runCli(["init", "--minimal"], dir);
+  assert.equal(minimal.status, 0, `init --minimal should exit 0 (got ${minimal.status}): ${minimal.stderr}`);
+  const add = runCli(["skills", "add", "debug-first"], dir);
+  assert.equal(add.status, 0, `add should exit 0 (got ${add.status}): ${add.stderr}`);
+
+  const r = runCli(["skills", "remove", "debug-first"], dir);
+  assert.equal(r.status, 0, `remove should exit 0 (got ${r.status}): ${r.stderr}`);
+  assert.match(r.stdout, /Run "sync" to update the runtimes\./, "receipt gives the next step");
+  assert.doesNotMatch(r.stdout, /sync applied automatically/, "no auto-sync without sync state");
+  assert.equal(existsSync(join(dir, ".claude")), false, "no runtime output was created");
+});

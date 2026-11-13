@@ -1,7 +1,12 @@
 # reviewer-harness via Docker Compose — zero local Node.js required.
 #
-# Run from this repo (your project is this directory), or copy this
-# file into any project and run the same commands there:
+# Run this from a clone of the reviewer-harness repo itself: the
+# `build: .` below requires this repo's Dockerfile in the same
+# directory, so this file cannot be copied alone into another
+# project (it would fail, or build that project's Dockerfile
+# instead). To run the harness against another project, either
+# mount that project over /workspace from the repo clone, or use
+# the published npm package: `npm install -g reviewer-harness`.
 #
 #   docker compose run --rm reviewer-harness status
 #   docker compose run --rm reviewer-harness init

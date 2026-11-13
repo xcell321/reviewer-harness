@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.16.0-blue)
+![version](https://img.shields.io/badge/version-1.21.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -43,7 +43,7 @@ AI coding assistants are powerful, but anyone who vibe-codes with them daily run
 
 ### Who it is for
 
-Anyone who codes with an AI assistant and is tired of re-explaining the same rules, re-fixing the same breakage, and re-teaching the same project every session. It was built by a student vibe-coder for daily use across eight different AI CLIs — and it works just as well if you only use one.
+Anyone who codes with an AI assistant and is tired of re-explaining the same rules, re-fixing the same breakage, and re-teaching the same project every session. It was built by a student agentic coder for daily use across eight different AI CLIs — and it works just as well if you only use one.
 
 ## Requirements
 
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.16.0
+Harness : reviewer-harness v1.21.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -159,27 +159,38 @@ If you see `Config file not found`, you are in a folder without a harness config
 
 This is the full flow, start to finish. Run the commands inside your project folder.
 
-**Step 1 — Create the master config.** One time per project:
+**Step 1 — Set up everything.** One time per project, one command:
 
 ```bash
 reviewer-harness init
 ```
 
-Expected output:
+Init reads your project first — its manifest (`package.json`, `composer.json`, `go.mod`, …) and its README — then sets up the whole harness, adapted to what it found. Expected output (counts depend on your project):
 
 ```
-Config created: /path/to/your/project/harness.config.json
+Project: your-app — TypeScript · React
+Goal   : (from your package.json description or README)
+Config : created → /path/to/your/project/harness.config.json
+Skills : 28 installed + enabled ✓
+Agents : 3 installed (6 runtime files) ✓
+Commands: 2 installed (4 runtime files) ✓
+Memory : created (project.md, decisions.md) — 2 notes indexed ✓
+Sync   : 144 files written across 9 runtime targets ✓
+
+Done — everything is installed. Open any runtime in this project and the harness is live.
 ```
 
-This creates `harness.config.json` — the one file that holds your rules, your problem statement, and your enabled skills. Open it and edit the `rules` and `problem` fields to describe your project. (Running `init` again never overwrites an existing config.)
+The `harness.config.json` it creates is already yours: your project's name and goal, its detected stack, and its real validation commands (e.g. `npm test`) written into the rules — and into the seeded memory note, so the first session already knows the project. Edit the `rules` and `problem` fields to fine-tune. (Running `init` again never overwrites an existing config; it refreshes the installs instead. `init --minimal` creates only the config — the pre-v1.17 behavior — and `init --dry-run` previews the whole setup without writing anything.)
 
-**Step 2 — Check the config.** Before anything gets written, validate it:
+**Step 2 — Open your AI tool.** That is it — the setup is done. Open the project in Claude Code, OpenCode, Gemini CLI, Cline, or any of the other runtimes, and the AI reads your rules, your skills, and your project memory before it writes a single line. (New idea to build? The everyday flow below starts with `/brainstorming`.)
+
+**That's the whole setup.** Everything after this is optional, for later — when you want to change something:
+
+**Fine-tune the config.** Edit the `rules` and `problem` fields in `harness.config.json`, then check it:
 
 ```bash
 reviewer-harness validate
 ```
-
-Expected output when everything is fine:
 
 ```
 ✓ Config is clean — no problems, no secrets.
@@ -187,39 +198,40 @@ Expected output when everything is fine:
 
 `validate` checks for empty or duplicate rules and scans the config for leaked API keys and tokens — secrets must never be synced into instruction files (they would leak into Git).
 
-**Step 3 — Add the skills you want.** Pick from the 28 bundled skills (full list below):
+**Add or remove a skill.** `init` installed all 28; trim or extend the set any time (full list below):
 
 ```bash
-reviewer-harness skills add safe-editing
-reviewer-harness skills add no-hallucination
-reviewer-harness skills add debug-first
+reviewer-harness skills list             # everything bundled, grouped by category
+reviewer-harness skills remove clone     # disable + remove one
+reviewer-harness skills add clone        # bring it back
 ```
 
-Each `skills add` copies the skill into your project and enables it in the config. See what is available first with `reviewer-harness skills list`.
-
-**Step 4 — Preview the sync.** See exactly what would change, without writing anything:
+**Re-sync after edits.** Preview first if you like — sync writes a `.bak` backup before overwriting any instruction file, and leaves unchanged files untouched:
 
 ```bash
-reviewer-harness sync --dry-run
+reviewer-harness sync --dry-run   # preview: what would change, writes nothing
+reviewer-harness sync             # apply it to every runtime
 ```
 
-**Step 5 — Sync.** Write the instruction files for every runtime:
+One file changes, every runtime follows.
 
-```bash
-reviewer-harness sync
-```
+## The everyday flow — from idea to shipped
 
-Before overwriting any existing instruction file, sync saves a `.bak` backup copy. Files that would not change are left untouched — running sync twice in a row writes nothing the second time.
+With the harness live in a project, building something new is one conversation:
 
-**Step 6 — Open your AI tool.** That is it. Open the project in Claude Code, OpenCode, Gemini CLI, Cline, or any of the other runtimes, and the AI reads your rules, your skills, and your problem statement before it writes a single line.
+1. **`/brainstorming <your idea>`** — the AI asks one question at a time, proposes 2–3 approaches, and writes a design doc. **Nothing is built until you approve the design** — that approval is a hard gate, not a courtesy.
+2. **Planning starts itself.** The moment the design is approved, brainstorming hands off to `writing-plans` automatically, in the same session — you never type the next command. You get a bite-sized, TDD-shaped implementation plan.
+3. **Build.** You (or the AI, task by task) work the plan under the harness's guardrails — safe editing, no invented APIs, your project's real validation commands.
+4. **`/audit-team`** — 8 agents audit the result in parallel, report-only: what is broken, risky, or fake, with evidence.
+5. **`/fix-team`** — 11 agents fix the audit's findings, and a verification agent re-checks every fix last.
 
-**Step 7 — Repeat when rules change.** Edit `harness.config.json`, then run `validate` and `sync` again. One file changes, every runtime follows.
+Design → plan → build → audit → fix, with your approval at the one gate that matters and no command-juggling in between.
 
 ## How to use
 
 ### Two ways to use it
 
-**Modular Mode — one skill, zero setup.** Copy a single skill straight into any project, no config needed. The skill lands in `./skills/` as a playbook your AI can follow:
+**Modular Mode — one skill, zero setup.** Copy a single skill straight into any project, no config needed. The skill lands in `./skills/<category>/` as a playbook your AI can follow:
 
 ```bash
 # Browse the bundled skills first
@@ -230,19 +242,21 @@ npx reviewer-harness skills add safe-editing
 npx reviewer-harness skills add no-hallucination
 ```
 
-**Full Harness Mode — one config, every runtime.** `init` creates your master config, `validate` checks it, and `sync` generates the native instruction file for every runtime you enable. This is the mode the Quick start above walks through, and the mode this README documents in detail.
+**Full Harness Mode — one config, every runtime.** `init` sets up everything in one command (config, all skills, agents, commands, memory, and a first sync), `validate` checks the config, and `sync` regenerates the native instruction file for every runtime you enable. This is the mode the Quick start above walks through, and the mode this README documents in detail.
 
 ### Skills — reusable playbooks
 
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer-harness skills list            # see all 28 bundled skills (+ which are enabled)
+reviewer-harness skills list            # see all 34 bundled skills, grouped by category (+ which are enabled)
 reviewer-harness skills add <name>      # install into the project and enable it in the config
 reviewer-harness skills remove <name>   # disable it in the config and remove it
 ```
 
-All 28 bundled skills:
+The skills are organized into **8 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (7), `quality` (5), `backend` (2), `security` (2), `ai-engineering` (2), `architecture` (2), `database` (8). Every skill lives in its own folder as `skills/<category>/<name>/SKILL.md`, the layout used by iging/sauron.
+
+All 34 bundled skills:
 
 | Skill | What it does |
 |---|---|
@@ -252,28 +266,36 @@ All 28 bundled skills:
 | `explain-bisaya` | After each task, explain the changes in simple Bisaya (Cebuano). |
 | `clone` | Fully clone a website's design — layout, components, animations, borders — while replacing all text and assets with your own. |
 | `rea` | Reverse-engineer a shipped app, binary, or website with REA: inspect it without source code, get evidence for how a feature works, and rebuild it as your own code. |
-| `api-security` | 14 API security rules — apply to every backend endpoint you build or review. |
+| `api-security` | 17 API security rules — apply to every backend endpoint you build or review. |
 | `ux-edge-states` | 10 UX states beyond the happy path — empty, loading, error, offline, success. |
 | `owasp-top10` | OWASP Top 10 web security risks — the industry standard check before shipping. |
-| `backend-performance` | 19 backend performance rules from nodebestpractices, system-design-primer, the PostgreSQL concurrency docs, and the OWASP Business Logic cheat sheet. |
-| `devops-basics` | 12 DevOps rules from nodebestpractices — Docker, graceful shutdown, health checks, logging. |
 | `motion-design` | Animation principles from GSAP (GreenSock) — easing, sequencing, stagger, performance. |
 | `frontend-performance` | Frontend performance rules from the Front-End Checklist — animations, resource hints, budgets, lazy loading. |
 | `system-design` | 68 system design rules from system-design-primer — CAP tradeoffs, load balancing, scaling. |
-| `nodejs-quality` | 62 Node.js quality rules from nodebestpractices — errors, structure, testing, production, security. |
+| `api-design` | REST API design patterns — resource naming, HTTP method semantics, status codes, cursor pagination, filtering, rate limiting, versioning, deterministic error envelopes. |
+| `nodejs-quality` | 93 Node.js backend rules from nodebestpractices — errors, structure, testing, production, security, plus the merged backend-performance (19) and devops-basics (12) rule sets. |
+| `php-principles` | Modern PHP 8.x engineering rules — strict typing, PSR architecture, security hardening, error discipline, static analysis gates. |
 | `audit-team` | Run an 8-agent parallel audit — 5 skill specialists plus 3 area agents — report-only, no edits. |
 | `ub-mode` | Uncle Bob mode — Clean Code discipline from Robert C. Martin: TDD first, CRAP < 10. |
-| `design-taste-frontend` | Anti-slop design taste from Leonxlnx/taste-skill — layout, palettes, type, heroes, copy ban lists. |
+| `design-taste-frontend` | Anti-slop design taste from Leonxlnx/taste-skill — layout, palettes, type, heroes, copy ban lists. Includes a 3-tier design-token architecture (rules 60–65, merged from iging/sauron). |
 | `ui-ux-pro-max` | Full UI/UX audit from nextlevelbuilder/ui-ux-pro-max-skill — 222 checkable guidelines across 10 categories. |
 | `vengeance-ui` | Modern animated React components from VengeanceUI — 79 copy-paste components across 9 families. |
-| `brainstorming` | Find out what you actually want — and why — before anything gets built. Design doc first, approval first. |
-| `writing-plans` | Turn an approved spec into a bite-sized TDD implementation plan. |
+| `brainstorming` | Find out what you actually want — and why — before anything gets built. Design doc first, approval first — then it hands off to writing-plans automatically, in the same session. |
+| `writing-plans` | Turn an approved spec into a bite-sized TDD implementation plan. (Brainstorming invokes it for you after approval.) |
 | `fix-team` | Run an 11-agent fix over an audit report's findings — 8 domain fixers plus ub-mode, superpowers, and a verification agent that runs last. Fix plan first, user approves, verification re-checks every fix. |
-| `verify_before_done` | Check defined-and-called plus remote evidence before reporting done, pushed, fixed, or working — never present an untested guess as done. |
+| `verify_before_done` | Check defined-and-called plus remote evidence before reporting done, pushed, fixed, or working — never present an untested guess as done. Also covers provider claims and publish/install surfaces (merged in). |
 | `instruction_registers` | Name the user's target and action registers before building, pushing, or planning, and ask one clarifying question when they are ambiguous. |
-| `verify_provider_claims` | Check a provider's live documentation or the user's verified setup before asserting its current availability, free tier, pricing, endpoints, or retired status. |
-| `verify_publish_install_surface` | Verify a published version on each surface the user can see (commit/tag, registry, installed file) before claiming it is installed or live. |
 | `playwright-cli` | Browser automation and real web-app testing for coding agents, from Microsoft's Playwright CLI — drive the app, turn the session into Playwright tests, attach screenshot evidence. |
+| `database-migration` | Plan and execute schema changes and migration scripts safely — zero-downtime and type-sync discipline. Includes zero-downtime table partitioning (merged in). |
+| `elasticsearch-patterns` | Elasticsearch mappings, analyzers, and search queries with relevance tuning. |
+| `firebase-principles` | Firebase production rules — Firestore modeling, cheap security rules, triple-layer security, cost-aware reads, Cloud Function boundaries. |
+| `mongodb-principles` | MongoDB schemas, indexes, and aggregation pipelines with document modeling discipline. |
+| `mysql-principles` | MySQL schemas, indexes, and transactions with InnoDB discipline for read-heavy workloads. |
+| `prisma-drizzle-orm` | Type-safe data access with Prisma or Drizzle — schemas, migrations, and query patterns. |
+| `sqlite-principles` | SQLite production rules — WAL pragmas, single-writer discipline, Litestream backup, Turso edge replicas, Postgres graduation criteria. |
+| `supabase-principles` | Supabase backends done safely — Row Level Security on every table, edge functions, realtime channels. Includes deep PostgreSQL query-planner optimization (merged in). |
+
+The `database` skills, `php-principles` (in `backend`), and `api-design` (in `architecture`) come from [iging/sauron](https://github.com/iging/sauron) (MIT-licensed) — the harness reviewer-harness was modeled on. Eight database skills remain verbatim standalone skills with their original frontmatter; on 2026-11-13 `zero-downtime-table-partitioning` and `postgres-query-planner-optimization` were merged into `database-migration` and `supabase-principles`, so those two files now carry clearly marked merged sections. The `graph` command's engine (`lib/graph.js`) is likewise a port of sauron's codebase knowledge graph generator (MIT), adapted to the harness's `.reviewer-harness/graph/` output folder and branding, with the port's changes listed in the file's header.
 
 Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
@@ -314,7 +336,7 @@ Four guardrails run before any file is written:
 
 Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured at audit (22 skills): **266,198 bytes** of skill source → **2,660,559 bytes** of generated output across 124 files (**10×** amplification); `CLAUDE.md` alone is **262,243 bytes** today. Growth is linear: at 10× skills (220), each instruction file would be ≈ 2.6 MB and total output ≈ 26.6 MB. The binding constraint is the AI runtime's context window, not disk.
 
-**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 4× today's skills (≈ 80 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 3× today's 34 skills (≈ 102 skills) at the current amplification. Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
 
 Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling.
 
@@ -329,6 +351,25 @@ Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skil
 ```bash
 reviewer-harness validate        # check the config (quality + secret scan)
 ```
+
+### Codebase knowledge graph — see your project's shape
+
+AI agents burn thousands of tokens dumping raw source files just to understand a project's topology. `graph` maps the codebase once, into three artifacts an agent (or you) can query instead:
+
+```bash
+reviewer-harness graph           # graph the current project
+reviewer-harness graph <path>    # graph another project folder
+```
+
+What it creates (in `.reviewer-harness/graph/`):
+
+```
+graph.json       — nodes (files + their functions, classes, types), edges (imports), detected cycles — structured data for programmatic agent queries
+graph-report.md  — the health report: top hub modules (highest fan-in + fan-out), circular dependencies, isolated modules, totals
+graph.html       — an interactive visualizer: one galaxy per top-level directory, deterministic layout, live search, click any node to inspect its symbols
+```
+
+The engine is zero-dependency and polyglot — TypeScript, JavaScript, Python, Go, Rust, Java, Kotlin, PHP, Ruby, C/C++, and C# — and it resolves real imports: relative paths, index files, tsconfig path aliases, and workspace packages by name. Ported from iging/sauron's graph engine (MIT) — see the attribution under Skills.
 
 ### Sub-agents and slash commands
 
@@ -391,17 +432,18 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness init` | One-time: create `harness.config.json` in the project (never overwrites an existing one) |
+| `reviewer-harness init` | One command: detect the project, create the config, install every skill, agent and command, start the memory, and sync all runtimes (never overwrites an existing config; `--minimal` = config only) |
 | `reviewer-harness validate` | Check the config: rule quality + secret scanning |
 | `reviewer-harness sync --dry-run` | Preview the sync: shows what would change, writes nothing |
 | `reviewer-harness sync` | Apply the rules to every enabled runtime (with `.bak` backups) |
 | `reviewer-harness status` | Show the config: name, version, runtimes, target files, enabled skills |
+| `reviewer-harness graph [path]` | Generate a codebase knowledge graph (`graph.json`, `graph-report.md`, `graph.html`) into `.reviewer-harness/graph/` |
 
 ### Skills, agents, commands
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness skills list` | List all 28 bundled skills (+ which are enabled) |
+| `reviewer-harness skills list` | List all 34 bundled skills, grouped by category (+ which are enabled) |
 | `reviewer-harness skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer-harness skills remove <name>` | Disable a skill and remove it |
 | `reviewer-harness agents list` | List the bundled sub-agents |
@@ -422,19 +464,21 @@ Running from a source checkout instead? The same commands work as `node bin/cli.
 
 ## File map
 
-- `bin/cli.js` — commands: `status`, `sync`, `init`, `validate`, `memory`, `skills`, `agents`, `commands`, `global`
+- `bin/cli.js` — commands: `status`, `sync`, `init`, `validate`, `memory`, `skills`, `agents`, `commands`, `global`, `graph`
 - `bin/install.sh` / `bin/install.ps1` — one-liner installers (Linux/macOS, Windows)
 - `Dockerfile` / `docker-compose.yml` — run the harness with zero local Node.js
 - `lib/config.js` — loads and validates the structure of the master spec
 - `lib/validate.js` — rule quality checks + secret scanning
 - `lib/sync.js` — THE SYNC ENGINE: validate gate, dry-run, backup, idempotent writes
 - `lib/frontmatter.js` — frontmatter parser (normalizes CRLF line endings, fixed in v1.14.0)
-- `lib/init.js` — creates the harness.config.json template in a new project
+- `lib/init.js` — the config template + init v2: the full one-command setup (detect → install everything → sync)
+- `lib/detect.js` — reads a project's manifests + README to detect its name, stack, goal, and validation commands
 - `lib/memory.js` — local memory: notes vault, graph builder, index generator
+- `lib/graph.js` — codebase knowledge graph engine (ported from iging/sauron, MIT): polyglot symbol + import extraction, cycle detection, galaxy layout, report + visualizer
 - `lib/skills.js` — skills system: bundled store, install/enable, section rendering
 - `lib/agents.js` / `lib/commands.js` — one source → OpenCode + Claude formats
 - `lib/adapters/` — registry + one adapter per runtime (opencode, claude, gemini, cline, freebuff, copilot, antigravity, qoder)
-- `skills/` — bundled skills · `agents/` — bundled sub-agents · `commands/` — bundled slash commands
+- `skills/` — bundled skills, organized by category (`backend/`, `frontend/`, `security/`, `quality/`, `workflow/`, `architecture/`, `devops/`, `ai-engineering/`) — installs mirror the same folders in your project · `agents/` — bundled sub-agents · `commands/` — bundled slash commands
 - `docs/superpowers/specs/` — design docs for releases and big changes
 
 ## Troubleshooting
@@ -467,6 +511,15 @@ Check that you edited the config in the same folder you are syncing (`--target` 
 6. ✅ Polish and publish — v1.0.0, LICENSE, publish-ready for GitHub/npx
 7. ✅ v1.1.0 — all-English repo, validate-and-report rule, self-governing repo, modular skills, one-liner installers, Docker
 8. ✅ v1.14.0 — the working peak: 27 skills (audit-team + fix-team, ub-mode, design-taste-frontend, ui-ux-pro-max, vengeance-ui, brainstorming, writing-plans, verification skills), Qoder as 8th runtime, system-design, nodejs-quality, all fix rounds verified WORKS, CRLF frontmatter fix (Windows sync without manual LF conversion), --help/--version flags fixed
+9. ✅ v1.15.0 — 22 pre-tested commits merged, CI on GitHub, full 27-skill re-test (every skill graded WORKS/PARTIAL with evidence)
+10. ✅ v1.15.1 — audit fix round F1–F8: vendored design libraries shipped with the harness, durable version tests, suite green on a fresh clone
+11. ✅ v1.16.0 — playwright-cli skill (28 skills): real browser testing for coding agents
+12. ✅ v1.17.0 — init v2: one command sets up everything — project detection (name, stack, goal, real validation commands) → adapted config → all skills, agents, commands → seeded memory → sync, with a receipt; re-running init refreshes instead of overwriting
+13. ✅ v1.17.1 — less hassle edition: brainstorming hands off to writing-plans automatically after design approval, and the skills are organized into 8 category folders — in the harness and mirrored in every project it sets up
+14. ✅ v1.18.0 — sauron-grade edition: all 34 skills retrofitted to one house template (Purpose, When to use, Rules, Validation gate, Examples, Sources, Changelog) with per-skill SemVer versions, a template validation gate in `validate` and CI, the sauron database clones and merges landed, and every skill in folder layout
+15. ✅ v1.19.0 — knowledge graph edition: the `graph` command (ported from iging/sauron's engine, MIT) maps any codebase into graph.json + graph-report.md + graph.html — dependencies, circular imports, god modules — across 11 languages, zero dependencies
+16. ✅ v1.20.0 — audit fix edition: the harness audited itself (78 findings) and fixed every non-deferred one — sync can no longer delete hand-written files or escape the project through symlinks, removed skills stay removed, the graph visualizer is truly standalone (vis-network vendored, zero network requests) and XSS-safe, the import parser no longer hangs on minified files, and the sync↔skills import cycle is dissolved (the repo's own graph now reports 0 cycles); suite 106 tests
+17. ✅ v1.21.0 — client-trust edition: api-security grows from 14 to 17 rules (skill v1.1.0) with a "Never trust the client" section — public env-prefix secrets (`VITE_` / `NEXT_PUBLIC_`), mass assignment + server-side checkout pricing, and Row Level Security as the authorization layer — every rule source-cited (OWASP API3:2023/API8:2023, Vite, Supabase and PostgreSQL docs) and effect-tested baseline-vs-new against a seeded vulnerable sample
 
 ## Contributing & Security
 

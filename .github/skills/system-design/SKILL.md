@@ -5,9 +5,27 @@ description: '68 system design rules distilled from system-design-primer (377k s
 
 ## Skill: system-design
 
+### Purpose
+
+68 system design rules for designing or reviewing a system's architecture — CAP tradeoffs, load balancing, database scaling, availability math, and how the pieces of a real SaaS fit together.
+It prevents designing without constraints and scaling by guesswork: scope first, name the trade-off, and scale last.
+
+### When to use
+
 When to use: designing or reviewing a system's architecture — a new app, a growing service, or any time the question is "how do the pieces fit and scale?" rather than "why is this endpoint slow?" Apply when choosing databases, splitting services, adding caching layers, or planning for traffic growth.
 
-Every rule below is distilled from donnemartin/system-design-primer (cited per rule). Nothing here is invented — if the primer doesn't cover a topic, it is labeled "general practice" instead. Pairs with `backend-performance` (caching patterns, latency numbers, backpressure, golden signals) — this skill covers the architecture around it.
+| Trigger | Example |
+| --- | --- |
+| Designing a new app or service architecture | "Design the architecture for a new app" |
+| Reviewing how a growing service fits and scales | "How do the pieces fit and scale?" |
+| Choosing databases, splitting services, or adding caching layers | "Should we shard, cache, or split this service?" |
+| Planning for traffic growth | "Plan for ten times the current traffic" |
+
+Do NOT use when: the question is why this endpoint is slow — `nodejs-quality` owns backend performance patterns for that case. Security depth belongs to `owasp-top10` and `api-security`, and REST contract design belongs to `api-design`.
+
+### Rules
+
+Every rule below is distilled from donnemartin/system-design-primer (cited per rule). Nothing here is invented — if the primer doesn't cover a topic, it is labeled "general practice" instead. Pairs with `nodejs-quality` (its Backend Performance section: caching patterns, latency numbers, backpressure, golden signals) — this skill covers the architecture around it.
 
 ### Start with the problem, not the stack
 1. **Scope first.** Before designing anything, pin down users, use cases, inputs/outputs, expected data volume, requests/second, and read-to-write ratio. A design without constraints is guesswork.
@@ -173,7 +191,7 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 52. **Choose SQL when:** structured data, strict schema, relational data, complex joins, transactions, clear scaling patterns, established tooling, fast index lookups. **Choose NoSQL when:** semi-structured/flexible schema, non-relational, no complex joins, TB–PB scale, data-intensive workloads, very high IOPS (clickstream/log ingest, leaderboards, shopping carts, hot tables, metadata tables).
 *Source: donnemartin/system-design-primer — `README.md`, "Database" (SQL or NoSQL)*
 
-### Caching layers (patterns live in backend-performance)
+### Caching layers (patterns live in nodejs-quality's Backend Performance section)
 53. **Cache at every layer:** client (OS/browser), CDN, web server/reverse proxy (e.g. Varnish — serves static and dynamic content without contacting app servers), database (tune built-in defaults), and application (in-memory Redis/Memcached between app and storage — RAM is faster than disk).
 *Source: donnemartin/system-design-primer — `README.md`, "Cache" (client/CDN/web server/database/application caching)*
 
@@ -183,8 +201,8 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 55. **Cache by query or by object:** hashing the query as the key suffers expiration problems (one cell change invalidates many cached queries); object-level caching lets the app assemble datasets into objects, evict on underlying change, and use workers to assemble asynchronously. Good candidates: user sessions, fully rendered pages, activity streams, user-graph data.
 *Source: donnemartin/system-design-primer — `README.md`, "Cache" (query level / object level)*
 
-56. **Cache-aside, write-through, write-behind, refresh-ahead** — the four patterns, their staleness and failure tradeoffs, live in `backend-performance` rules 3–4. Use this skill for *where* to cache; use that skill for *how* each pattern behaves.
-*Source: donnemartin/system-design-primer — `README.md`, "Cache" (cache-aside, write-through, write-behind, refresh-ahead); see also `backend-performance`*
+56. **Cache-aside, write-through, write-behind, refresh-ahead** — the four patterns, their staleness and failure tradeoffs, live in `nodejs-quality`'s Backend Performance section, rules 3–4. Use this skill for *where* to cache; use that skill for *how* each pattern behaves.
+*Source: donnemartin/system-design-primer — `README.md`, "Cache" (cache-aside, write-through, write-behind, refresh-ahead); see also `nodejs-quality` (Backend Performance section)*
 
 ### Asynchronism — work off the request path
 57. **Move expensive work off the request path:** async workflows reduce request times for slow operations and let you pre-compute (e.g. periodic aggregation) in advance.
@@ -196,7 +214,7 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 59. **Task queues** receive tasks + data, run them, deliver results; they support scheduling and run compute-intensive jobs in the background (e.g. Celery, mainly Python).
 *Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" (task queues)*
 
-60. **Do not queue what should be synchronous:** cheap calculations and real-time workflows are better inline — queues add delay and complexity. (Backpressure and 503-on-overflow live in `backend-performance` rule 6.)
+60. **Do not queue what should be synchronous:** cheap calculations and real-time workflows are better inline — queues add delay and complexity. (Backpressure and 503-on-overflow live in `nodejs-quality`'s Backend Performance section, rule 6.)
 *Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" (disadvantages)*
 
 ### Communication — how services talk
@@ -223,12 +241,12 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 67. **Sequential throughput rules of thumb:** HDD ~30 MB/s, 1 Gbps Ethernet ~100 MB/s, SSD ~1 GB/s, main memory ~4 GB/s.
 *Source: donnemartin/system-design-primer — `README.md`, "Appendix" (latency numbers, handy metrics)*
 
-68. **Round-trip budget:** ~6–7 world-wide round trips per second, ~2,000 round trips per second within a data center — design chatty protocols accordingly. (The full latency table — L1 ~0.5ns, RAM ~100ns, SSD ~150µs, HDD ~10ms — lives in `backend-performance` rule 8.)
+68. **Round-trip budget:** ~6–7 world-wide round trips per second, ~2,000 round trips per second within a data center — design chatty protocols accordingly. (The full latency table — L1 ~0.5ns, RAM ~100ns, SSD ~150µs, HDD ~10ms — lives in `nodejs-quality`'s Backend Performance section, rule 8.)
 *Source: donnemartin/system-design-primer — `README.md`, "Appendix" (latency numbers, handy metrics)*
 
 ### Also apply (general practice — NOT in the primer, labeled honestly)
 - **Rate limiting:** the primer names it only as an interview-question topic ("Design an API rate limiter") with no implementation guidance. For real rules, use `nodebestpractices` §6.2 (express-rate-limit, nginx, cloud load balancers) — see `api-security`.
-- **Monitoring / observability / error tracking:** not covered in the primer. Track the four golden signals (errors, latency, throughput, saturation — see `backend-performance` rule 10) and use an APM product (Sentry free tier is a good start) to discover errors and downtime.
+- **Monitoring / observability / error tracking:** not covered in the primer. Track the four golden signals (errors, latency, throughput, saturation — see `nodejs-quality`'s Backend Performance section, rule 10) and use an APM product (Sentry free tier is a good start) to discover errors and downtime.
 - **Autoscaling:** not a named topic in the primer; only horizontal scaling and cloning are discussed. In practice: scale on CPU/requests/latency metrics, never on vibes — and keep services stateless so new instances can join safely (rule 32).
 - **CI/CD:** not covered in the primer. Automate typecheck → lint → test → build on every push so broken code never reaches main.
 
@@ -248,5 +266,38 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 - System design primer (377k stars): https://github.com/donnemartin/system-design-primer
 - CAP theorem revisited: https://robertgreiner.com/cap-theorem-revisited/
 - Node.js best practices (rate limiting, APM): https://github.com/goldbergyoni/nodebestpractices
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Constraints scoped first (users, volume, requests/sec, read-to-write ratio)
+- [ ] CAP choice named (CP vs AP) with the reason written down
+- [ ] Availability target named in 9s; single points of failure identified
+- [ ] Static content on a CDN; SSL terminated at the load balancer
+- [ ] Servers stateless; sessions in a centralized store
+- [ ] Database scaling named (replication vs federation vs sharding) with its risks
+- [ ] SQL vs NoSQL choice justified against the decision table (rule 52)
+- [ ] Slow work moved off the request path (message/task queue)
+- [ ] Internal vs public communication chosen (RPC vs REST)
+- [ ] Secrets encrypted in transit and at rest; inputs sanitized; queries parameterized
+
+### Examples
+
+**Do:** scope the constraints first (users, volume, requests/second, read-to-write ratio), sketch the high-level design and justify each component, then scale last against the bottlenecks.
+
+**Do not:** pick the stack first and design without constraints — a design without constraints is guesswork.
+
+### Sources
+
+Every rule cites its source inline (the *Source:* line under each rule).
+
+- System design primer (377k stars): https://github.com/donnemartin/system-design-primer
+- CAP theorem revisited: https://robertgreiner.com/cap-theorem-revisited/
+- Node.js best practices (rate limiting, APM): https://github.com/goldbergyoni/nodebestpractices
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

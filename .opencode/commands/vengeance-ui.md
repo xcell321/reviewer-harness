@@ -4,9 +4,24 @@ description: 'Modern animated React components distilled from VengeanceUI (Ashut
 
 ## Skill: vengeance-ui
 
-*Distilled from [VengeanceUI](https://github.com/Ashutoshx7/VengeanceUI) (Ashutoshx7, MIT licensed, backed by the Vercel Open Source Program) — 79 animated React/Next.js components. Counts re-verified against live `components-catalog.ts` 2026-11-10 (was 77 at clone HEAD `298075b`; Buttons +1, Layout & Cards +1 since). Every rule below cites its repo source.*
+### Purpose
+
+79 copy-paste animated React components across 9 families for landing pages, portfolios, and SaaS sites, owned and edited in-project rather than installed as a dependency.
+It prevents static, flat pages and rebuilding premium motion from scratch.
+
+### When to use
 
 When to use: any modern design ask — landing page, portfolio section, SaaS hero, marketing site — where the UI should look premium and move, not sit static.
+
+| Trigger | Example |
+| --- | --- |
+| Designing a modern landing page or marketing site | "Design a SaaS hero that looks premium and moves" |
+| Building a portfolio section | "Make my portfolio projects section feel premium" |
+| Picking a ready-made animated component for a section | "Find a pricing section component" |
+
+Do NOT use when: the job is custom animation choreography or a non-React page — `motion-design` owns that; performance budgets for heavy effects are `frontend-performance`.
+
+### Rules
 
 ### 1. Copy-paste ownership, not a dependency
 Source: [README.md](https://github.com/Ashutoshx7/VengeanceUI/blob/main/README.md) — "Copy. Paste. Customize. Ship."; [src/lib/registry.ts](https://github.com/Ashutoshx7/VengeanceUI/blob/main/src/lib/registry.ts) — `selectRegistrySource()` returns the component's file content
@@ -128,5 +143,29 @@ Source: [package.json](https://github.com/Ashutoshx7/VengeanceUI/blob/main/packa
 - Vengeance components live in React (Next.js or Vite) + Tailwind 4 + Framer Motion. If the target project is plain HTML/CSS/JS (like a static portfolio `index.html`), the components don't drop in directly — either port the effect by hand with GSAP/CSS, or build that section in a React home.
 - Before recommending a component, check the project's stack. Recommending `aurora-hero` for a vanilla HTML page without flagging the React requirement is a miss.
 - For Edsiel's React projects (DevPilotAI web app, Next.js work), the components apply directly.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] The component was picked by family matching the section being built, not by scrolling for the coolest one
+- [ ] The install used the registry filename stem (componentName) — on a 404, the filename in public/r/ was checked first
+- [ ] The project's stack is React/Next.js or Vite + Tailwind; a non-React target was flagged before recommending a component
+- [ ] At most one heavy (WebGL/3D) component is on the page, in the hero or the single showcase section
+- [ ] Colors, spacing, and radius were customized to the project's palette after copying; motion props were kept unless there was a reason
+
+### Examples
+
+**Do:** assemble a page in recipe order — Background, Navbar, Hero, Proof, Features, Pricing, Footer — with one Interactive showpiece.
+
+**Do not:** install a Vengeance component as an npm dependency, or put two heavy WebGL effects on one page.
+
+### Sources
+
+*Distilled from [VengeanceUI](https://github.com/Ashutoshx7/VengeanceUI) (Ashutoshx7, MIT licensed, backed by the Vercel Open Source Program) — 79 animated React/Next.js components. Counts re-verified against live `components-catalog.ts` 2026-11-10 (was 77 at clone HEAD `298075b`; Buttons +1, Layout & Cards +1 since). Every rule below cites its repo source.*
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

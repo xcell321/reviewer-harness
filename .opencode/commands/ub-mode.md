@@ -4,9 +4,30 @@ description: 'Uncle Bob mode — Clean Code discipline from Robert C. Martin (au
 
 ## Skill: ub-mode
 
-Distilled from [unclebob/ub-mode](https://github.com/unclebob/ub-mode) — by Robert C. Martin ("Uncle Bob"), author of Clean Code. The source skill is "loosely based on portions of @poteto's rules, reduced and paired with deterministic quality-gate tools" (README). Every rule below cites its source section. Anything the source does not cover is labeled "general practice".
+### Purpose
+
+Clean Code discipline for code changes: first make it work, then make it right, and keep every step provable against deterministic quality gates. It prevents changes that work by accident — untested, over-complex, duplicated — from shipping as if they were done.
+
+### When to use
 
 When to use: `/ub-mode`, or any backend/logic change, bug fix, or refactor where the code must stay clean and provable.
+
+| Trigger | Example |
+| --- | --- |
+| `/ub-mode` is invoked | "/ub-mode" |
+| A backend or logic change | "Add the refund flow to the orders service" |
+| A bug fix | "Fix the double-charge bug" |
+| A refactor | "Split this module into smaller functions" |
+
+Pairings:
+
+- Backend/logic changes (paired with safe-editing)
+- Bug fixes (paired with debug-first)
+- Refactors (paired with safe-editing + debug-first)
+
+Do NOT use when: the work is purely visual or frontend — `design-taste-frontend` and `ui-ux-pro-max` own page design. Endpoint security specifics belong to `api-security`, and security audits to `owasp-top10`.
+
+### Rules
 
 The principle: every change follows **First Make it Work → Then Make it Right → Follow Practice**.
 
@@ -96,18 +117,36 @@ The principle: every change follows **First Make it Work → Then Make it Right 
 ### Tools
 The source names three quality-gate tools: **crapper**, **dryer**, **mutator** (see the ub-mode repo README for the tool repos). Use them where they are installed — the gates above are the point, not the tools. *General practice:* where the tools are not installed, apply the same thresholds by manual review (estimate CRAP from complexity + coverage, flag near-duplicate blocks) and say so — a manual estimate is not a gate pass.
 
-## When to apply
-
-- Backend/logic changes (paired with safe-editing)
-- Bug fixes (paired with debug-first)
-- Refactors (paired with safe-editing + debug-first)
-
-## Edsiel's rule
+### Edsiel's rule
 
 Backend team = `ub-mode` + `safe-editing` (+ `api-security` for endpoints, `owasp-top10` for audits, `debug-first` for bugs).
 
-## Learn more
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] A failing test was written first and seen to fail for the expected reason before code changed (rule 3)
+- [ ] Every function is under CRAP 10 (rule 17)
+- [ ] Duplication at similarity ≥ 0.8 is eliminated (rule 18)
+- [ ] Mutation survivors are killed and dead code is deleted (rule 19)
+- [ ] The fix addresses the root cause — no guard that only hides the crash (rule 14)
+- [ ] A log of actions and reasons is kept and reported on completion (rule 21)
+
+### Examples
+
+**Do:** facing a bug, write the failing test first, watch it fail for the expected reason, then make the smallest change that turns it green — and split the touched function until it sits under CRAP 10.
+
+**Do not:** bolt the new requirement onto the old design, then hide the crash behind a guard so the suite goes quiet.
+
+### Sources
+
+Distilled from [unclebob/ub-mode](https://github.com/unclebob/ub-mode) — by Robert C. Martin ("Uncle Bob"), author of Clean Code. The source skill is "loosely based on portions of @poteto's rules, reduced and paired with deterministic quality-gate tools" (README). Every rule below cites its source section. Anything the source does not cover is labeled "general practice".
+
 - ub-mode skill (source): https://github.com/unclebob/ub-mode
 - Clean Code (Robert C. Martin): the book behind the discipline
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

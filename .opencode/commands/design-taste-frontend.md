@@ -1,13 +1,26 @@
 ---
-description: 'Anti-slop design taste distilled from Leonxlnx/taste-skill (v2.5.1) — kind-first layout, dealt palettes/type/heroes, house rules with exact numbers, copy ban lists, motion tokens. Use when building, redesigning, or reviewing a landing/company/product/shop/cafe/hotel/studio/SaaS/AI/devtool/game site, or when a page looks generic, templated, or "AI-made".'
+description: 'Anti-slop design taste distilled from Leonxlnx/taste-skill (v2.5.1) — kind-first layout, dealt palettes/type/heroes, house rules with exact numbers, copy ban lists, motion tokens. Use when building, redesigning, or reviewing a landing/company/product/shop/cafe/hotel/studio/SaaS/AI/devtool/game site, or when a page looks generic, templated, or "AI-made". Includes a 3-tier design-token architecture (rules 60–65).'
 ---
 
 ## Skill: design-taste-frontend
 
-Distilled from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (`tasteskill 2.5.1`, HEAD `f6b7657`) — SKILL.md + references/layout-v4.md, copy.md, copy-tells.md, system.md, motion.md, library/palettes.json, library/type.json. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
-The two library files are vendored verbatim in this repo at `skills/library/palettes.json` (64 palettes) and `skills/library/type.json` (39 pairings), so the `library/…` paths in rules 32–33 resolve from this file's directory. Upstream is MIT — the license is vendored at `skills/library/LICENSE` (Copyright (c) 2026 Leonxlnx).
+### Purpose
+
+Anti-slop design taste for building, redesigning, or reviewing web pages: classify the business kind first, deal palette, type, and hero from the library instead of choosing by taste, and hold every choice to checkable numbers. It prevents pages that look generic, templated, or AI-made.
+
+### When to use
 
 When to use: build, design, redesign, restyle, polish, or review a landing page, company site, product page, shop, cafe, hotel, studio, SaaS, AI, devtool, or game site — or when a page looks generic, templated, or "AI-made".
+
+| Trigger | Example |
+| --- | --- |
+| Building or redesigning a page or site | "Build a landing page for a coffee shop" |
+| Restyling or polishing an existing page | "Restyle this product page" |
+| A page looks generic, templated, or AI-made | "This page looks templated — fix it" |
+
+Do NOT use when: the job is component state behaviour — `ux-edge-states` owns state *behaviour*; this skill holds the state *values* as tokens (rule 64).
+
+### Rules
 
 ### The method — classify first, deal, never choose by taste
 
@@ -106,6 +119,16 @@ When to use: build, design, redesign, restyle, polish, or review a landing page,
 58. **The gate holds the finish until no fixable FAIL is left, three rounds at most.** Last line must be `GATE: PASS` or `GATE: OPEN`. A FAIL judged false is waived with its reason — never fixed by gaming the check.
 59. **Tap targets:** every link/control outside running text ≥44px tall; a FAIL when another target is under 8px away. Nothing past the screen at 320.
 
+### Design tokens — the 3-tier system
+*Source: token architecture merged 2026-11-13 from [iging/sauron](https://github.com/iging/sauron) `design-tokens` (MIT), adapted to this skill's checkable style. The dealt values still come from rules 26–33 and the library; this section governs how they are named, tiered, and consumed.*
+
+60. **Three tiers, always.** Primitive tokens hold raw values (`--blue-600`, `--space-4`); semantic tokens name the job (`--accent`, `--g-main`, `--m-in`); component tokens name the part (`--btn-bg`, `--card-pad`). A component consumes semantic and component tokens only — a primitive or a raw value inside a component is a FAIL.
+61. **Semantic names, never literal ones.** A token is named for what it does, not what it looks like: `--ink`, not `--slate-900`; `--accent`, not `--orange`. One change at the semantic tier re-skins the whole page; a literal name forces a hex hunt.
+62. **Colour ramps are OKLCH, built once per hue.** Each ramp steps lightness evenly in OKLCH so the steps look even; hex values are exported from the ramp, never picked ad hoc per component. The violet ban (rule 28) applies at ramp level.
+63. **Scales are the tokens.** Spacing on the 4px scale (rule 49), type on the rule-22 scale, radius on the rule-24 scale, motion on the rule-51 tokens — each value exists exactly once, as a named token, before any component uses it. An arbitrary value with no token mapping is a FAIL.
+64. **Six states per interactive component, as tokens:** default, hover, focus, active, disabled, and loading/error where the part has them — each state a token assignment, never an ad-hoc override. A component with an undocumented state is unfinished. (State *behaviour* lives in `ux-edge-states`; the state *values* live here.)
+65. **One icon size scale:** icon sizes come from a fixed tier set tied to the type scale (16/20/24), one icon set per page (rule 11), rendered in `currentColor` so icons inherit the semantic ink token.
+
 ### Edsiel's rules (local — not from the source)
 - **No green by default (2026-11-07):** never default to green or jade accents — Edsiel finds them ugly. The accent comes from the client or product (rule 27); a dealt palette that lands green-dominant with no client basis is dealt again. (A client's own green brand colour is his call, not a default.)
 - **No grid or dot-pattern backgrounds (2026-11-07):** grounds are flat colour, photographs, or the dealt effects where rule 3 allows them — never a grid or dot texture behind content.
@@ -113,8 +136,32 @@ When to use: build, design, redesign, restyle, polish, or review a landing page,
 - Installed on Edsiel's PC via `npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"`; location `~/.claude/skills/design-taste-frontend` (needed manual copy from `~/.agents/skills/`).
 - Paired with ui-ux-pro-max for the anti-slop check in DevPilotAI UI audits (since 2026-10-31).
 
-### Learn more
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] The page was checked in a real browser over HTTP at 1440, 1024, 820, 768, and 390, and the last gate line reads `GATE: PASS` or `GATE: OPEN` (rules 57–58)
+- [ ] No fixable FAIL is left after at most three rounds; any waived FAIL carries its reason (rule 58)
+- [ ] Every tap target is ≥44px, no two targets sit under 8px apart, and nothing overflows at 320 (rule 59)
+- [ ] Nothing is invented — no fake reviews, ratings, statistics, or testimonials (rule 43); no placeholders or `#` links (rule 44)
+- [ ] Components consume semantic and component tokens only — no primitives or raw values inside a component (rule 60)
+
+### Examples
+
+**Do:** classify the page kind first, deal its palette and type pairing from the library, and let the hero fill the first screen alone.
+
+**Do not:** choose a violet gradient by taste, headline it "Unlock the power of…", and add three invented stats under it.
+
+### Sources
+
+Distilled from [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) (`tasteskill 2.5.1`, HEAD `f6b7657`) — SKILL.md + references/layout-v4.md, copy.md, copy-tells.md, system.md, motion.md, library/palettes.json, library/type.json. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
+The two library files are vendored verbatim in this repo at `skills/frontend/library/palettes.json` (64 palettes) and `skills/frontend/library/type.json` (39 pairings), so the `library/…` paths in rules 32–33 resolve from this file's directory. Upstream is MIT — the license is vendored at `skills/frontend/library/LICENSE` (Copyright (c) 2026 Leonxlnx).
+
 - taste-skill (source): https://github.com/Leonxlnx/taste-skill
 - Skill file: https://raw.githubusercontent.com/Leonxlnx/taste-skill/main/skills/taste-skill/SKILL.md
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

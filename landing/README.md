@@ -6,7 +6,7 @@ The public landing page for reviewer-harness. Static HTML — no build step.
 
 | File | What it is |
 |---|---|
-| `index.html` | The landing page (Warm Aurora hero, Problem, Without-vs-With, what-sync-creates file tree, Install, interactive demo terminal, Command reference table, 15 skills, 6 rules, 8 runtimes, FAQ, final CTA). |
+| `index.html` | The landing page (Warm Aurora hero, Problem, Without-vs-With, what-sync-creates file tree, Install, interactive demo terminal, Command reference table, 34 skills, 6 rules, 8 runtimes, FAQ, final CTA). |
 | `device-preview.html` | Live device preview — the same landing page in Mobile (390px), Tablet (768px), and Desktop (1280px) frames, all working. |
 
 ## Deploy

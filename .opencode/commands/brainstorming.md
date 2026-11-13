@@ -4,7 +4,23 @@ description: 'Find out what Edsiel actually wants — and why — before anythin
 
 ## Skill: brainstorming
 
+### Purpose
+
+Find out what Edsiel actually wants — and why — before anything gets built: read the project first, ask one question at a time, lay out the approaches, and write a design doc he approves. It prevents building the wrong thing well — nothing is built, scaffolded, or installed until the design doc is approved.
+
+### When to use
+
 When to use: before any creative work — a new feature, a new component, a new project, a behavior change, or anything where the shape of the work is not already fully decided. Do NOT use for a quick, clear task where everything that matters is already in the request ("make the icon cornflower blue") — just do it and say what you did.
+
+| Trigger | Example |
+| --- | --- |
+| A new feature, component, or project is requested and its shape is not fully decided | "Build me a dashboard for the pantry" |
+| A behavior change is requested | "Change how claiming works" |
+| Edsiel says plan ra / plan mode / plan sa | "Plan ra ni" |
+
+Do NOT use when: the task is a quick, clear change where everything that matters is already in the request — just do it and say what you did. Once a design is approved, `writing-plans` owns the implementation plan; fixing audit findings belongs to `fix-team`.
+
+### Rules
 
 Every rule below is distilled from obra/superpowers — `skills/brainstorming/SKILL.md` (cited per rule). Nothing here is invented — anything the source doesn't cover is labeled "general practice". Rules marked [Edsiel] are adaptations from his standing preferences, not from the source.
 
@@ -19,8 +35,8 @@ Every rule below is distilled from obra/superpowers — `skills/brainstorming/SK
 3. **Two exceptions only.** If Edsiel opts out of the questions ("just dive in"), the skill is done and the gate goes with it — state any significant how-it-gets-made choice in one plain line, then do what he asked. A spike he said yes to may be built, but it stays labeled throwaway; keeping what it produced is a new request that comes back through the gate.
 *Source: obra/superpowers — `skills/brainstorming/SKILL.md`, "HARD-GATE" and "Your First Message"*
 
-4. **After approval, the next step is writing-plans — and no other skill.** The approved design doc becomes the spec the plan implements.
-*Source: obra/superpowers — `skills/brainstorming/SKILL.md`, "HARD-GATE"*
+4. **After approval, go straight to writing-plans — automatically, in the same session, and to no other skill.** The moment the design is approved and the design doc is written, invoke the writing-plans skill yourself, with the approved doc as its spec. Do NOT stop to summarize-and-wait, and do NOT make him type `/writing-plans` — the handoff is part of this skill, not a new request. The approved design doc becomes the spec the plan implements.
+*Source: obra/superpowers — `skills/brainstorming/SKILL.md`, "HARD-GATE" (writing-plans is the next and only step). The automatic same-session handoff is [Edsiel] — general practice, Edsiel's standing preference (2026-11-13): after brainstorming, writing-plans runs on its own.*
 
 ### Look before you ask
 
@@ -143,5 +159,30 @@ Every rule below is distilled from obra/superpowers — `skills/brainstorming/SK
 
 38. **"The spike works, I'll keep building on it"** — keeping it is a new request. Back through the gate.
 *Source: obra/superpowers — `skills/brainstorming/SKILL.md`, "Red Flags"*
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Nothing was built, scaffolded, or installed before Edsiel approved the design doc (rule 1)
+- [ ] The project was read before the first message, and no already-decided question was reopened (rules 5–6)
+- [ ] Questions were asked one at a time, in Bisaya, and only when the answer would change what gets built (rules 11–13)
+- [ ] The approaches were laid out in a message of their own, with a recommendation, before anything was written up (rule 19)
+- [ ] The written design covers intent, goals and non-goals, constraints, approaches, and the parts of the how he decided (rule 29)
+- [ ] The builder check was run for a project-sized design and its open questions were brought in one message (rule 31)
+
+### Examples
+
+**Do:** echo the request back in your own words in about 200 words, add what you found in the project and what the change would touch, and end with one line inviting corrections.
+
+**Do not:** offer a menu of what he might want, or fill in sensible defaults without saying them out loud — a default he never heard is one he could not reject.
+
+### Sources
+
+- Distilled from obra/superpowers — `skills/brainstorming/SKILL.md` (cited per rule in the Rules section). Rules marked [Edsiel] are adaptations from his standing preferences, not from the source.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

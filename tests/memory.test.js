@@ -1,12 +1,21 @@
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildIndex } from "../lib/memory.js";
 
+// S-30: every temp dir created here is registered and removed by
+// the after() hook — no leaks.
+const madeDirs = [];
+after(() => {
+  for (const dir of madeDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 function tempDir() {
-  return mkdtempSync(join(tmpdir(), "memory-test-"));
+  const dir = mkdtempSync(join(tmpdir(), "memory-test-"));
+  madeDirs.push(dir);
+  return dir;
 }
 
 test("memory index writes are atomic", () => {
