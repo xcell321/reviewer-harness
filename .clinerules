@@ -445,7 +445,7 @@ No external source is cited in this skill; the rules stand as written (general p
 
 ### Purpose
 
-14 API security rules for every backend endpoint, covering authentication and access, input and transport, tokens and sessions, observability, configuration, and queries.
+17 API security rules for every backend endpoint, covering authentication and access, input and transport, tokens and sessions, observability, configuration, queries, and client-trust failures.
 It prevents anonymous backdoors and leaked secrets.
 
 ### When to use
@@ -462,7 +462,7 @@ Do NOT use when: the job is a full web-application risk audit (`owasp-top10`), A
 
 ### Rules
 
-Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
+Apply these 17 rules to every endpoint. If a rule doesn't apply, say why.
 
 ### Authentication & Access
 1. **Authenticate every call.** No anonymous backdoors. Every endpoint requires a valid credential — no "internal" or "debug" routes left open.
@@ -490,6 +490,14 @@ Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
 14. **Use parameterized queries — never build queries by string concatenation.** Concatenating user input into a query string lets an attacker inject SQL (or NoSQL/OS/LDAP commands) as code. Use prepared statements / parameterized queries for every database call so input is always data, never syntax. The same ban covers ORM raw-query escape hatches (`sequelize.query()`, `.raw()`, `find_by_sql`) that accept a plain string.
 *Source: OWASP Top 10 2021, A03:2021 Injection — parameterized queries (prepared statements) are the primary prevention for injection.*
 
+### Never trust the client (added 2026-11-13 — gap check against the failures that actually ship in AI-built apps: in each rule below, something the client sent was treated as truth)
+15. **A public env prefix makes the value public — never put a secret behind one.** Anything named `VITE_*` (Vite) or `NEXT_PUBLIC_*` (Next.js) is inlined into the JavaScript bundle every visitor downloads; minification and source-map settings do not hide it. Only values designed to be public may carry the prefix: API URLs, the Supabase anon/publishable key, a Stripe publishable key. A real secret that ever shipped with the prefix — a Supabase service_role key, an LLM API key, a Stripe secret key — is already public: move it behind a server route or Edge Function and rotate it.
+*Source: Vite documentation, "Env Variables and Modes" — only variables prefixed with `VITE_` are exposed to client code, and "`VITE_*` variables should not contain any sensitive information"; OWASP API Security Top 10 2023, API8:2023 Security Misconfiguration.*
+16. **Reject mass assignment — never bind a request body straight onto a record.** If an update accepts the raw body, a client can add fields the UI never sends: `role: "admin"`, `is_verified: true`, `balance: 999999`. Allowlist the exact fields each write endpoint accepts, reject unknown fields, and set server-owned fields (role, status, owner, timestamps) only on the server. The same rule covers money: a checkout total is computed on the server from product IDs, never taken from a price field in the request.
+*Source: OWASP API Security Top 10 2023, API3:2023 Broken Object Property Level Authorization — the mass-assignment half (API3 merges the 2019 Excessive Data Exposure and Mass Assignment categories); CWE-915.*
+17. **If the browser talks to the database, the database is the authorization layer.** When clients query Supabase or Firebase directly there is no API layer left to check ownership (rule 2) — the database policies are the only check. Enable Row Level Security on every client-exposed table (enabled with no policies = deny-all, the safe default), scope policies to the caller (`auth.uid() = user_id`), and include WITH CHECK on INSERT/UPDATE policies so a user cannot write rows under someone else's ID. A table with RLS off, or a per-user table with a `using (true)` policy, is a launch blocker. The anon key is public by design — the policy is the lock — and the service_role key bypasses RLS entirely, so it never reaches a client (rule 15).
+*Source: Supabase documentation, "Row Level Security"; PostgreSQL documentation, "Row Security Policies".*
+
 ### Validation gate
 
 Before reporting the task done, check each line against the actual work:
@@ -501,6 +509,9 @@ Before reporting the task done, check each line against the actual work:
 - [ ] Auth endpoints are rate-limited
 - [ ] CORS names exact origins (no `*`, no `*` + credentials)
 - [ ] Every query is parameterized (no string concatenation into SQL)
+- [ ] No real secret sits behind a `VITE_` / `NEXT_PUBLIC_` prefix
+- [ ] Write endpoints allowlist fields — `role`, `status`, `price` cannot arrive from a request body
+- [ ] Every client-exposed table has RLS enabled, policies scoped to `auth.uid()`
 
 ### Examples
 
@@ -510,7 +521,7 @@ Before reporting the task done, check each line against the actual work:
 
 ### Sources
 
-- Rules 1–12 originate from the "12 API Security Rules" reel by Code Crack — the reel is their origin; their detailed wording in this file is general practice. Rules 13–14 cite their OWASP sources inline.
+- Rules 1–12 originate from the "12 API Security Rules" reel by Code Crack — the reel is their origin; their detailed wording in this file is general practice. Rules 13–17 cite their sources inline (OWASP; Vite, Supabase and PostgreSQL documentation).
 - OWASP API Security Top 10: https://owasp.org/API-Security/
 - OWASP Cheat Sheet Series (API Security): https://cheatsheetseries.owasp.org/
 - OWASP Web Security Testing Guide: https://github.com/OWASP/wstg
@@ -519,6 +530,7 @@ Before reporting the task done, check each line against the actual work:
 
 ### Changelog
 
+- 1.1.0 — 2026-11-13 — Added rules 15–17 ("Never trust the client"): public env-prefix secrets, mass assignment + server-side checkout pricing, RLS as the authorization layer. Effect-tested against a seeded vulnerable sample (baseline vs new audit).
 - 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 ## Skill: ux-edge-states
