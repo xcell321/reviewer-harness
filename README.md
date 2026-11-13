@@ -12,7 +12,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.20.0-blue)
+![version](https://img.shields.io/badge/version-1.21.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -139,7 +139,7 @@ reviewer-harness status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.20.0
+Harness : reviewer-harness v1.21.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -266,7 +266,7 @@ All 34 bundled skills:
 | `explain-bisaya` | After each task, explain the changes in simple Bisaya (Cebuano). |
 | `clone` | Fully clone a website's design — layout, components, animations, borders — while replacing all text and assets with your own. |
 | `rea` | Reverse-engineer a shipped app, binary, or website with REA: inspect it without source code, get evidence for how a feature works, and rebuild it as your own code. |
-| `api-security` | 14 API security rules — apply to every backend endpoint you build or review. |
+| `api-security` | 17 API security rules — apply to every backend endpoint you build or review. |
 | `ux-edge-states` | 10 UX states beyond the happy path — empty, loading, error, offline, success. |
 | `owasp-top10` | OWASP Top 10 web security risks — the industry standard check before shipping. |
 | `motion-design` | Animation principles from GSAP (GreenSock) — easing, sequencing, stagger, performance. |
@@ -519,6 +519,7 @@ Check that you edited the config in the same folder you are syncing (`--target` 
 14. ✅ v1.18.0 — sauron-grade edition: all 34 skills retrofitted to one house template (Purpose, When to use, Rules, Validation gate, Examples, Sources, Changelog) with per-skill SemVer versions, a template validation gate in `validate` and CI, the sauron database clones and merges landed, and every skill in folder layout
 15. ✅ v1.19.0 — knowledge graph edition: the `graph` command (ported from iging/sauron's engine, MIT) maps any codebase into graph.json + graph-report.md + graph.html — dependencies, circular imports, god modules — across 11 languages, zero dependencies
 16. ✅ v1.20.0 — audit fix edition: the harness audited itself (78 findings) and fixed every non-deferred one — sync can no longer delete hand-written files or escape the project through symlinks, removed skills stay removed, the graph visualizer is truly standalone (vis-network vendored, zero network requests) and XSS-safe, the import parser no longer hangs on minified files, and the sync↔skills import cycle is dissolved (the repo's own graph now reports 0 cycles); suite 106 tests
+17. ✅ v1.21.0 — client-trust edition: api-security grows from 14 to 17 rules (skill v1.1.0) with a "Never trust the client" section — public env-prefix secrets (`VITE_` / `NEXT_PUBLIC_`), mass assignment + server-side checkout pricing, and Row Level Security as the authorization layer — every rule source-cited (OWASP API3:2023/API8:2023, Vite, Supabase and PostgreSQL docs) and effect-tested baseline-vs-new against a seeded vulnerable sample
 
 ## Contributing & Security
 
