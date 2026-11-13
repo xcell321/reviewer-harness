@@ -1,5 +1,5 @@
 ---
-description: 'Run an 8-agent parallel audit — 5 skill specialists (api-security, devops, ux-edge-states, backend-performance, system-design) plus 3 area agents (backend, frontend, DevOps) — over a target repo, each applying the relevant reviewer-harness skills, report-only, no edits. Merged triage with severities; the user picks what to fix.'
+description: 'Run an 8-agent parallel audit — 5 skill specialists (api-security, devops via nodejs-quality, ux-edge-states, backend-performance via nodejs-quality, system-design) plus 3 area agents (backend, frontend, DevOps) — over a target repo, each applying the relevant reviewer-harness skills, report-only, no edits. Merged triage with severities; the user picks what to fix.'
 ---
 
 ## Skill: audit-team
@@ -15,13 +15,13 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 | # | Agent | Harness skills it applies | What it checks |
 |---|---|---|---|
 | 1 | **api-security** | api-security | Auth, RLS, RPCs, Edge Functions — who can read/write what, via the app AND via direct API calls |
-| 2 | **devops** | devops-basics | Docker images, graceful shutdown, health checks, logging, memory guards |
+| 2 | **devops** | nodejs-quality (DevOps Basics section) | Docker images, graceful shutdown, health checks, logging, memory guards |
 | 3 | **ux-edge-states** | ux-edge-states | Loading / empty / error / offline states, keyboard + screen-reader access, dark mode |
-| 4 | **backend-performance** | backend-performance | Queries, N+1, missing indexes, re-renders, Edge Function cost |
+| 4 | **backend-performance** | nodejs-quality (Backend Performance section) | Queries, N+1, missing indexes, re-renders, Edge Function cost |
 | 5 | **system-design** | system-design | Status transitions, trust boundaries, scale (pilot city → bigger) |
 | 6 | **backend** (area) | safe-editing, debug-first, owasp-top10, nodejs-quality, rea | Code correctness and quality: surgical edits, error handling, OWASP Top 10, Node quality rules, tracing unfamiliar flows |
 | 7 | **frontend** (area) | motion-design, frontend-performance, playwright-cli | Real animations (not static visuals), render performance, visual quality, runtime behavior in a real browser |
-| 8 | **devops** (area) | devops-basics (the CI guidance in its "Also apply" section) | The live shipping path: CI green on this exact commit, tests (pass count AND exit code AND the "Errors" line), build, lint, typecheck, migrations idempotent + re-runnable, deploy config, no secrets in the repo |
+| 8 | **devops** (area) | nodejs-quality (the CI guidance in its DevOps Basics section) | The live shipping path: CI green on this exact commit, tests (pass count AND exit code AND the "Errors" line), build, lint, typecheck, migrations idempotent + re-runnable, deploy config, no secrets in the repo |
 
 **Every agent also applies no-hallucination** — every finding cites a real file and line, and every claim about what runs or passes is backed by evidence the agent actually saw.
 
@@ -59,11 +59,11 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 **1 — api-security agent brief:** "Audit the API security of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: api-security. Check: auth (who is the caller, really?); RLS policies (what can a stranger read/write via direct API calls, not just through the app?); RPCs and Edge Functions (auth gates, input validation, PII in prompts/logs); rate limits and abuse paths. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
-**2 — devops agent brief:** "Audit the DevOps rules of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics. Check: Docker images (lean base, COPY not ADD, non-root user, no secrets in the image); graceful shutdown (SIGTERM drains, doesn't drop in-flight work); health checks (liveness + readiness, lightweight); logging (structured, request IDs, no secrets); memory (caps, leak paths); the four golden signals. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
+**2 — devops agent brief:** "Audit the DevOps rules of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — its DevOps Basics section. Check: Docker images (lean base, COPY not ADD, non-root user, no secrets in the image); graceful shutdown (SIGTERM drains, doesn't drop in-flight work); health checks (liveness + readiness, lightweight); logging (structured, request IDs, no secrets); memory (caps, leak paths); the four golden signals. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
 **3 — ux-edge-states agent brief:** "Audit the UX edge states of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: ux-edge-states. Check: every screen's loading / empty / error / offline states (no blank screens, no whole-page error cards where an inline banner fits); keyboard operability and screen-reader labels on every interactive element; dark mode (no unreadable text, no invisible controls); focus management on navigation. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
-**4 — backend-performance agent brief:** "Audit the backend performance of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: backend-performance. Check: queries (N+1, missing indexes on hot filters, unbounded selects); re-renders and fetch loops (effect deps on object identity, token-refresh refetch storms); Edge Function cost (per-invocation work, timeouts, retries); caching where it matters. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
+**4 — backend-performance agent brief:** "Audit the backend performance of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — its Backend Performance section. Check: queries (N+1, missing indexes on hot filters, unbounded selects); re-renders and fetch loops (effect deps on object identity, token-refresh refetch storms); Edge Function cost (per-invocation work, timeouts, retries); caching where it matters. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
 **5 — system-design agent brief:** "Audit the system design of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: system-design. Check: status transitions (can a client force an illegal state?); trust boundaries (what does the client control that the server must not trust?); race conditions and idempotency (double-submit, re-invocation); scale (what breaks when the pilot grows 10× — one city today, more tomorrow?). Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
@@ -71,7 +71,7 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 **7 — frontend area agent brief:** "Audit the frontend of <repo> at <commit> as a whole. Read these skills first and apply them genuinely, not as labels: motion-design, frontend-performance, playwright-cli. Check: animations are real motion, not static visuals; render performance (no infinite fetch loops, no jank from layout-triggering animations — transform/opacity only); visual quality (no generic purple-blue gradients, no floating orbs, no identical glass cards); contrast (WCAG AA on text over gradients). When the target is a web app that can be run (dev server or deployed URL), also drive its key flows with playwright-cli — open, snapshot, walk the primary journeys — and report runtime failures (console errors, dead buttons, broken states) as findings with screenshot or snapshot evidence; if it cannot be run, say so and label the findings code-only. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
-**8 — devops area agent brief:** "Audit the live shipping path of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics — in particular the CI guidance in its 'Also apply' section. Check: CI is green on this exact commit (read the Actions/runs page, not the workflow file — a workflow file is not proof); tests really pass (pass count AND exit code AND the 'Errors' line); build, lint, and typecheck clean; migrations are idempotent and re-runnable (every CREATE has DROP IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE); deploy config matches the live target; no secrets in the repo. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line or run URL, evidence, and what breaks in real use."
+**8 — devops area agent brief:** "Audit the live shipping path of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — in particular the CI guidance in the 'Also apply' part of its DevOps Basics section. Check: CI is green on this exact commit (read the Actions/runs page, not the workflow file — a workflow file is not proof); tests really pass (pass count AND exit code AND the 'Errors' line); build, lint, and typecheck clean; migrations are idempotent and re-runnable (every CREATE has DROP IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE); deploy config matches the live target; no secrets in the repo. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line or run URL, evidence, and what breaks in real use."
 
 ### Quick check before reporting
 - [ ] Target commit verified against the remote (agents read the right code)
@@ -83,7 +83,7 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 ### Learn more (sources for the skills this team applies)
 - OWASP Top 10 (owasp-top10, api-security): https://owasp.org/www-project-top-ten/
-- Node.js best practices (backend-performance, devops-basics, nodejs-quality): https://github.com/goldbergyoni/nodebestpractices
+- Node.js best practices (nodejs-quality, incl. its merged backend-performance and devops-basics sections): https://github.com/goldbergyoni/nodebestpractices
 - System Design Primer (system-design): https://github.com/donnemartin/system-design-primer
 - Front-End Checklist (frontend-performance): https://github.com/thedaviddias/Front-End-Checklist
 - GSAP / GreenSock (motion-design): https://gsap.com/

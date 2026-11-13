@@ -1,13 +1,13 @@
 ---
 name: nodejs-quality
-description: '62 Node.js quality rules distilled from nodebestpractices (105k stars) — error handling, project structure, code style, testing, production, Node-specific security, and Docker. Everything backend-performance, devops-basics, system-design, api-security, and owasp-top10 already cover is left out.'
+description: '93 Node.js backend rules distilled from nodebestpractices (105k stars) — the 62 quality rules (error handling, project structure, code style, testing, production, Node-specific security, Docker) plus the merged backend-performance (19) and devops-basics (12) rule sets. Excludes what system-design, api-security, and owasp-top10 cover.'
 ---
 
 ## Skill: nodejs-quality
 
-When to use: writing or reviewing Node.js code — a new endpoint, a new service, a refactor, or any time the question is "is this code correct, testable, and shippable?" rather than "is it fast?" (that's `backend-performance`) or "does it deploy?" (that's `devops-basics`). Apply when errors are swallowed, tests are thin, files are spaghetti, or production surprises keep happening.
+When to use: writing or reviewing Node.js code — a new endpoint, a new service, a refactor, or any time the question is "is this code correct, testable, and shippable?" — performance and deployment questions are covered by this skill's own merged sections (Backend Performance, DevOps Basics) below. Apply when errors are swallowed, tests are thin, files are spaghetti, or production surprises keep happening.
 
-Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rule: the `sections/` file and the README section). Nothing here is invented — if the repo doesn't cover a topic, it is labeled "general practice" instead. Rules already covered by `backend-performance`, `devops-basics`, `system-design`, `api-security`, or `owasp-top10` are NOT repeated here; the skill points to them instead.
+Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rule: the `sections/` file and the README section). Nothing here is invented — if the repo doesn't cover a topic, it is labeled "general practice" instead. Rules covered by `system-design`, `api-security`, or `owasp-top10` are NOT repeated here; the skill points to them instead. (`backend-performance` and `devops-basics` were merged into this skill on 2026-11-13 — their rules are the two Merged sections at the end.)
 
 ### Error handling — the biggest gap
 1. **Use async/await (or promises) for async errors — never callbacks.** Callbacks force error checks everywhere, nest deeply, and break try/catch flow. Async/await gives one try/catch for the whole chain plus `finally` for cleanup.
@@ -228,6 +228,174 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 - Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
 - System design primer: https://github.com/donnemartin/system-design-primer
 - Twelve-factor app: https://12factor.net/
+- Semantic versioning: https://semver.org/
+
+## Merged: backend-performance (2026-11-13)
+
+The standalone `backend-performance` skill (19 rules) was merged into this skill on 2026-11-13; it is no longer a separate skill. Its full text follows, unchanged — cross-references to "backend-performance rules N" now mean the rules in this section.
+
+When to use: building or reviewing any backend — API endpoints, database queries, or background jobs. Apply when the app feels slow, hangs, or breaks under repeated requests.
+
+Every rule below is distilled from a reputable open-source repo (cited per rule). If a rule doesn't apply, say why.
+
+### Don't block the machine
+1. **Never block the event loop.** Node runs your code on a single thread — one slow synchronous operation (huge JSON parse, giant loop, unsafe regex) stalls every request behind it. Keep per-request work small; offload CPU-heavy jobs to a worker or separate service.
+*Source: goldbergyoni/nodebestpractices — `sections/performance/block-loop.md`*
+
+2. **Prefer native methods over utility libraries.** Native V8 methods (Array.map, String.indexOf) run roughly 50% faster than Lodash/Underscore equivalents — benchmarks show Lodash averaging ~146% more time per operation. If the platform already does it, drop the dependency. Enforce with `eslint-plugin-you-dont-need-lodash-underscore`.
+*Source: goldbergyoni/nodebestpractices — `sections/performance/nativeoverutil.md`*
+
+### Cache deliberately
+3. **Put a cache in front of the database.** RAM reads take ~100ns; an SSD random read ~150µs; an HDD seek ~10ms. An in-memory cache (Redis, Memcached) absorbs traffic spikes so the database doesn't take the hit directly. Use an eviction policy like LRU to keep hot entries and drop cold ones.
+*Source: donnemartin/system-design-primer — `README.md`, "Cache" section*
+
+4. **Use cache-aside with a TTL — and know its tradeoffs.** Simplest pattern: check cache first; on miss, load from DB, store, return (lazy loading — only requested data gets cached). Every miss costs three trips, and cached data goes stale — mitigate with a time-to-live that forces refresh. Alternatives: write-through (never stale, slow writes) and write-behind (fast writes, data loss if cache dies).
+*Source: donnemartin/system-design-primer — `README.md`, "Cache-aside" sections*
+
+### Design for failure
+5. **Build retries on idempotent operations.** GET, PUT, and DELETE can be repeated safely; POST and PATCH cannot — a retried POST creates duplicates. Any write endpoint that might be retried (network replay, double-click) needs an explicit idempotency mechanism such as idempotency keys. The protocol won't save you on POST.
+*Source: donnemartin/system-design-primer — `README.md`, HTTP verb table*
+
+6. **Apply backpressure; retry with exponential backoff.** When a work queue outgrows memory, throughput collapses — cap the queue, reject overflow with HTTP 503, and let clients retry later. Retries must use growing delays (not immediate hammering), or the retry storm finishes off the struggling server.
+*Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" section*
+
+7. **Pool expensive connections.** Opening a TCP connection per request (app → database, server → cache) burns memory and setup cost each time. Reuse a bounded pool instead. Size it deliberately — too small starves throughput, too large wastes memory.
+*Source: donnemartin/system-design-primer — `README.md`, "Communication" section*
+
+### Measure, don't guess
+8. **Know your latency numbers.** L1 cache ~0.5ns, RAM ~100ns, SSD ~150µs, datacenter round trip ~500µs, HDD seek ~10ms, cross-continent ~150ms. "The database is slow" usually means "we're doing disk or network round trips we could avoid." Measure first, then attack the biggest number.
+*Source: donnemartin/system-design-primer — `README.md`, "Latency numbers every programmer should know"*
+
+9. **Distinguish performance from scalability problems.** Slow for a single user = performance problem (fix the code/queries). Fast for one user but slow under load = scalability problem (add caching, pooling, capacity). The fix differs — diagnose before prescribing. Target: maximal throughput with acceptable latency.
+*Source: donnemartin/system-design-primer — `README.md`, "Performance vs scalability"*
+
+10. **Watch the four golden signals.** Error rate (users feel it immediately), latency (directly affects business), throughput (gives context to the other two), and saturation (90% CPU = no headroom). Node-specific: keep process RAM under ~1.4GB, track errors per minute and restarts.
+*Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`*
+
+### Survive concurrent requests
+11. **Treat every check-then-act as a race.** Any operation that reads a value, decides, then writes — check balance then debit, check the coupon is unused then redeem it, check the slot is free then book it — lets two concurrent requests both read the old value, both pass the check, and both write. Loyalty points get drained, balances go negative, single-use coupons get redeemed many times. If two requests can race, assume they will; the check and the act must be one atomic operation. (Idempotency keys, rule 5, cover retries — this rule covers simultaneous first attempts.)
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, "Prevent Race Conditions on Sensitive Operations"*
+
+12. **Lock the row when you read-then-write it.** In PostgreSQL, `SELECT ... FOR UPDATE` inside a transaction locks the row until commit — other writers and lockers wait, then see the updated row. Use `FOR NO KEY UPDATE` when you don't change key columns (weaker, blocks less). A plain `SELECT` takes no such lock: under MVCC it reads a snapshot and stops nobody.
+*Source: PostgreSQL documentation — Chapter 13 "Concurrency Control", §13.3.2 "Row-Level Locks"*
+
+13. **Prefer a conditional update over read-modify-write.** `UPDATE ... SET stock = stock - 1 WHERE stock > 0` makes the predicate part of the write itself — there is no window between check and act. Check the affected-row count: 0 rows means the condition no longer held at write time, so return the conflict error instead of writing.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, pattern reference (conditional decrement)*
+
+14. **Back "exactly once" with a unique constraint.** One claim per donation, one redemption per coupon, one bonus per user: put a UNIQUE constraint on the natural key (e.g. `(user_id, bonus_type)`) and let the database reject the loser of the race. Application-level checks alone always leave a window — the constraint is the last line of defense.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, pattern reference (one-per-user bonus)*
+
+15. **Know your isolation level — the default is weaker than you think.** PostgreSQL defaults to Read Committed: every statement sees a fresh snapshot, so invariants that span rows or statements can break under concurrency even though each statement looks correct. Repeatable Read gives one stable snapshot per transaction; Serializable additionally detects dangerous read/write patterns and aborts one side. Choose per invariant, not by habit.
+*Source: PostgreSQL documentation — Chapter 13 "Concurrency Control", §13.2 "Transaction Isolation"*
+
+16. **Retry serialization failures and deadlocks — they are normal outcomes, not bugs.** Repeatable Read and Serializable transactions can abort with SQLSTATE 40001 ("could not serialize access…"), and PostgreSQL automatically detects deadlocks and aborts one transaction to let the others finish. Wrap the whole transaction in a bounded retry loop; never surface a 40001 or a deadlock abort to the user as a 500.
+*Source: PostgreSQL documentation — Chapter 13, §13.2.2–13.2.3 (SQLSTATE 40001) and §13.3.4 "Deadlocks"*
+
+17. **Lock rows in a consistent order to prevent deadlocks.** When every transaction that touches multiple rows or tables locks them in the same order, circular waits mostly disappear. PostgreSQL detects the deadlocks that remain and aborts one side — which is why rule 16's retry loop must exist wherever explicit locking is used.
+*Source: PostgreSQL documentation — Chapter 13, §13.3.4 "Deadlocks"*
+
+18. **Use advisory locks when the resource isn't a row.** `pg_advisory_xact_lock` gives an application-defined lock for resources MVCC doesn't model — a job name, an external system, a whole workflow — and releases it automatically at transaction end. Advisory locks are cooperative: every code path that touches the resource must take the same lock, or it protects nothing.
+*Source: PostgreSQL documentation — Chapter 13, §13.3.5 "Advisory Locks"*
+
+19. **Write a test that races.** If two requests can race, a sequential test suite will never see the bug. Fire the same request concurrently (parallel calls against the real database) and assert the end state: the balance never goes negative, the coupon is redeemed exactly once, exactly one claim wins. The test documents the invariant as much as it verifies it.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, "Test Concurrency"*
+
+### Also apply (general practice, beyond these repos)
+- **Kill N+1 queries** — never query inside a loop; fetch related data with JOIN or `IN (...)`.
+- **Index hot columns** — foreign keys, `WHERE` and `ORDER BY` columns; verify with `EXPLAIN`.
+- **Set timeouts on every external call** — fail fast instead of hanging forever.
+- **Paginate large lists** — never return "all rows"; cap page size.
+
+### Quick check before shipping
+- [ ] No synchronous heavy work on the request path (event loop stays free)
+- [ ] No Lodash where a native method does the job
+- [ ] Repeated reads are cached with a TTL and an invalidation plan
+- [ ] Write endpoints are idempotent or carry idempotency keys
+- [ ] Check-then-act operations are atomic — row lock, conditional update, or unique constraint, never a bare read-then-write
+- [ ] Serialization failures (40001) and deadlocks are retried with a bounded loop, not surfaced as 500s
+- [ ] Retries use backoff; queues have caps with 503 on overflow
+- [ ] Connections come from a sized pool, released on every path
+- [ ] Slowest path measured against the latency scale — biggest number attacked first
+- [ ] Four golden signals are tracked (errors, latency, throughput, saturation)
+
+### Learn more (official sources)
+- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
+- System design primer: https://github.com/donnemartin/system-design-primer
+- Don't block the event loop (Node.js docs): https://nodejs.org/en/docs/guides/dont-block-the-event-loop/
+- Latency numbers: https://github.com/donnemartin/system-design-primer#latency-numbers-every-programmer-should-know
+- PostgreSQL concurrency control (official docs, Ch. 13): https://www.postgresql.org/docs/current/mvcc.html
+- OWASP Business Logic Security Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html
+
+## Merged: devops-basics (2026-11-13)
+
+The standalone `devops-basics` skill (12 rules) was merged into this skill on 2026-11-13; it is no longer a separate skill. Its full text follows, unchanged.
+
+When to use: containerizing an app, setting up deployment, adding observability, or reviewing anything that ships to production. Apply when deploys are manual, scary, or "works on my machine" only.
+
+Every rule below is distilled from a reputable open-source repo (cited per rule). If a rule doesn't apply, say why.
+
+### Build lean images
+1. **Ship small base images.** A full Node.js image (~345MB) is roughly 10× the weight of its Alpine variant (~39MB); Slim is similarly tiny (~38MB). Smaller images pull faster, start faster, use less storage, and shrink the attack surface — fewer packages, fewer vulnerabilities. If the minimal image lacks build tools, install them in a separate build stage.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/smaller_base_images.md`*
+
+2. **Prefer COPY over ADD; keep builds reproducible.** COPY only copies local files; ADD can silently fetch remote binaries — a supply-chain risk. Never run `apt-get update` inside the build: it produces a different image every time and needs elevated privileges. Use base images that their maintainers update frequently instead.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/generic-tips.md`*
+
+3. **Run unprivileged and inspect what you ship.** Privileged containers have root-equivalent power over the host — almost never needed; use the `node` user baked into official Node images. Builds leak secrets and bloat (leftover files, dev dependencies) — inspect the final image with a tool like Dive to catch both.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/generic-tips.md`*
+
+### Shut down like a professional
+4. **Handle SIGTERM gracefully — don't let npm swallow it.** Orchestrators kill containers constantly (deploys, rescheduling, scaling) with SIGTERM and a ~30-second grace period. The app must: stop accepting new requests, finish in-flight ones, release resources, log, then exit. Anti-pattern: `CMD ["npm", "start"]` — npm sits between the signal and Node, so Node never receives it. Fix: `CMD ["node", "index.js"]` or run under Tini.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/graceful-shutdown.md`*
+
+5. **Expose health checks so the platform routes around sickness.** The load balancer needs to know "don't send me traffic" during shutdown and "I'm broken, restart me" during failures. A `/health` (liveness) endpoint answers "am I alive?"; a readiness check answers "am I ready to serve?" Keep them lightweight — a health check that does heavy work becomes the outage.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/graceful-shutdown.md`*
+
+6. **Keep a private ops endpoint — locked to admins.** Some diagnostics are app-specific (heap dumps, memory reports) and generic monitoring tools can't reach them. Expose them on a dedicated maintenance endpoint, but restrict it to admins — it can become a DDoS target. Use professional monitoring for the standard stuff; the custom endpoint is for the rest.
+*Source: goldbergyoni/nodebestpractices — `sections/production/createmaintenanceendpoint.md`*
+
+### Log so you can debug later
+7. **Tag every log line with a request ID.** A production log is thousands of interleaved requests — without a shared ID you can't reconstruct one user's flow from the noise. Assign a unique transaction ID per request, attach it to every log statement, and propagate it downstream via an `x-transaction-id` header. In Node this needs AsyncLocalStorage (v14+) or a helper like cls-rtracer.
+*Source: goldbergyoni/nodebestpractices — `sections/production/assigntransactionid.md`*
+
+8. **Log structured, with context.** Format logs as JSON with timestamps, request IDs, user IDs, and operation types — readable by humans and machines. Log at transaction start and end so you can trace errors and spot the slowest endpoints. Never log secrets. If you can't reconstruct what happened from the logs, they're decoration.
+*Source: goldbergyoni/nodebestpractices — `sections/production/smartlogging.md`*
+
+### Guard the runtime
+9. **Cap memory and hunt leaks.** Node's default heap target is ~1.5GB — on smaller machines cap it explicitly (e.g. `node --max_old_space_size=400 server.js`), because V8's stop-the-world garbage collector gets expensive near the limit. Prevent leaks: avoid globals, stream data instead of buffering it, scope with let/const. Find leaks by diffing heap dumps taken apart in time.
+*Source: goldbergyoni/nodebestpractices — `sections/production/measurememory.md`*
+
+10. **Monitor the four golden signals; save APM for scale.** Track error rate, latency, throughput, and saturation — plus Node specifics (process RAM, errors per minute, restarts). Full APM suites trace transactions end-to-end but carry a price tag: justified for large complex systems, overkill for a small app where the four signals plus good logs suffice.
+*Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`, `sections/production/apmproducts.md`*
+**Checkable criteria (general practice — thresholds are starting points, tune per product):** error rate — alert if 5xx > 1% of requests over 5 min; latency — p95 < 500ms on key routes; throughput — requests/min tracked, alert on a sudden drop vs the same hour last week; saturation — CPU or memory > 80% sustained 10 min. If a signal has no number and no alert, it isn't monitored.
+
+11. **Pin the base image — never `FROM x:latest`.** `latest` is a moving pointer: the same Dockerfile builds a different image tomorrow, and a breaking upstream change ships silently. Pin a specific version (`FROM node:20.11.0-alpine`) — or a digest (`FROM node:20.11.0-alpine@sha256:…`) for production — and bump it intentionally after testing.
+*Source: Docker best practices (docs.docker.com/build/building/best-practices); nodebestpractices examples pin versions (`FROM node:14.8.0-alpine`, `sections/docker/install-for-production.md`).*
+
+12. **Cache dependencies in CI — don't reinstall the world on every push (general practice).** Cache `node_modules` keyed on the lockfile and Docker layers (BuildKit cache) so a green build takes minutes, not a full reinstall. A cache miss must still produce a correct build — never depend on the cache for correctness. (Note: nodebestpractices has no CI-caching rule — its `sections/docker/clean-cache.md` is about removing the cache from images, the opposite direction.)
+
+### Also apply (general practice, beyond these repos)
+- **Automate build + test on every push (CI)** — red build blocks the merge; nobody merges without green checks.
+- **Version your API explicitly** (`/v1`, `/v2`) with semantic versioning; deprecate with a sunset date, never silently change shapes.
+- **Migrate the database, don't hand-edit it** — versioned migration files, tested before production, reversible where possible.
+- **Back up on a schedule and test the restore** — an untested backup is a hope, not a backup.
+
+### Quick check before shipping
+- [ ] Base image is Alpine/Slim (~40MB), built with COPY, no `apt-get update` inside
+- [ ] Container runs as non-root user; final image inspected (no secrets, no bloat)
+- [ ] App handles SIGTERM: drains requests, releases resources, exits cleanly
+- [ ] `/health` endpoint exists, is lightweight, and is wired to the platform
+- [ ] Every log line carries a request/transaction ID, propagated downstream
+- [ ] Logs are JSON with timestamps and context; no secrets logged
+- [ ] Memory is capped for the machine size; leak-hunting path is known
+- [ ] Four golden signals are monitored with alerts on user-facing symptoms
+- [ ] Base image pinned to a specific version/digest, never `latest`
+- [ ] CI caches dependencies (lockfile-keyed) and Docker layers; a cache miss still builds correctly
+
+### Learn more (official sources)
+- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
+- Docker best practices: https://docs.docker.com/build/building/best-practices/
+- Graceful shutdown in Node: https://github.com/goldbergyoni/nodebestpractices/tree/master/sections/docker
 - Semantic versioning: https://semver.org/
 
 Apply this playbook to the following: $ARGUMENTS

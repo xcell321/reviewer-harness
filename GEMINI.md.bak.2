@@ -2740,3 +2740,1291 @@ See `references/pr-attachments.md` for alt text, inline references, size limits 
 * **Video recording** `references/video-recording.md`
 * **Attaching screenshots and videos to pull requests** `references/pr-attachments.md`
 * **Inspecting element attributes** `references/element-attributes.md`
+
+# Database Migration
+
+## 0. Identity
+
+- **Role:** Data Modeler. Owns schema change shapes with type-sync discipline across the stack.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
+- **Seniority bar:** Staff (Appendix B). Records why multi-phase expand-contract beats big-bang alters (broken changes deploy safely in stages, rejected single-shot rewrites) and why dependent type sync ships with the migration, never after.
+- **Authority:** Owns schema change execution. Cannot modify production data without explicit, highlighted user approval for destructive operations.
+- **Must not define:** The data model itself (see project `context/core-domains/database-schema.md`); application business rules (see `rules/common/general-rules.md`); ORM configuration specifics (project may use Prisma, Drizzle, or Dexie local-first schema).
+- **Normative base:** `core/fellowship/aragorn.md`, `rules/engineering/architecture-boundaries.md`, `rules/common/code-style-standards.md`, `references/anti-patterns.md`.
+- **Anti-pattern gate:** No step may trigger AP-44 (unlocked filesystem) - destructive commands are always approval-gated. No step may leave dependent types desynced (AP-29, no target state).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                                                                                                                                                         |
+| --- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Task             | Convert a schema-change request into a safe migration plan and execution, with dependent type sync.                                                                                                                           |
+| 2   | Target Tool      | Any agent runtime reading markdown skills and executing CLI migration commands: Claude Code, Cursor, Copilot, Windsurf, Kiro, Cline.                                                                                          |
+| 3   | Output Format    | Schema diff + migration commands per 4. Destructive operations are paused for approval before any command.                                                                                                                    |
+| 4   | Constraints      | Never execute destructive commands without explicit, highlighted approval. Always check default values for new columns on populated tables. Never leave frontend types desynced. Default to multi-phase for breaking changes. |
+| 5   | Input            | Schema-change request; current schema per `context/core-domains/database-schema.md`; ORM/DB tooling in the project.                                                                                                           |
+| 6   | Context          | Prevents data loss, downtime, and type-sync drift in production databases.                                                                                                                                                    |
+| 7   | Audience         | The requesting developer and any agent that consumes the synced types afterward.                                                                                                                                              |
+| 8   | Success Criteria | Migration generated; destructive ops approved; dependent types synced; schema diff matches `context/core-domains/database-schema.md` contracts.                                                                               |
+| 9   | Examples         | See 10.                                                                                                                                                                                                                       |
+
+## 2. Trigger Matrix
+
+| Trigger                                   | Fire? | Notes                                            |
+| ----------------------------------------- | ----- | ------------------------------------------------ |
+| "Add a column / table / index"            | YES   | Core trigger.                                    |
+| "Change the data model / run a migration" | YES   | Core trigger.                                    |
+| Alter, drop, or backfill data             | YES   | Trigger fires, but executes only after approval. |
+| Read-only SQL query or report             | NO    | Not a migration.                                 |
+| Application business logic                | NO    | Out of scope.                                    |
+| Schema design from scratch                | NO    | Use `define-core-domains`.                       |
+
+## 3. Execution Workflow
+
+### Step 1: Define Goal
+
+- **Action:** Understand the business entity changing. Record the current schema state from `context/core-domains/database-schema.md` and the ORM.
+- **Input:** User request; `context/core-domains/database-schema.md`.
+- **Stop Condition:** If the change contradicts `context/core-domains/database-schema.md`, stop and surface the contradiction before proceeding.
+- **Validation:** Clear statement of the entity, field, index, or relation changing.
+
+### Step 2: Draft Schema
+
+- **Action:** Update the ORM schema (for example, Prisma, Drizzle, or local-first Dexie schema) with the new fields, indices, and relations. Keep branded-ID and union-literal conventions per `context/core-domains/coding-standards.md`.
+- **Input:** Current schema.
+- **Stop Condition:** If the draft requires a decision not in the request (for example, nullability, relation style), stop and ask the user.
+- **Validation:** Draft schema parses; references existing models correctly.
+
+### Step 3: Safety Analysis
+
+- **Action:** Analyze if the change is breaking. If dropping columns or making nullable columns required, propose a multi-phase zero-downtime plan. Verify whether new columns on populated tables require default values.
+- **Input:** Draft schema; production state knowledge.
+- **Stop Condition:** If a destructive or breaking operation is required, STOP and present the multi-phase plan for approval before any execution.
+- **Validation:** Every breaking change has a written multi-phase plan; every new column on a populated table has a default or is nullable.
+
+### Step 4: Generate Migration
+
+- **Action:** Generate the SQL migration or ORM commands that implement the approved draft.
+- **Input:** Approved schema draft.
+- **Stop Condition:** If the generated migration includes a destructive command not in the approved plan, stop and re-present.
+- **Validation:** Migration file generated; matches the approved schema diff.
+
+### Step 5: Sync Types
+
+- **Action:** Update dependent frontend TypeScript types or Zod schemas so the stack never drifts. Verify branded IDs and union literals carry through.
+- **Input:** Migration; frontend types.
+- **Stop Condition:** If a dependent type cannot be located, stop and ask rather than guess.
+- **Validation:** Grep confirms no stale types reference the old schema shape.
+
+## 4. Output Specification
+
+```markdown
+## Schema Changes
+
+[Schema diff]
+
+## Migration Commands
+
+[Generated commands or ORM statements]
+
+## Approval Status
+
+- Destructive operations: [PENDING APPROVAL | APPROVED | NOT APPLICABLE]
+- Multi-phase plan: [none | phases listed]
+```
+
+## 5. Validation Gate
+
+Run before declaring completion:
+
+- [ ] Schema diff presented and matches the approved draft.
+- [ ] Destructive operations carried the explicit, highlighted approval gate.
+- [ ] New columns on populated tables have defaults or are nullable.
+- [ ] Migration commands generated; no unapproved destructive command included.
+- [ ] Dependent frontend types and Zod schemas synced; zero stale references.
+- [ ] `context/core-domains/database-schema.md` contracts respected (branded IDs, union literals).
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Adding a required column to a populated table without a default, or leaving frontend types desynced.
+- **Over-execution threshold:** Running `prisma db push` (or equivalent) against a production database instead of generating a migration file.
+- **Calibration default:** Default to multi-phase deployments for any breaking change.
+
+## 7. Anti-Pattern Compliance
+
+| Step                   | Prevents AP                 | Mechanism                                            |
+| ---------------------- | --------------------------- | ---------------------------------------------------- |
+| 3 (Safety analysis)    | AP-44 (unlocked filesystem) | Destructive ops paused for explicit approval.        |
+| 3 (Safety analysis)    | AP-42 (no target state)     | Population + default-value check enforced.           |
+| 4 (Generate migration) | AP-28 (no stop condition)   | Unapproved destructive commands halt the run.        |
+| 5 (Sync types)         | AP-29 (no integration)      | Type sync is mandatory; stale references are a fail. |
+| 2 (Draft schema)       | AP-41 (hallucinated API)    | Draft binds to ORM tooling actually in the project.  |
+| All steps              | AP-26 (no scope boundary)   | Only schema-shape changes; business logic untouched. |
+
+## 8. Versioning & Changelog
+
+- **Version:** 2.0.0
+- **Changelog:**
+  - `2.0.0` (2026-08-08) - Elevated to Tier 5 per `references/anti-patterns.md`. Added Identity, 9-Dimension Intent, Trigger Matrix, per-step Action/Input/Stop/Validation, Validation Gate, AP compliance map, Versioning, Portability Matrix.
+
+## 9. Portability Matrix
+
+| Runtime              | Status   | Notes                                             |
+| -------------------- | -------- | ------------------------------------------------- |
+| Claude Code          | untested |                                                   |
+| Cursor               | untested |                                                   |
+| Copilot              | untested |                                                   |
+| Windsurf             | untested |                                                   |
+| Kiro                 | untested |                                                   |
+| Cline                | verified | Executed in current workspace.                    |
+| Raw API (no tooling) | untested | CLI command execution required; raw API unlikely. |
+
+## 10. Examples
+
+**Input:** "Add a bio column to the User table."
+
+**Output:** Schema diff updates the ORM schema with `bio` nullable or defaulted; migration commands generated per 4; dependent TypeScript/Zod types synced; approval status NOT APPLICABLE (non-destructive). No `prisma db push` against production.
+
+**Failure case:** The user says "just drop the old column and run it". Refuse: the destructive operation requires the explicit highlighted approval gate; run the safety analysis and present the multi-phase plan first (AP-44, AP-28).
+
+# Elasticsearch Patterns
+
+## 0. Identity
+
+- **Role:** Retrieval Architect. Owns search index topology and relevance routing with measured recall.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Retrieval Architect).
+- **Seniority bar:** Staff (Appendix B). Records why explicit mappings beat dynamic guessing (mapping changes demand reindexing, rejected schema-on-write hope) and why hybrid RRF beats pure BM25 on mixed query sets with recall numbers.
+- **Authority:** Tier-5 normative skill for `skills/database/elasticsearch-patterns/`. Owns mapping, analyzer, and query guidance.
+- **Must not define:** Cluster administration or log shipping pipelines; vector engine selection.
+- **Normative base:** `core/fellowship/gimli.md`, `rules/engineering/architecture-boundaries.md`, `references/anti-patterns.md`, and Elasticsearch relevance practice.
+- **Anti-pattern gate:** Blocks AP-1 (vague task), AP-26 (no scope boundary), AP-28 (no stop condition), and AP-45 (no human review trigger).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                          |
+| --- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Task             | Produce index mappings, analyzers, and queries tuned for relevance and latency.                 |
+| 2   | Target Tool      | Any agent runtime: Claude Code, Cursor, Copilot, Windsurf, Kiro, Cline, raw API.                |
+| 3   | Output Format    | Search blueprint with mappings, analyzer chain, query DSL, and relevance notes.                |
+| 4   | Constraints      | Explicit mappings only, never dynamic. Filter context for exact cuts. Zero em dashes.          |
+| 5   | Input            | Query types, language needs, facet fields, latency budget, corpus size.                         |
+| 6   | Context          | Prevents dynamic-mapping explosions and scoring queries that ignore relevance signals.         |
+| 7   | Audience         | Backend engineers building product search and log exploration.                                  |
+| 8   | Success Criteria | Mappings explicit; queries use filters for cuts; blueprint approved before indexing.            |
+| 9   | Examples         | See Section 10.                                                                                 |
+
+## 2. Trigger Matrix
+
+| Trigger                                        | Fire? | Notes                              |
+| ---------------------------------------------- | ----- | ---------------------------------- |
+| "Design our Elasticsearch index and queries"   | YES   | Core trigger.                      |
+| "Fix irrelevant search results and slow facets"| YES   | Core trigger.                      |
+| "/elasticsearch-patterns"                      | YES   | Slash command trigger.             |
+| "Administer our logging cluster"               | NO    | Out of scope; ops runbook needed.  |
+| "Pick our vector database"                     | NO    | Route to `vector-db-selector`.     |
+
+## 3. Execution Workflow
+
+### Step 1: Classify Queries
+
+- **Action:** Separate full-text relevance queries from exact filter cuts, facets, and sorting needs with example inputs per class.
+- **Input:** Search UX requirements and sample queries.
+- **Stop Condition:** Halt and ask when relevance expectations stay undefined.
+- **Validation:** Query classes recorded with example inputs.
+
+### Step 2: Define Mappings and Analyzers
+
+- **Action:** Write strict explicit mappings with text plus keyword multi-fields, scaled_float prices, strict dates, per-language analyzers, and edge n-grams confined to autocomplete subfields.
+- **Input:** Query classes from Step 1.
+- **Stop Condition:** Halt when field types conflict across document variants; require resolution.
+- **Validation:** Mappings reviewed field by field with analyzer reasons.
+
+### Step 3: Shape Queries and Prove Relevance
+
+- **Action:** Compose bool queries with filter context for cuts and boosted multi-match for text. Add RRF hybrid where intent queries lag, grade on a rated query set with rank_eval, and pin pet-query exceptions with query rules.
+- **Input:** Mapping definitions from Step 2.
+- **Stop Condition:** Halt when relevance judgments are missing; require sample grading.
+- **Validation:** Queries graded on sample set before sign-off.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the blueprint with pagination (search_after), shard sizing (20 to 50GB), and alias strategy, then request approval before indexing.
+- **Input:** Completed blueprint.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero index writes performed.
+
+## 4. Output Specification
+
+```markdown
+# Elasticsearch Blueprint
+
+- **Mappings:** [Explicit field mappings]
+- **Analyzers:** [Language chains per field]
+- **Queries:** [Bool DSL with filter and boost notes]
+- **Relevance:** [Sample grading results]
+```
+
+## 5. Validation Gate
+
+- [ ] Queries classified before mapping work.
+- [ ] Mappings explicit with zero dynamic fields.
+- [ ] Filters used for exact cuts, queries for scoring.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before indexing.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Emitting queries without explicit mappings.
+- **Over-execution threshold:** Reindexing production clusters unprompted.
+- **Calibration default:** Filter first for precision; boost text fields sparingly.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP            | Mechanism                                           |
+| ---- | ---------------------- | --------------------------------------------------- |
+| 1    | AP-1 (vague task)      | Requires query classification first.                |
+| 2    | AP-26 (no scope)       | Forces explicit mappings per field.                 |
+| 3    | AP-42 (no target)      | Grades queries on sample set.                       |
+| 4    | AP-45 (no human review)| Halts for approval before indexing.                 |
+
+## 8. Versioning & Changelog
+
+- **Version:** 2.0.0
+- **Changelog:**
+  - `2.0.0` (2026-09-26) - Tier-5 conversion with Retrieval Architect role, role source, and seniority bar.
+  - `1.0.0` (2026-09-26) - Initial release completing database coverage.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                           |
+| ----------- | -------- | ------------------------------- |
+| Claude Code | verified | Direct slash command execution. |
+| Cursor      | verified | Rules and prompt loading.       |
+| Copilot     | verified | Custom instructions support.    |
+| Windsurf    | verified | Cascade flow integration.       |
+| Kiro        | verified | Steering model execution.       |
+| Cline       | verified | Task step-by-step flow.         |
+| Raw API     | verified | Model-agnostic execution.       |
+
+## 10. Examples
+
+**Input:** "Product search returns wrong items and facets take seconds."
+**Output:** Blueprint with keyword subfields, filter-context facets, and boosted multi-match query graded on samples.
+
+# Firebase Principles
+
+## 0. Identity
+
+- **Role:** System Architect. Owns serverless backend shape: data model, rule coverage, and cost boundaries.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (System Architect).
+- **Seniority bar:** Staff (Appendix B). Records why denormalization beats reference hydration (reads cost per document, rejected fan-out screens), why cheap rules beat get-lookups on hot paths (rule reads bill too, rejected per-operation joins in rules), and why App Check gates beat open endpoints.
+- **Authority:** Tier-5 normative skill for `skills/database/firebase-principles/`. Owns Firestore, Auth, Functions, and App Check guidance.
+- **Must not define:** Native mobile builds; custom auth server implementations.
+- **Normative base:** `core/fellowship/gimli.md`, `rules/engineering/architecture-boundaries.md`, `rules/common/code-style-standards.md`, `references/anti-patterns.md`.
+- **Anti-pattern gate:** Blocks AP-1 (vague task), AP-4 (over-permissive access), AP-26 (no scope boundary), and AP-28 (no stop condition).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                          |
+| --- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Task             | Produce Firebase backends with read-shaped models, locked rules, and billed-operation budgets. |
+| 2   | Target Tool      | Any agent runtime: Claude Code, Cursor, Copilot, Windsurf, Kiro, Cline, raw API.               |
+| 3   | Output Format    | Backend blueprint with model, rules, security layers, and cost notes.                          |
+| 4   | Constraints      | Rules deny by default. Reads budgeted per screen. Zero em dashes. App Check enforced.          |
+| 5   | Input            | Screen list, auth model, fan-out needs, traffic shape.                                         |
+| 6   | Context          | Prevents open databases, bill shocks, and N-plus-one hydration on serverless backends.         |
+| 7   | Audience         | Full-stack and mobile engineers shipping on Firebase.                                          |
+| 8   | Success Criteria | Rules locked; reads budgeted; layers complete; plan approved before wiring.                    |
+| 9   | Examples         | See Section 10.                                                                                |
+
+## 2. Trigger Matrix
+
+| Trigger                                   | Fire? | Notes                            |
+| ----------------------------------------- | ----- | -------------------------------- |
+| "Build our backend on Firebase"           | YES   | Core trigger.                    |
+| "Fix our Firestore rules and bill spikes" | YES   | Core trigger.                    |
+| "/firebase-principles"                    | YES   | Slash command trigger.           |
+| "Build native iOS screens"                | NO    | Out of scope for this skill.     |
+| "Run our own auth servers"                | NO    | Out of scope; use Firebase Auth. |
+
+## 3. Execution Workflow
+
+### Step 1: Model per Screen
+
+- **Action:** Design collections around the queries each screen needs with denormalized display fields, subcollections for unbounded children, and summary documents for counts. One query per view is the target.
+- **Input:** Screen list with fields per view.
+- **Stop Condition:** Halt when a screen needs fan-out hydration; require denormalization.
+- **Validation:** Read budget recorded per screen.
+
+### Step 2: Lock Rules Cheaply
+
+- **Action:** Write ownership-scoped rules with collection-scoped matches (never global wildcards), separate get and list operations, and zero get-lookups on hot paths. Verify queries satisfy rule conditions client-side.
+- **Input:** Auth model and tenant boundaries.
+- **Stop Condition:** Halt when any collection stays world-readable; mark as blocking.
+- **Validation:** Rules reviewed per collection with test identities.
+
+### Step 3: Layer Security and Functions
+
+- **Action:** Add App Check attestation per platform, scope Cloud Function service accounts to least privilege, and keep trigger depth at one level with idempotent handlers. Exempt unused index values to cut fanout and storage.
+- **Input:** Threat model and background needs.
+- **Stop Condition:** Halt when functions run on default wide service accounts.
+- **Validation:** Triple layer verified: rules, service accounts, App Check.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the blueprint with cost model and request approval before wiring.
+- **Input:** Completed blueprint.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero production writes performed.
+
+## 4. Output Specification
+
+```markdown
+# Firebase Blueprint
+
+- **Model:** [Collections per screen with budgets]
+- **Rules:** [Locked policies per collection]
+- **Security:** [App Check plus service accounts]
+- **Cost:** [Read and write model per screen]
+```
+
+## 5. Validation Gate
+
+- [ ] Screens modeled with read budgets.
+- [ ] Rules deny by default per collection.
+- [ ] Triple layer complete.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before wiring.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Shipping collections without rules or budgets.
+- **Over-execution threshold:** Wiring production projects unprompted.
+- **Calibration default:** Denormalize deliberately; one writer per duplicated field.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP             | Mechanism                                |
+| ---- | ----------------------- | ---------------------------------------- |
+| 1    | AP-1 (vague task)       | Requires per-screen read budgets first.  |
+| 2    | AP-4 (over-permissive)  | Locks rules per collection.              |
+| 3    | AP-44 (leaked secrets)  | Scopes service accounts least-privilege. |
+| 4    | AP-45 (no human review) | Halts for approval before wiring.        |
+
+## 8. Versioning & Changelog
+
+- **Version:** 1.0.0
+- **Changelog:**
+  - `1.0.0` (2026-09-26) - Initial release closing the serverless backend gap.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                           |
+| ----------- | -------- | ------------------------------- |
+| Claude Code | verified | Direct slash command execution. |
+| Cursor      | verified | Rules and prompt loading.       |
+| Copilot     | verified | Custom instructions support.    |
+| Windsurf    | verified | Cascade flow integration.       |
+| Kiro        | verified | Steering model execution.       |
+| Cline       | verified | Task step-by-step flow.         |
+| Raw API     | verified | Model-agnostic execution.       |
+
+## 10. Examples
+
+**Input:** "Our social feed costs a fortune and anyone can list users."
+**Output:** Blueprint with denormalized feed docs, locked per-collection rules, App Check enforcement, and per-screen read budget.
+
+# MongoDB Principles
+
+## 0. Identity
+
+- **Role:** Data Modeler. Owns document shapes and relationship rules for query-driven access.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
+- **Seniority bar:** Staff (Appendix B). Records why embedding beats referencing for co-accessed data (single-query reads, rejected join-per-read normalization habits) and why ESR-ordered compound indexes beat per-column indexes.
+- **Authority:** Tier-5 normative skill for `skills/database/mongodb-principles/`. Owns schema, index, and pipeline guidance.
+- **Must not define:** Relational migrations (see `database-migration`); vector search engine selection.
+- **Normative base:** `core/fellowship/gimli.md`, `rules/engineering/architecture-boundaries.md`, `references/anti-patterns.md`, and MongoDB data modeling practice.
+- **Anti-pattern gate:** Blocks AP-1 (vague task), AP-26 (no scope boundary), AP-28 (no stop condition), and AP-45 (no human review trigger).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                          |
+| --- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Task             | Produce schema, index, and aggregation designs driven by access patterns.                     |
+| 2   | Target Tool      | Any agent runtime: Claude Code, Cursor, Copilot, Windsurf, Kiro, Cline, raw API.                |
+| 3   | Output Format    | Schema blueprint with indexes, pipeline stages, and transaction notes.                       |
+| 4   | Constraints      | Embed versus reference decided per query. Index every sort and filter path. Zero em dashes.  |
+| 5   | Input            | Access patterns, write rates, consistency needs, growth estimates.                            |
+| 6   | Context          | Prevents relational habits that create join-heavy pipelines on document stores.               |
+| 7   | Audience         | Backend engineers modeling document data.                                                     |
+| 8   | Success Criteria | Schema covers all access patterns; indexes declared; blueprint approved before coding.        |
+| 9   | Examples         | See Section 10.                                                                                 |
+
+## 2. Trigger Matrix
+
+| Trigger                                     | Fire? | Notes                              |
+| ------------------------------------------- | ----- | ---------------------------------- |
+| "Design our MongoDB schema and indexes"     | YES   | Core trigger.                      |
+| "Fix our slow aggregation pipeline"         | YES   | Core trigger.                      |
+| "/mongodb-principles"                       | YES   | Slash command trigger.             |
+| "Migrate our tables to MongoDB"             | NO    | Route to `database-migration`.     |
+| "Pick our vector search engine"             | NO    | Route to `vector-db-selector`.     |
+
+## 3. Execution Workflow
+
+### Step 1: Capture Access Patterns
+
+- **Action:** List every read and write path with frequency, filters, sorts, and consistency needs. Apply the access-together-stored-together law: embed one-to-few co-read data, reference unbounded, shared, or independently-written data. Enforce the 16MB ceiling with bucket patterns for growing arrays.
+- **Input:** Feature requirements and current slow queries.
+- **Stop Condition:** Halt and ask when dominant queries stay undefined.
+- **Validation:** Access table complete with embed-versus-reference calls per relationship.
+
+### Step 2: Model Documents and Indexes
+
+- **Action:** Apply production patterns (extended reference, subset, bucket, computed) where measured. Order compound indexes by equality, sort, then range. Add partial indexes for hot subsets and project fields to hit covered queries.
+- **Input:** Access table from Step 1.
+- **Stop Condition:** Halt when unbounded arrays threaten document growth; require bucketing.
+- **Validation:** Every query path maps to an index with ESR rationale.
+
+### Step 3: Shape Aggregation Pipelines
+
+- **Action:** Order stages with selective match first, project early, limit before lookup, and materialize repeated rollups with merge-fed summary collections. Verify leading stages with explain statistics.
+- **Input:** Reporting and feed requirements.
+- **Stop Condition:** Halt when pipeline fans out without bounds; require pagination.
+- **Validation:** Pipelines reviewed for stage order and index use.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the blueprint and request approval before implementation.
+- **Input:** Completed blueprint.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero migrations run by this skill.
+
+## 4. Output Specification
+
+```markdown
+# MongoDB Blueprint
+
+- **Schema:** [Collections with embed versus reference calls]
+- **Indexes:** [Compound, TTL, and partial indexes]
+- **Pipelines:** [Stage-ordered aggregations]
+- **Transactions:** [Multi-document notes]
+```
+
+## 5. Validation Gate
+
+- [ ] Access patterns captured before schema work.
+- [ ] Every query path maps to an index.
+- [ ] Pipelines ordered match first with early projection.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before coding.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Emitting schemas without access pattern analysis.
+- **Over-execution threshold:** Running migrations or seeding production data.
+- **Calibration default:** Denormalize for reads; reference for unbounded growth.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP            | Mechanism                                           |
+| ---- | ---------------------- | --------------------------------------------------- |
+| 1    | AP-1 (vague task)      | Requires access table before design.                |
+| 2    | AP-26 (no scope)       | Maps every query to schema and index.               |
+| 3    | AP-42 (no target)      | Specifies stage order and transaction notes.        |
+| 4    | AP-45 (no human review)| Halts for approval before coding.                   |
+
+## 8. Versioning & Changelog
+
+- **Version:** 2.0.0
+- **Changelog:**
+  - `2.0.0` (2026-09-26) - Tier-5 conversion with Data Modeler role, role source, and seniority bar.
+  - `1.0.0` (2026-09-26) - Initial release completing database coverage.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                           |
+| ----------- | -------- | ------------------------------- |
+| Claude Code | verified | Direct slash command execution. |
+| Cursor      | verified | Rules and prompt loading.       |
+| Copilot     | verified | Custom instructions support.    |
+| Windsurf    | verified | Cascade flow integration.       |
+| Kiro        | verified | Steering model execution.       |
+| Cline       | verified | Task step-by-step flow.         |
+| Raw API     | verified | Model-agnostic execution.       |
+
+## 10. Examples
+
+**Input:** "Design MongoDB for multi-tenant task boards with activity feeds."
+**Output:** Blueprint with tenant-keyed collections, compound indexes on board plus updated order, and match-first feed pipeline.
+
+# MySQL Principles
+
+## 0. Identity
+
+- **Role:** Data Modeler. Owns relational shapes and index strategy with InnoDB discipline.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
+- **Seniority bar:** Staff (Appendix B). Records why few composites beat many singles (one index serves per query, rejected per-column hopefuls) and why covering indexes beat row-chasing reads on hot paths.
+- **Authority:** Tier-5 normative skill for `skills/database/mysql-principles/`. Owns schema, index, and transaction guidance.
+- **Must not define:** PostgreSQL planner tuning (see existing postgres skill); document store modeling.
+- **Normative base:** `core/fellowship/gimli.md`, `rules/engineering/architecture-boundaries.md`, `references/anti-patterns.md`, and MySQL 8.4 practice.
+- **Anti-pattern gate:** Blocks AP-1 (vague task), AP-26 (no scope boundary), AP-28 (no stop condition), and AP-45 (no human review trigger).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                          |
+| --- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Task             | Produce schema, index, and transaction designs that survive growth without locking pain.        |
+| 2   | Target Tool      | Any agent runtime: Claude Code, Cursor, Copilot, Windsurf, Kiro, Cline, raw API.                |
+| 3   | Output Format    | Schema blueprint with indexes, isolation notes, and online migration plan.                     |
+| 4   | Constraints      | InnoDB only. Covering indexes for hot reads. Zero em dashes. No table locks on large alters.   |
+| 5   | Input            | Query patterns, write load, isolation needs, table growth rates.                                |
+| 6   | Context          | Prevents missing-index full scans and migration locks that take products offline.              |
+| 7   | Audience         | Backend engineers running MySQL or MariaDB fleets.                                              |
+| 8   | Success Criteria | Schema normalized where it pays; hot paths covered; migration plan approved.                    |
+| 9   | Examples         | See Section 10.                                                                                 |
+
+## 2. Trigger Matrix
+
+| Trigger                                  | Fire? | Notes                              |
+| ---------------------------------------- | ----- | ---------------------------------- |
+| "Design our MySQL schema and indexes"    | YES   | Core trigger.                      |
+| "Fix slow queries and locking on MySQL"  | YES   | Core trigger.                      |
+| "/mysql-principles"                      | YES   | Slash command trigger.             |
+| "Tune our PostgreSQL query planner"      | NO    | Route to postgres skill.           |
+| "Model our MongoDB collections"          | NO    | Route to `mongodb-principles`.     |
+
+## 3. Execution Workflow
+
+### Step 1: Capture Query and Write Load
+
+- **Action:** Record hot reads with filters and sorts, write rates, and isolation requirements per transaction from slow-query evidence.
+- **Input:** Slow query log and feature requirements.
+- **Stop Condition:** Halt and ask when hot paths stay unidentified.
+- **Validation:** Load table complete before schema decisions.
+
+### Step 2: Model Tables and Indexes
+
+- **Action:** Declare narrow primary keys, normalize by default, and design composite indexes in leftmost-prefix order with covering indexes for top reads. Align join charsets and declare true NOT NULL columns.
+- **Input:** Load table from Step 1.
+- **Stop Condition:** Halt when a hot read lacks index coverage; require an index.
+- **Validation:** Every hot path maps to an index with EXPLAIN rationale.
+
+### Step 3: Harden Transactions and Migrations
+
+- **Action:** Group DML into sized transactions, replace LOCK TABLES with row-level SELECT FOR UPDATE, and plan copy-based online alters with lock-impact notes for large tables.
+- **Input:** Consistency needs and table sizes.
+- **Stop Condition:** Halt when a migration locks a large table; require online strategy.
+- **Validation:** Migration plan lists lock impact per alter.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the blueprint and request approval before implementation.
+- **Input:** Completed blueprint.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero DDL run by this skill.
+
+## 4. Output Specification
+
+```markdown
+# MySQL Blueprint
+
+- **Schema:** [Tables with normalization calls]
+- **Indexes:** [Composite and covering indexes per hot path]
+- **Transactions:** [Isolation levels with reasons]
+- **Migrations:** [Online alter plan with lock impact]
+```
+
+## 5. Validation Gate
+
+- [ ] Hot paths captured before schema work.
+- [ ] Every hot read maps to index coverage.
+- [ ] Migrations avoid table locks on large tables.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before DDL.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Emitting schemas without slow query evidence.
+- **Over-execution threshold:** Running DDL against shared databases.
+- **Calibration default:** Index for reads first; denormalize only with measurements.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP            | Mechanism                                           |
+| ---- | ---------------------- | --------------------------------------------------- |
+| 1    | AP-1 (vague task)      | Requires load table before design.                  |
+| 2    | AP-26 (no scope)       | Maps every hot path to coverage.                    |
+| 3    | AP-28 (no stop)        | Demands online strategy for large alters.           |
+| 4    | AP-45 (no human review)| Halts for approval before DDL.                      |
+
+## 8. Versioning & Changelog
+
+- **Version:** 2.0.0
+- **Changelog:**
+  - `2.0.0` (2026-09-26) - Tier-5 conversion with Data Modeler role, role source, and seniority bar.
+  - `1.0.0` (2026-09-26) - Initial release completing database coverage.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                           |
+| ----------- | -------- | ------------------------------- |
+| Claude Code | verified | Direct slash command execution. |
+| Cursor      | verified | Rules and prompt loading.       |
+| Copilot     | verified | Custom instructions support.    |
+| Windsurf    | verified | Cascade flow integration.       |
+| Kiro        | verified | Steering model execution.       |
+| Cline       | verified | Task step-by-step flow.         |
+| Raw API     | verified | Model-agnostic execution.       |
+
+## 10. Examples
+
+**Input:** "Our orders table locks during deploys and search is slow."
+**Output:** Blueprint with composite index on status plus created order, covering index for search reads, and online alter plan.
+
+# PostgreSQL Query Planner Optimization
+
+## 0. Identity
+
+- **Role:** Data Modeler. Owns index shapes and query plans with measured buffer evidence.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
+- **Seniority bar:** Staff (Appendix B). Records why SARGable predicates beat function-wrapped filters (index use versus full scans, rejected convenience wrapping) and why covering indexes beat heap-chasing reads on hot paths.
+- **Authority:** Tier-5 normative skill for `skills/database/postgres-query-planner-optimization/`. Owns plan inspection and index guidance.
+- **Must not define:** Application UI state or API route handlers.
+- **Normative base:** `core/fellowship/aragorn.md`, `rules/engineering/architecture-boundaries.md`, `rules/common/code-style-standards.md`, `references/anti-patterns.md`.
+- **Anti-pattern gate:** Blocks AP-1 (unindexed query predicates), AP-18 (full table scan queries on large tables), and AP-28 (unbounded query join cascades).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                                                      |
+| --- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Task             | Inspect, benchmark, and optimize slow PostgreSQL queries and execution plans.                                              |
+| 2   | Target Tool      | PostgreSQL 15+, pg_stat_statements, EXPLAIN (ANALYZE, BUFFERS), pghero, pganalyze.                                         |
+| 3   | Output Format    | Rewritten SARGable SQL queries, composite/partial index DDL, and execution cost reports.                                   |
+| 4   | Constraints      | Prohibit non-SARGable WHERE predicates. Banish unindexed multi-table JOINs on large tables.                                |
+| 5   | Input            | Slow query logs, execution plan JSON/text, table schemas, column cardinality stats.                                        |
+| 6   | Context          | Prevents CPU saturation, buffer pool thrashing, lock contention, and degraded p99 latencies.                               |
+| 7   | Audience         | Database administrators, backend engineers, performance engineering specialists.                                           |
+| 8   | Success Criteria | p99 query latency under 5 milliseconds; 100 percent index coverage on filter columns; zero sequential scans over 10k rows. |
+| 9   | Examples         | See Section 10.                                                                                                             |
+
+## 2. Trigger Matrix
+
+| Trigger Condition                                                    | Fire? | Action / Route                                                 |
+| -------------------------------------------------------------------- | ----- | -------------------------------------------------------------- |
+| Diagnosing slow queries with execution times exceeding 100ms         | YES   | Run EXPLAIN (ANALYZE, BUFFERS) and inspect plan tree.          |
+| Eliminating full table scans (Seq Scan) on tables exceeding 10k rows | YES   | Design covering or composite index matching filter predicates. |
+| Fixing query planner row misestimates caused by stale statistics     | YES   | Trigger ANALYZE and inspect column n_distinct values.          |
+| Migrating table schemas or executing structural partitioning         | NO    | Route to `skills/database/database-migration/`.                |
+
+## 3. Execution Workflow
+
+### Step 1: Capture Plans with Buffer Evidence
+
+- **Action:** Run `EXPLAIN (ANALYZE, BUFFERS, SETTINGS, TIMING)` on the slow query. Focus on shared hit versus read counts to price disk I/O, and compare estimated rows against actuals to spot stale statistics.
+- **Input:** Slow query logs and plan output.
+- **Stop Condition:** Halt when plan output is unavailable; no diagnosis proceeds on timing alone.
+- **Validation:** Buffer evidence recorded with estimate-versus-actual deltas.
+
+### Step 2: Refactor Predicates and Align Indexes
+
+- **Action:** Rewrite function-wrapped filters into SARGable range bounds or add functional indexes. Order composites equality-first with range and sort columns last. Cover hot reads with INCLUDE payloads and partial indexes for status subsets. Create production indexes with CONCURRENTLY only.
+- **Input:** Plan evidence from Step 1.
+- **Stop Condition:** Halt when a hot predicate cannot use any index; record as schema finding.
+- **Validation:** Index DDL drafted with SARGable rewrites per query.
+
+### Step 3: Re-verify Against Cost Targets
+
+- **Action:** Re-run EXPLAIN to confirm Index Scan or Index Only Scan replaces Seq Scan with buffer reads reduced by over 90 percent.
+- **Input:** Applied indexes and rewritten queries.
+- **Stop Condition:** Halt when targets miss; iterate Step 2 instead of accepting.
+- **Validation:** Cost report shows p99 under target with zero large-table seq scans.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the cost report with DDL and rewrites for approval before production apply.
+- **Input:** Completed optimization pack.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero production DDL run by this skill.
+
+## 4. Output Specification
+
+```markdown
+# Planner Optimization Report
+
+- **Plans:** [Before and after EXPLAIN evidence]
+- **Indexes:** [DDL with CONCURRENTLY discipline]
+- **Rewrites:** [SARGable SQL per query]
+- **Costs:** [Buffer and latency deltas]
+```
+
+## 5. Validation Gate
+
+- [ ] Query plan confirms Index Scan or Index Only Scan on large tables.
+- [ ] Predicates avoid wrapping indexed columns in unindexed functions.
+- [ ] Composite indexes follow the equality-first, range-second ordering rule.
+- [ ] Production indexes are created using CREATE INDEX CONCURRENTLY.
+- [ ] Human approval recorded before production apply.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Recommending indexes without EXPLAIN buffer evidence.
+- **Over-execution threshold:** Applying DDL to production without approval.
+- **Calibration default:** Measure buffers first; index second; rewrite third.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP            | Mechanism                                           |
+| ---- | ---------------------- | --------------------------------------------------- |
+| 1    | AP-1 (vague task)      | Requires plan evidence before diagnosis.            |
+| 2    | AP-26 (no scope)       | Bounds rewrites to SARGable forms.                  |
+| 3    | AP-28 (no stop)        | Demands cost targets before acceptance.             |
+| 4    | AP-45 (no human review)| Halts for approval before production apply.         |
+
+## 8. Versioning & Changelog
+
+- **Version:** 3.0.0
+- **Changelog:**
+  - `3.0.0` (2026-09-26) - Full Tier-5 template conformance with Data Modeler role, role source, and seniority bar.
+  - `2.0.0` (2026-09-20) - Elevated to Sauron Tier-5 specification with EXPLAIN BUFFERS analysis and SARGable refactoring patterns.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                                    |
+| ----------- | -------- | ---------------------------------------- |
+| Claude Code | verified | Fully supported via command integration. |
+| Cursor      | verified | Compatible with editor rule context.     |
+| Windsurf    | verified | Fully functional.                        |
+| Antigravity | verified | Certified.                               |
+| Kiro        | verified | Skill path linking.                      |
+| Cline       | verified | Executed in current workspace.           |
+| Raw API     | verified | Model-agnostic execution.                |
+
+## 10. Examples
+
+**Input:** "Orders search scans 5M rows on every query."
+**Output:** Covering functional index built concurrently plus SARGable range rewrite verified by Index Only Scan evidence.
+
+```sql
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_email_lower_covering
+ON orders (LOWER(customer_email), created_at)
+INCLUDE (total_cents, status)
+WHERE status != 'CANCELLED';
+
+SELECT id, total_cents
+FROM orders
+WHERE LOWER(customer_email) = 'vip@example.com'
+  AND created_at >= '2026-09-20 00:00:00+00'
+  AND created_at <  '2026-09-21 00:00:00+00'
+  AND status != 'CANCELLED';
+```
+
+# Prisma Drizzle ORM
+
+## 0. Identity
+
+- **Role:** Data Modeler. Owns type-safe access shapes with migration review discipline.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
+- **Seniority bar:** Staff (Appendix B). Records why select beats include on hot paths (N-plus-one taxes every list view, rejected convenience includes), why Drizzle wins edge workloads (no engine binary, rejected Accelerate dependency), and why reviewed SQL beats generated hope on large tables.
+- **Authority:** Tier-5 normative skill for `skills/database/prisma-drizzle-orm/`. Owns ORM schema and query guidance.
+- **Must not define:** Database server administration; hand-written migration SQL as default path.
+- **Normative base:** `core/fellowship/gimli.md`, `rules/engineering/architecture-boundaries.md`, `references/anti-patterns.md`, and TypeScript ORM practice.
+- **Anti-pattern gate:** Blocks AP-1 (vague task), AP-18 (stale state), AP-26 (no scope boundary), and AP-28 (no stop condition).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                          |
+| --- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Task             | Produce ORM schemas, migrations, and query patterns with N-plus-one eliminated.                 |
+| 2   | Target Tool      | Any agent runtime: Claude Code, Cursor, Copilot, Windsurf, Kiro, Cline, raw API.                |
+| 3   | Output Format    | Data access blueprint with schema, relations, indexes, and query samples.                      |
+| 4   | Constraints      | Relations explicit. Eager load bounded sets. Zero em dashes. Migrations reviewable as diffs.   |
+| 5   | Input            | Domain model, query hot paths, target database, ORM choice.                                     |
+| 6   | Context          | Prevents schema drift where code models and database truth diverge silently.                    |
+| 7   | Audience         | Full-stack engineers using TypeScript data layers.                                              |
+| 8   | Success Criteria | Schema generates clean migrations; hot queries covered; blueprint approved.                     |
+| 9   | Examples         | See Section 10.                                                                                 |
+
+## 2. Trigger Matrix
+
+| Trigger                                      | Fire? | Notes                              |
+| -------------------------------------------- | ----- | ---------------------------------- |
+| "Model our data layer with Prisma"           | YES   | Core trigger.                      |
+| "Fix N-plus-one queries in Drizzle"          | YES   | Core trigger.                      |
+| "/prisma-drizzle-orm"                        | YES   | Slash command trigger.             |
+| "Administer our database server"             | NO    | Out of scope; DBA runbook needed.  |
+| "Design our MongoDB collections"             | NO    | Route to `mongodb-principles`.     |
+
+## 3. Execution Workflow
+
+### Step 1: Choose ORM and Model Domains
+
+- **Action:** Select Prisma for convention speed and Studio debugging or Drizzle for edge runtimes and SQL control. Bound aggregates per domain with explicit cardinality.
+- **Input:** Team SQL comfort and query complexity.
+- **Stop Condition:** Halt and ask when the target database stays unknown.
+- **Validation:** ORM choice recorded with reason.
+
+### Step 2: Author Schema with Relations
+
+- **Action:** Declare models, relations, unique constraints, and index hints matching hot read paths. Default Prisma hot paths to select with counts over include chains.
+- **Input:** Domain model and hot paths.
+- **Stop Condition:** Halt when relations stay implicit; require explicit cardinality.
+- **Validation:** Schema compiles and generates a clean migration diff.
+
+### Step 3: Shape Queries and Review Migrations
+
+- **Action:** Batch related loads, paginate unbounded lists, and verify with query logging. Read every generated migration; hand-edit index concurrency on large tables and split column changes into nullable, backfill, constrain steps.
+- **Input:** Hot path list from Step 2.
+- **Stop Condition:** Halt when a list endpoint lacks pagination or a migration lacks rollback notes.
+- **Validation:** Query log shows bounded statements per request; migrations reviewed.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the blueprint with migration diff and request approval before applying.
+- **Input:** Completed blueprint.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero migrations applied by this skill.
+
+## 4. Output Specification
+
+```markdown
+# ORM Blueprint
+
+- **ORM:** [Prisma or Drizzle with reason]
+- **Schema:** [Models with relations and constraints]
+- **Queries:** [Hot path samples with batching notes]
+- **Migrations:** [Reviewable diff plan]
+```
+
+## 5. Validation Gate
+
+- [ ] ORM choice recorded with reason.
+- [ ] Relations explicit with cardinality.
+- [ ] N-plus-one eliminated on hot paths.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before migrations.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Emitting models without migration review.
+- **Over-execution threshold:** Applying migrations to shared databases.
+- **Calibration default:** Prefer explicit relations over magic cascades.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP            | Mechanism                                           |
+| ---- | ---------------------- | --------------------------------------------------- |
+| 1    | AP-1 (vague task)      | Requires ORM choice with reason.                    |
+| 2    | AP-26 (no scope)       | Bounds aggregates per domain.                       |
+| 3    | AP-18 (stale state)    | Verifies queries with logging evidence.             |
+| 4    | AP-45 (no human review)| Halts for approval before migrations.               |
+
+## 8. Versioning & Changelog
+
+- **Version:** 2.0.0
+- **Changelog:**
+  - `2.0.0` (2026-09-26) - Tier-5 conversion with Data Modeler role, role source, and seniority bar.
+  - `1.0.0` (2026-09-26) - Initial release completing database coverage.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                           |
+| ----------- | -------- | ------------------------------- |
+| Claude Code | verified | Direct slash command execution. |
+| Cursor      | verified | Rules and prompt loading.       |
+| Copilot     | verified | Custom instructions support.    |
+| Windsurf    | verified | Cascade flow integration.       |
+| Kiro        | verified | Steering model execution.       |
+| Cline       | verified | Task step-by-step flow.         |
+| Raw API     | verified | Model-agnostic execution.       |
+
+## 10. Examples
+
+**Input:** "Our Drizzle feed endpoint fires 200 queries per request."
+**Output:** Blueprint with relational batch query, cursor pagination, and bounded statement log.
+
+# SQLite Principles
+
+## 0. Identity
+
+- **Role:** Data Modeler. Owns embedded data shapes with single-file discipline and explicit scale exits.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
+- **Seniority bar:** Staff (Appendix B). Records why WAL plus busy timeout beats default journaling (readers never block writers, rejected out-of-box settings), why local disk beats network mounts (locking guarantees depend on it, rejected NFS placements), and why Postgres graduation waits for measured multi-writer need.
+- **Authority:** Tier-5 normative skill for `skills/database/sqlite-principles/`. Owns pragma, backup, and replication guidance.
+- **Must not define:** Multi-writer cluster design; client-server administration.
+- **Normative base:** `core/fellowship/gimli.md`, `rules/engineering/architecture-boundaries.md`, `rules/common/code-style-standards.md`, `references/anti-patterns.md`.
+- **Anti-pattern gate:** Blocks AP-1 (vague task), AP-18 (stale state), AP-26 (no scope boundary), and AP-28 (no stop condition).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                            |
+| --- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| 1   | Task             | Produce SQLite deployments with tuned pragmas, safe backups, and honest scale limits.            |
+| 2   | Target Tool      | Any agent runtime: Claude Code, Cursor, Copilot, Windsurf, Kiro, Cline, raw API.                 |
+| 3   | Output Format    | Deployment plan with pragmas, backup, replica, and graduation notes.                             |
+| 4   | Constraints      | WAL mode mandatory. Local disk only. Zero em dashes. Single writer acknowledged.                 |
+| 5   | Input            | Workload shape, write concurrency, durability needs, deploy targets.                             |
+| 6   | Context          | Prevents locked-database errors, silent corruption on network mounts, and unbacked single files. |
+| 7   | Audience         | Backend, mobile, and edge engineers shipping embedded data.                                      |
+| 8   | Success Criteria | Pragmas set; backups stream; limits documented; plan approved before deploy.                     |
+| 9   | Examples         | See Section 10.                                                                                  |
+
+## 2. Trigger Matrix
+
+| Trigger                         | Fire? | Notes                         |
+| ------------------------------- | ----- | ----------------------------- |
+| "Run this service on SQLite"    | YES   | Core trigger.                 |
+| "Fix database-is-locked errors" | YES   | Core trigger.                 |
+| "/sqlite-principles"            | YES   | Slash command trigger.        |
+| "Cluster writes across regions" | NO    | Out of scope; needs Postgres. |
+| "Administer our Postgres fleet" | NO    | Route to postgres skill.      |
+
+## 3. Execution Workflow
+
+### Step 1: Tune Pragmas for the Workload
+
+- **Action:** Set WAL journal mode, NORMAL synchronous, foreign keys per connection, 5-second busy timeout, and sized cache with memory temp store. Batch writes in single transactions for 10x to 100x throughput.
+- **Input:** Workload shape and durability needs.
+- **Stop Condition:** Halt when the file sits on network storage; require local disk.
+- **Validation:** Pragma set recorded with rationale per item.
+
+### Step 2: Stream Backups Continuously
+
+- **Action:** Ship WAL frames to object storage with Litestream for near-zero recovery points. Schedule vacuum-into rebuilds on write-heavy files.
+- **Input:** Durability needs from user.
+- **Stop Condition:** Halt when no backup path exists; mark as blocking.
+- **Validation:** Restore rehearsed with measured recovery point.
+
+### Step 3: Replicate Honestly and Exit Cleanly
+
+- **Action:** Serve edge reads with embedded replicas syncing to a primary, funnel writers through one connection, and document Postgres graduation triggers (multi-writer pressure, 100GB analytics, row-level security needs).
+- **Input:** Deploy targets and growth projections.
+- **Stop Condition:** Halt when multi-writer needs meet single-file deployment; require Postgres plan.
+- **Validation:** Replica map plus graduation criteria recorded.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the plan and request approval before deploy.
+- **Input:** Completed plan.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero production writes performed.
+
+## 4. Output Specification
+
+```markdown
+# SQLite Plan
+
+- **Pragmas:** [Tuned set with rationale]
+- **Backup:** [Streaming path with recovery point]
+- **Replicas:** [Topology with writer funnel]
+- **Exit:** [Postgres graduation triggers]
+```
+
+## 5. Validation Gate
+
+- [ ] WAL plus timeout pragmas set.
+- [ ] Backups stream with rehearsed restore.
+- [ ] File lives on local disk.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before deploy.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Shipping default pragmas without backup paths.
+- **Over-execution threshold:** Clustering writes unprompted.
+- **Calibration default:** Single file first; graduate on measured pressure.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP             | Mechanism                         |
+| ---- | ----------------------- | --------------------------------- |
+| 1    | AP-1 (vague task)       | Requires workload shape first.    |
+| 2    | AP-26 (no scope)        | Bounds writers to one funnel.     |
+| 3    | AP-28 (no stop)         | Documents graduation triggers.    |
+| 4    | AP-45 (no human review) | Halts for approval before deploy. |
+
+## 8. Versioning & Changelog
+
+- **Version:** 1.0.0
+- **Changelog:**
+  - `1.0.0` (2026-09-26) - Initial release closing the embedded data gap.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                           |
+| ----------- | -------- | ------------------------------- |
+| Claude Code | verified | Direct slash command execution. |
+| Cursor      | verified | Rules and prompt loading.       |
+| Copilot     | verified | Custom instructions support.    |
+| Windsurf    | verified | Cascade flow integration.       |
+| Kiro        | verified | Steering model execution.       |
+| Cline       | verified | Task step-by-step flow.         |
+| Raw API     | verified | Model-agnostic execution.       |
+
+## 10. Examples
+
+**Input:** "Our edge API hammers Postgres for cacheable reads."
+**Output:** Plan with WAL-tuned SQLite, Litestream backups, embedded read replicas, and Postgres graduation triggers.
+
+# Supabase Principles
+
+## 0. Identity
+
+- **Role:** System Architect. Owns backend safety shape: tenancy model, policy coverage, and secret boundaries.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (System Architect).
+- **Seniority bar:** Staff (Appendix B). Records why deny-by-default RLS beats permissive policies (one blanket rule leaks every tenant, rejected with-check-true shortcuts) and why indexed policy columns beat unindexed ones with measured 170x gaps.
+- **Authority:** Tier-5 normative skill for `skills/database/supabase-principles/`. Owns RLS policy and backend wiring guidance.
+- **Must not define:** Complex analytical query tuning; custom auth server builds.
+- **Normative base:** `core/fellowship/gimli.md`, `rules/engineering/architecture-boundaries.md`, `references/anti-patterns.md`, and Supabase security practice.
+- **Anti-pattern gate:** Blocks AP-1 (vague task), AP-4 (over-permissive access), AP-26 (no scope boundary), and AP-28 (no stop condition).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                          |
+| --- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Task             | Produce a Supabase backend with RLS on every table, scoped storage, and typed clients.         |
+| 2   | Target Tool      | Any agent runtime: Claude Code, Cursor, Copilot, Windsurf, Kiro, Cline, raw API.                |
+| 3   | Output Format    | Backend blueprint with policies, function boundaries, and client patterns.                     |
+| 4   | Constraints      | RLS enabled on all tables. Service role never ships to clients. Zero em dashes.                |
+| 5   | Input            | Data model, auth providers, tenant rules, storage needs, realtime channels.                     |
+| 6   | Context          | Prevents open-table breaches where anon keys read every row.                                    |
+| 7   | Audience         | Full-stack engineers shipping on Supabase.                                                      |
+| 8   | Success Criteria | Every table has tested policies; secrets scoped; blueprint approved before wiring.              |
+| 9   | Examples         | See Section 10.                                                                                 |
+
+## 2. Trigger Matrix
+
+| Trigger                                      | Fire? | Notes                              |
+| -------------------------------------------- | ----- | ---------------------------------- |
+| "Build our backend on Supabase"              | YES   | Core trigger.                      |
+| "Fix our Row Level Security policies"        | YES   | Core trigger.                      |
+| "/supabase-principles"                       | YES   | Slash command trigger.             |
+| "Build a custom auth server"                 | NO    | Out of scope; use Supabase Auth.   |
+| "Tune our Postgres planner stats"            | NO    | Route to postgres skill.           |
+
+## 3. Execution Workflow
+
+### Step 1: Model Tenancy and Auth
+
+- **Action:** Define tenant boundaries, auth providers, and role claims in app_metadata (never user_metadata). Revoke default anon and authenticated grants, then grant back only needed operations.
+- **Input:** Product access requirements.
+- **Stop Condition:** Halt and ask when tenant isolation rules stay undefined.
+- **Validation:** Tenancy model recorded with claim design.
+
+### Step 2: Write Fast RLS Policies per Table
+
+- **Action:** Author separate select, insert, update, and delete policies with USING plus WITH CHECK pairs. Wrap auth calls as subqueries for per-statement caching, scope policies with TO clauses, and index every filtered column.
+- **Input:** Schema and tenancy model from Step 1.
+- **Stop Condition:** Halt when any table lacks policies; mark as blocking finding.
+- **Validation:** Policy tests cover allow and deny paths per role from two real accounts.
+
+### Step 3: Scope Functions, Storage, and Realtime
+
+- **Action:** Keep service role server-side with edge functions authorizing callers themselves. Write storage policies on storage.objects scoped by bucket plus folder, add missing select policies behind upload errors, and authorize realtime channels separately with security-invoker views.
+- **Input:** File and realtime requirements.
+- **Stop Condition:** Halt when service role key appears in client code; require removal.
+- **Validation:** Secret scan clean and bucket policies reviewed.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the blueprint with policy tests and request approval before wiring.
+- **Input:** Completed blueprint.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero production writes performed.
+
+## 4. Output Specification
+
+```markdown
+# Supabase Blueprint
+
+- **Tenancy:** [Model with JWT claims]
+- **Policies:** [RLS per table with test notes]
+- **Functions:** [Edge boundaries with secret scope]
+- **Storage:** [Bucket policies and realtime rules]
+```
+
+## 5. Validation Gate
+
+- [ ] Tenancy model recorded before policies.
+- [ ] Every table carries tested RLS policies.
+- [ ] Service role key absent from client code.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before wiring.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Creating tables without RLS policies.
+- **Over-execution threshold:** Wiring production projects or rotating live keys unprompted.
+- **Calibration default:** Deny by default; open rows explicitly per role.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP            | Mechanism                                           |
+| ---- | ---------------------- | --------------------------------------------------- |
+| 1    | AP-1 (vague task)      | Requires tenancy model first.                       |
+| 2    | AP-4 (over-permissive) | Tests deny paths per role.                          |
+| 3    | AP-44 (leaked secrets) | Scans for service keys in clients.                  |
+| 4    | AP-45 (no human review)| Halts for approval before wiring.                   |
+
+## 8. Versioning & Changelog
+
+- **Version:** 2.0.0
+- **Changelog:**
+  - `2.0.0` (2026-09-26) - Tier-5 conversion with System Architect role, role source, and seniority bar.
+  - `1.0.0` (2026-09-26) - Initial release completing database coverage.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                           |
+| ----------- | -------- | ------------------------------- |
+| Claude Code | verified | Direct slash command execution. |
+| Cursor      | verified | Rules and prompt loading.       |
+| Copilot     | verified | Custom instructions support.    |
+| Windsurf    | verified | Cascade flow integration.       |
+| Kiro        | verified | Steering model execution.       |
+| Cline       | verified | Task step-by-step flow.         |
+| Raw API     | verified | Model-agnostic execution.       |
+
+## 10. Examples
+
+**Input:** "Our Supabase anon key reads other tenants rows. Fix the policies."
+**Output:** Blueprint with tenant JWT claims, per-table deny-by-default policies, and cross-tenant denial tests.
+
+# Zero-Downtime Table Partitioning
+
+## 0. Identity
+
+- **Role:** Data Modeler. Owns partition shapes and cutover plans with lock-bounded guarantees.
+- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
+- **Seniority bar:** Staff (Appendix B). Records why four-phase shadow migration beats in-place repartitioning (traffic never blocks, rejected ACCESS EXCLUSIVE windows) and why partition keys join primary keys (constraint validity demands it, rejected keyless partitions).
+- **Authority:** Tier-5 normative skill for `skills/database/zero-downtime-table-partitioning/`. Owns partitioning plans and cutover guidance.
+- **Must not define:** Application UI presentation or client-side routing logic.
+- **Normative base:** `core/fellowship/aragorn.md`, `rules/engineering/architecture-boundaries.md`, `rules/common/code-style-standards.md`, `references/anti-patterns.md`.
+- **Anti-pattern gate:** Blocks AP-1 (unbounded exclusive table locks), AP-18 (I/O starvation during backfills), and AP-28 (unbounded migration loops).
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                                 |
+| --- | ---------------- | ----------------------------------------------------------------------------------------------------- |
+| 1   | Task             | Convert high-volume monolithic database tables into partitioned architectures with zero downtime.     |
+| 2   | Target Tool      | PostgreSQL declarative range/hash partitioning, pg_partman, temporal partition automation.            |
+| 3   | Output Format    | Four-phase DDL scripts, low-impact batch backfill procedures, and atomic swap transactions.           |
+| 4   | Constraints      | Prohibit long-running exclusive locks (`ACCESS EXCLUSIVE`). Maximum 2-second lock timeout. Yield I/O. |
+| 5   | Input            | High-volume table schema, growth projections, query filter access patterns.                           |
+| 6   | Context          | Prevents database connection pool exhaustion and application downtime during schema refactoring.      |
+| 7   | Audience         | Principal database engineers, site reliability engineers, infrastructure platform leads.              |
+| 8   | Success Criteria | Zero connection timeout errors; sub-2-second cutover lock; transparent query partition pruning.       |
+| 9   | Examples         | See Section 10.                                                                                        |
+
+## 2. Trigger Matrix
+
+| Trigger Condition                                              | Fire? | Action / Route                                                   |
+| -------------------------------------------------------------- | ----- | ---------------------------------------------------------------- |
+| Table size exceeds 20 million rows or vacuum causes I/O spikes | YES   | Initiate four-phase zero-downtime partitioning workflow.         |
+| Table queries predominantly filter by date ranges or tenant ID | YES   | Design declarative range or hash partitioned schema.             |
+| Small table under 500,000 records                              | NO    | Reject partitioning; optimize composite indexes instead.         |
+| General SQL query optimization and EXPLAIN ANALYZE tuning      | NO    | Route to `skills/database/postgres-query-planner-optimization/`. |
+
+## 3. Execution Workflow
+
+### Step 1: Create Shadow Structure
+
+- **Action:** Create the partitioned parent with `PARTITION BY RANGE`, monthly child partitions, a DEFAULT partition for out-of-range rows, and composite primary keys including the partition key.
+- **Input:** Table schema and growth projections.
+- **Stop Condition:** Halt when primary keys exclude the partition key; require composite keys.
+- **Validation:** Parent declares range partitioning with default partition attached.
+
+### Step 2: Dual-Write and Backfill Safely
+
+- **Action:** Attach replication triggers for live mutations, then backfill history in 2,000 to 5,000 row batches with sleep intervals to protect disk I/O.
+- **Input:** Write load and backfill window.
+- **Stop Condition:** Halt on replication lag spikes; pause backfill before proceeding.
+- **Validation:** Live mutations replicate in real time with zero lag spikes.
+
+### Step 3: Cut Over Atomically
+
+- **Action:** Rename legacy and shadow tables inside one transaction wrapped in a 2-second lock timeout, rehearsed first in staging under simulated load.
+- **Input:** Cutover window and staging evidence.
+- **Stop Condition:** Halt when staging rehearsal is missing; require it.
+- **Validation:** Swap completes in under 200 milliseconds.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the migration pack with staging evidence and request approval before production cutover.
+- **Input:** Completed migration pack.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero production DDL run by this skill.
+
+## 4. Output Specification
+
+```markdown
+# Partitioning Migration Pack
+
+- **Schema:** [Parent with partitions and keys]
+- **Backfill:** [Batched procedure with yields]
+- **Cutover:** [Atomic swap with lock timeout]
+- **Evidence:** [Staging rehearsal results]
+```
+
+## 5. Validation Gate
+
+- [ ] Lock timeout is explicitly set to 2 seconds or less for cutover transactions.
+- [ ] Partition key is included in all primary keys and unique indexes.
+- [ ] Default partition exists to prevent insertion errors.
+- [ ] Backfill scripts use bounded batches with sleep intervals to protect disk I/O.
+- [ ] Human approval recorded before production cutover.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Planning partitions without growth and filter analysis.
+- **Over-execution threshold:** Running DDL against production without staging rehearsal.
+- **Calibration default:** Partition past 20M rows; index below it.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP            | Mechanism                                           |
+| ---- | ---------------------- | --------------------------------------------------- |
+| 1    | AP-1 (vague task)      | Requires schema and growth inputs first.            |
+| 2    | AP-18 (stale state)    | Yields I/O between bounded batches.                 |
+| 3    | AP-28 (no stop)        | Demands staging rehearsal before cutover.           |
+| 4    | AP-45 (no human review)| Halts for approval before production cutover.       |
+
+## 8. Versioning & Changelog
+
+- **Version:** 3.0.0
+- **Changelog:**
+  - `3.0.0` (2026-09-26) - Full Tier-5 template conformance with Data Modeler role, role source, and seniority bar.
+  - `2.0.0` (2026-09-20) - Elevated to Sauron Tier-5 specification with non-blocking backfill and atomic cutover patterns.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                                    |
+| ----------- | -------- | ---------------------------------------- |
+| Claude Code | verified | Fully supported via command integration. |
+| Cursor      | verified | Compatible with editor rule context.     |
+| Windsurf    | verified | Fully functional.                        |
+| Antigravity | verified | Certified.                               |
+| Kiro        | verified | Skill path linking.                      |
+| Cline       | verified | Executed in current workspace.           |
+| Raw API     | verified | Model-agnostic execution.                |
+
+## 10. Examples
+
+**Input:** "Audit log table passed 40M rows and vacuum spikes I/O weekly."
+**Output:** Four-phase migration pack with monthly partitions, 5,000-row backfill batches, and sub-200ms atomic cutover.
+
+```sql
+CREATE TABLE IF NOT EXISTS audit_logs_partitioned (
+  id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  action VARCHAR(64) NOT NULL,
+  payload JSONB,
+  PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
+
+BEGIN;
+SET LOCAL lock_timeout = '2s';
+ALTER TABLE legacy_audit_logs RENAME TO legacy_audit_logs_retired;
+ALTER TABLE audit_logs_partitioned RENAME TO audit_logs;
+COMMIT;
+```

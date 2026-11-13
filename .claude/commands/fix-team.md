@@ -15,13 +15,13 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 | # | Agent | Harness skills it applies | What it fixes |
 |---|---|---|---|
 | 1 | **api-security** | api-security | Auth, RLS, RPCs, Edge Functions — fix per the 14 rules |
-| 2 | **devops** | devops-basics | Docker images, graceful shutdown, health checks, logging, memory guards |
+| 2 | **devops** | nodejs-quality (DevOps Basics section) | Docker images, graceful shutdown, health checks, logging, memory guards |
 | 3 | **ux-edge-states** | ux-edge-states | Loading / empty / error / offline states, keyboard + screen-reader access, dark mode |
-| 4 | **backend-performance** | backend-performance | Queries, N+1, missing indexes, re-renders, Edge Function cost |
+| 4 | **backend-performance** | nodejs-quality (Backend Performance section) | Queries, N+1, missing indexes, re-renders, Edge Function cost |
 | 5 | **system-design** | system-design | Status transitions, trust boundaries, races, idempotency |
 | 6 | **backend** (area) | safe-editing, debug-first, owasp-top10, nodejs-quality, rea, ub-mode | Code correctness and quality across the whole backend |
 | 7 | **frontend** (area) | motion-design, frontend-performance, design-taste-frontend, ui-ux-pro-max, vengeance-ui | Real animations, render performance, visual quality, anti-slop |
-| 8 | **devops** (area) | devops-basics (the CI guidance in its "Also apply" section) | The live shipping path: tests, build, lint, typecheck, migrations, deploy config |
+| 8 | **devops** (area) | nodejs-quality (the CI guidance in its DevOps Basics section) | The live shipping path: tests, build, lint, typecheck, migrations, deploy config |
 | 9 | **ub-mode** | ub-mode | Clean Code organization across the whole fix: TDD first, smallest edit, CRAP < 10, duplication ≥ 0.8 out, small ordered commits + log |
 | 10 | **superpowers** | writing-plans, brainstorming | The fix plan first (file map, rollback anchor, bite-sized TDD tasks, each ending in a commit) + the hard gate (no fix until the user approves the plan) |
 | 11 | **verification** | verify_before_done, instruction_registers, verify_provider_claims, verify_publish_install_surface, playwright-cli | The fixer at the last: re-checks every fix (defined AND called, remote evidence, publish/install surfaces) and fixes what verification catches. For fixes touching a runnable web UI, it also drives the real app with playwright-cli — a UI fix is not verified by reading code alone |
@@ -68,11 +68,11 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 **1 — api-security fixer brief:** "Fix the api-security findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: api-security. Fix: auth, RLS policies, RPCs and Edge Functions, rate limits — per the skill's 14 rules. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
-**2 — devops fixer brief:** "Fix the devops findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics. Fix: Docker images, graceful shutdown, health checks, logging, memory guards — per the skill's 12 rules. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
+**2 — devops fixer brief:** "Fix the devops findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — its DevOps Basics section. Fix: Docker images, graceful shutdown, health checks, logging, memory guards — per the skill's 12 rules. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
 **3 — ux-edge-states fixer brief:** "Fix the ux-edge-states findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: ux-edge-states. Fix: loading / empty / error / offline states, keyboard operability, screen-reader labels, dark mode. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
-**4 — backend-performance fixer brief:** "Fix the backend-performance findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: backend-performance. Fix: queries (N+1, missing indexes, unbounded selects), re-renders and fetch loops, Edge Function cost, caching. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
+**4 — backend-performance fixer brief:** "Fix the backend-performance findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — its Backend Performance section. Fix: queries (N+1, missing indexes, unbounded selects), re-renders and fetch loops, Edge Function cost, caching. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
 **5 — system-design fixer brief:** "Fix the system-design findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: system-design. Fix: status transitions, trust boundaries, races and idempotency, scale. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
@@ -80,7 +80,7 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 **7 — frontend area fixer brief:** "Fix the frontend findings in <audit report> on <repo> at <commit> as a whole. Read these skills first and apply them genuinely, not as labels: motion-design, frontend-performance, design-taste-frontend, ui-ux-pro-max, vengeance-ui. Fix: animations are real motion, not static visuals; render performance; visual quality (no generic purple-blue gradients, no floating orbs, no identical glass cards); contrast (WCAG AA on text over gradients). Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
-**8 — devops area fixer brief:** "Fix the shipping-path findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics — in particular the CI guidance in its 'Also apply' section. Fix: CI green on this exact commit, tests really passing (pass count AND exit code AND the 'Errors' line), build, lint, and typecheck clean, migrations idempotent and re-runnable, deploy config matching the live target, no secrets in the repo. Fix-only — fix what the audit found, nothing more. Every fix: finding file:line or run URL, what you changed, and the command output proving it."
+**8 — devops area fixer brief:** "Fix the shipping-path findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — in particular the CI guidance in the 'Also apply' part of its DevOps Basics section. Fix: CI green on this exact commit, tests really passing (pass count AND exit code AND the 'Errors' line), build, lint, and typecheck clean, migrations idempotent and re-runnable, deploy config matching the live target, no secrets in the repo. Fix-only — fix what the audit found, nothing more. Every fix: finding file:line or run URL, what you changed, and the command output proving it."
 
 **9 — ub-mode fixer brief:** "Make the fixes in <fix run> on <repo> at <commit> clean and organized. Read this skill first and apply it genuinely, not as a label: ub-mode. Enforce across the whole fix: TDD first (failing test before the change); smallest edit that solves the problem (one decision lives in one place); sequence the work into verifiable units (finish one small unit and check it, then start the next); fix root causes, not symptoms; every function under CRAP 10; duplication ≥ 0.8 eliminated; small ordered commits, each saying why, what changed, and how it was proved; a log of every action and the reason. Where the crapper/dryer/mutator tools are not installed, apply the same thresholds by manual review and say so. Fix-only — organize what the audit found, nothing more. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
@@ -100,7 +100,7 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 ### Learn more (sources for the skills this team applies)
 - OWASP Top 10 (owasp-top10, api-security): https://owasp.org/www-project-top-ten/
-- Node.js best practices (backend-performance, devops-basics, nodejs-quality): https://github.com/goldbergyoni/nodebestpractices
+- Node.js best practices (nodejs-quality, incl. its merged backend-performance and devops-basics sections): https://github.com/goldbergyoni/nodebestpractices
 - System Design Primer (system-design): https://github.com/donnemartin/system-design-primer
 - Front-End Checklist (frontend-performance): https://github.com/thedaviddias/Front-End-Checklist
 - GSAP / GreenSock (motion-design): https://gsap.com/

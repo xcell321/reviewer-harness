@@ -126,8 +126,8 @@ test("empty, Unicode, and 300-char names are rejected", () => {
 
 test("add preserves a user-edited skill file", () => {
   const dir = makeTempDir();
-  const dest = join(dir, "skills", "quality", "safe-editing.md");
-  mkdirSync(join(dir, "skills", "quality"), { recursive: true });
+  const dest = join(dir, "skills", "quality", "safe-editing", "SKILL.md");
+  mkdirSync(join(dir, "skills", "quality", "safe-editing"), { recursive: true });
   writeFileSync(dest, "MY CUSTOM EDIT\nplus the bundled text\n");
 
   let warnings;
@@ -137,11 +137,11 @@ test("add preserves a user-edited skill file", () => {
   assert.equal(existsSync(dest + ".bak"), true);
   assert.match(readFileSync(dest + ".bak", "utf8"), /MY CUSTOM EDIT/);
   assert.match(warnings, /locally modified/i);
-  assert.match(warnings, /safe-editing\.md/);
+  assert.match(warnings, /safe-editing/);
   // The destination is now the bundled copy (the install still happens).
   assert.equal(
     readFileSync(dest, "utf8"),
-    readFileSync(join(REPO_ROOT, "skills", "quality", "safe-editing.md"), "utf8")
+    readFileSync(join(REPO_ROOT, "skills", "quality", "safe-editing", "SKILL.md"), "utf8")
   );
 });
 
@@ -176,7 +176,7 @@ test("add preserves a user-edited command file", () => {
 test("add of an unchanged file writes nothing and warns nothing", () => {
   const dir = makeTempDir();
   addSkill("safe-editing", dir);
-  const dest = join(dir, "skills", "quality", "safe-editing.md");
+  const dest = join(dir, "skills", "quality", "safe-editing", "SKILL.md");
   const before = readFileSync(dest, "utf8");
   const warnings = captureWarnings(() => addSkill("safe-editing", dir));
   assert.equal(readFileSync(dest, "utf8"), before);
@@ -201,7 +201,7 @@ function assertQuotedDescription(content, skill) {
 
 test("generated frontmatter parses as strict YAML", () => {
   const bundled = loadBundledSkills();
-  assert.equal(bundled.length, 40);
+  assert.equal(bundled.length, 34);
   // rea + ub-mode are the two the audit proved unparseable (their
   // descriptions contain ": " — rea col 73, ub-mode col 97).
   for (const name of ["rea", "ub-mode"]) {
@@ -209,7 +209,7 @@ test("generated frontmatter parses as strict YAML", () => {
     assert.match(skill.description, /: /);
     assertQuotedDescription(skillCommandContent(skill, bundled), skill);
   }
-  // All 40 bundled skills, command + bundle form.
+  // All 34 bundled skills, command + bundle form.
   for (const skill of bundled) {
     assertQuotedDescription(skillCommandContent(skill, bundled), skill);
     const bundle = skillBundleContent(skill, bundled);

@@ -1,6 +1,6 @@
 ---
 name: design-taste-frontend
-description: 'Anti-slop design taste distilled from Leonxlnx/taste-skill (v2.5.1) — kind-first layout, dealt palettes/type/heroes, house rules with exact numbers, copy ban lists, motion tokens. Use when building, redesigning, or reviewing a landing/company/product/shop/cafe/hotel/studio/SaaS/AI/devtool/game site, or when a page looks generic, templated, or "AI-made".'
+description: 'Anti-slop design taste distilled from Leonxlnx/taste-skill (v2.5.1) — kind-first layout, dealt palettes/type/heroes, house rules with exact numbers, copy ban lists, motion tokens. Use when building, redesigning, or reviewing a landing/company/product/shop/cafe/hotel/studio/SaaS/AI/devtool/game site, or when a page looks generic, templated, or "AI-made". Includes a 3-tier design-token architecture (rules 60–65).'
 ---
 
 ## Skill: design-taste-frontend
@@ -106,6 +106,16 @@ When to use: build, design, redesign, restyle, polish, or review a landing page,
 57. **Check in a real browser over HTTP** (never `file://`), at widths 1440, 1024, 820, 768, 390 (layout check also 1440×900, 1024×768, 820×1180, 768×1024, 390×844; gate walks the page at 320 for overflow/collide/tap-size). Fix every FAIL (and every copy-lint WARN, or say why it stays).
 58. **The gate holds the finish until no fixable FAIL is left, three rounds at most.** Last line must be `GATE: PASS` or `GATE: OPEN`. A FAIL judged false is waived with its reason — never fixed by gaming the check.
 59. **Tap targets:** every link/control outside running text ≥44px tall; a FAIL when another target is under 8px away. Nothing past the screen at 320.
+
+### Design tokens — the 3-tier system
+*Source: token architecture merged 2026-11-13 from [iging/sauron](https://github.com/iging/sauron) `design-tokens` (MIT), adapted to this skill's checkable style. The dealt values still come from rules 26–33 and the library; this section governs how they are named, tiered, and consumed.*
+
+60. **Three tiers, always.** Primitive tokens hold raw values (`--blue-600`, `--space-4`); semantic tokens name the job (`--accent`, `--g-main`, `--m-in`); component tokens name the part (`--btn-bg`, `--card-pad`). A component consumes semantic and component tokens only — a primitive or a raw value inside a component is a FAIL.
+61. **Semantic names, never literal ones.** A token is named for what it does, not what it looks like: `--ink`, not `--slate-900`; `--accent`, not `--orange`. One change at the semantic tier re-skins the whole page; a literal name forces a hex hunt.
+62. **Colour ramps are OKLCH, built once per hue.** Each ramp steps lightness evenly in OKLCH so the steps look even; hex values are exported from the ramp, never picked ad hoc per component. The violet ban (rule 28) applies at ramp level.
+63. **Scales are the tokens.** Spacing on the 4px scale (rule 49), type on the rule-22 scale, radius on the rule-24 scale, motion on the rule-51 tokens — each value exists exactly once, as a named token, before any component uses it. An arbitrary value with no token mapping is a FAIL.
+64. **Six states per interactive component, as tokens:** default, hover, focus, active, disabled, and loading/error where the part has them — each state a token assignment, never an ad-hoc override. A component with an undocumented state is unfinished. (State *behaviour* lives in `ux-edge-states`; the state *values* live here.)
+65. **One icon size scale:** icon sizes come from a fixed tier set tied to the type scale (16/20/24), one icon set per page (rule 11), rendered in `currentColor` so icons inherit the semantic ink token.
 
 ### Edsiel's rules (local — not from the source)
 - **No green by default (2026-11-07):** never default to green or jade accents — Edsiel finds them ugly. The accent comes from the client or product (rule 27); a dealt palette that lands green-dominant with no client basis is dealt again. (A client's own green brand colour is his call, not a default.)

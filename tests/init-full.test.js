@@ -141,8 +141,8 @@ test("initFull: React project gets EVERYTHING, adapted", () => {
     String(f).endsWith(".md")
   );
   assert.equal(skillFiles.length, bundledSkills.length);
-  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team.md")));
-  assert.ok(existsSync(join(dir, "skills", "architecture", "system-design.md")));
+  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team", "SKILL.md")));
+  assert.ok(existsSync(join(dir, "skills", "architecture", "system-design", "SKILL.md")));
 
   // Agents + commands in both runtime formats.
   for (const a of bundledAgents) {
@@ -176,7 +176,7 @@ test("initFull: empty folder still installs everything, generically", () => {
   assert.equal(r.config.created, true);
   const config = readConfig(dir);
   assert.equal(config.skills.length, listBundledSkills().length);
-  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team.md")));
+  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team", "SKILL.md")));
   assert.ok(existsSync(join(dir, "memory", "INDEX.md")));
 });
 
@@ -242,7 +242,7 @@ test("store: every bundled skill carries a category (v1.17.1 organization)", () 
   const byName = new Map(all.map((s) => [s.name, s.category]));
   assert.equal(byName.get("fix-team"), "workflow");
   assert.equal(byName.get("system-design"), "architecture");
-  assert.equal(byName.get("backend-performance"), "backend");
+  assert.equal(byName.get("nodejs-quality"), "backend");
   assert.equal(byName.get("design-taste-frontend"), "frontend");
   assert.equal(byName.get("owasp-top10"), "security");
   // The pinned public listing shape stays { name, description }.
@@ -256,7 +256,7 @@ test("store: addSkill installs into the project's matching category folder", () 
   initProject(dir);
   const r = addSkill("fix-team", dir);
   assert.equal(r.enabled, true);
-  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team.md")));
+  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team", "SKILL.md")));
   assert.deepEqual(readConfig(dir).skills, ["fix-team"]);
 });
 
@@ -280,6 +280,6 @@ test("CLI init: full setup in one command, with a receipt", () => {
   assert.match(res.stdout, /Project: demo-app/);
   assert.match(res.stdout, /Skills : \d+ installed/);
   assert.match(res.stdout, /Done — everything is installed/);
-  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team.md")));
+  assert.ok(existsSync(join(dir, "skills", "workflow", "fix-team", "SKILL.md")));
   assert.equal(readConfig(dir).skills.length, listBundledSkills().length);
 });
