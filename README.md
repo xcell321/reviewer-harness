@@ -249,14 +249,14 @@ npx reviewer-harness skills add no-hallucination
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer-harness skills list            # see all 28 bundled skills, grouped by category (+ which are enabled)
+reviewer-harness skills list            # see all 38 bundled skills, grouped by category (+ which are enabled)
 reviewer-harness skills add <name>      # install into the project and enable it in the config
 reviewer-harness skills remove <name>   # disable it in the config and remove it
 ```
 
-The skills are organized into **8 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (7), `quality` (7), `backend` (2), `security` (2), `ai-engineering` (2), `architecture` (1), `devops` (1).
+The skills are organized into **9 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (7), `quality` (7), `backend` (2), `security` (2), `ai-engineering` (2), `architecture` (1), `devops` (1), `database` (10).
 
-All 28 bundled skills:
+All 38 bundled skills:
 
 | Skill | What it does |
 |---|---|
@@ -288,6 +288,18 @@ All 28 bundled skills:
 | `verify_provider_claims` | Check a provider's live documentation or the user's verified setup before asserting its current availability, free tier, pricing, endpoints, or retired status. |
 | `verify_publish_install_surface` | Verify a published version on each surface the user can see (commit/tag, registry, installed file) before claiming it is installed or live. |
 | `playwright-cli` | Browser automation and real web-app testing for coding agents, from Microsoft's Playwright CLI — drive the app, turn the session into Playwright tests, attach screenshot evidence. |
+| `database-migration` | Plan and execute schema changes and migration scripts safely — zero-downtime and type-sync discipline. |
+| `elasticsearch-patterns` | Elasticsearch mappings, analyzers, and search queries with relevance tuning. |
+| `firebase-principles` | Firebase production rules — Firestore modeling, cheap security rules, triple-layer security, cost-aware reads, Cloud Function boundaries. |
+| `mongodb-principles` | MongoDB schemas, indexes, and aggregation pipelines with document modeling discipline. |
+| `mysql-principles` | MySQL schemas, indexes, and transactions with InnoDB discipline for read-heavy workloads. |
+| `postgres-query-planner-optimization` | Deep EXPLAIN ANALYZE inspection for PostgreSQL — kill sequential scans, tune index cardinality and join algorithms, write SARGable queries. |
+| `prisma-drizzle-orm` | Type-safe data access with Prisma or Drizzle — schemas, migrations, and query patterns. |
+| `sqlite-principles` | SQLite production rules — WAL pragmas, single-writer discipline, Litestream backup, Turso edge replicas, Postgres graduation criteria. |
+| `supabase-principles` | Supabase backends done safely — Row Level Security on every table, edge functions, realtime channels. |
+| `zero-downtime-table-partitioning` | PostgreSQL range and hash partitioning migrations without exclusive table locks or downtime. |
+
+The 10 `database` skills are cloned verbatim from [iging/sauron](https://github.com/iging/sauron/tree/main/skills/database) (MIT-licensed) — the harness reviewer-harness was modeled on. Their full text is unchanged, including the original frontmatter.
 
 Enabled skills render below the rules in every instruction file — and sync also generates a **slash command** for each one (`.opencode/commands/<name>.md` and `.claude/commands/<name>.md`), so every enabled skill appears in the `/` menu of OpenCode and Claude, ready to invoke on a specific task: `/safe-editing`, `/no-hallucination`, and so on.
 
@@ -328,7 +340,7 @@ Four guardrails run before any file is written:
 
 Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured at audit (22 skills): **266,198 bytes** of skill source → **2,660,559 bytes** of generated output across 124 files (**10×** amplification); `CLAUDE.md` alone is **262,243 bytes** today. Growth is linear: at 10× skills (220), each instruction file would be ≈ 2.6 MB and total output ≈ 26.6 MB. The binding constraint is the AI runtime's context window, not disk.
 
-**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 3× today's 28 skills (≈ 90 skills) at the current amplification. Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 3× today's 38 skills (≈ 114 skills) at the current amplification. Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
 
 Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling.
 
@@ -415,7 +427,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer-harness skills list` | List all 28 bundled skills, grouped by category (+ which are enabled) |
+| `reviewer-harness skills list` | List all 38 bundled skills, grouped by category (+ which are enabled) |
 | `reviewer-harness skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer-harness skills remove <name>` | Disable a skill and remove it |
 | `reviewer-harness agents list` | List the bundled sub-agents |

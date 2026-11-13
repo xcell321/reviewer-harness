@@ -47,7 +47,17 @@
     "instruction_registers",
     "verify_provider_claims",
     "verify_publish_install_surface",
-    "playwright-cli"
+    "playwright-cli",
+    "database-migration",
+    "elasticsearch-patterns",
+    "firebase-principles",
+    "mongodb-principles",
+    "mysql-principles",
+    "postgres-query-planner-optimization",
+    "prisma-drizzle-orm",
+    "sqlite-principles",
+    "supabase-principles",
+    "zero-downtime-table-partitioning"
   ],
   "version": "1.16.0"
 }
