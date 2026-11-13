@@ -4,6 +4,23 @@ description: 'Builds Supabase backends with Row Level Security, edge functions, 
 
 # Supabase Principles
 
+## Purpose
+
+Builds Supabase backends with Row Level Security, edge functions, and realtime channels done safely: a backend with RLS on every table, scoped storage, and typed clients, plus the merged PostgreSQL query-planner optimization guidance. It prevents open-table breaches where anon keys read every row.
+
+## When to use
+
+| Trigger | Example |
+| --- | --- |
+| "Build our backend on Supabase" | Core trigger. |
+| "Fix our Row Level Security policies" | Core trigger. |
+| "/supabase-principles" | Slash command trigger. |
+| Diagnosing slow PostgreSQL queries, eliminating sequential scans, or fixing planner row misestimates | Merged query-planner section trigger (see its Section 2 in Rules). |
+
+Do NOT use when: the work is a MySQL schema — `mysql-principles` owns that; MongoDB collection modeling belongs to `mongodb-principles`; a Firebase backend belongs to `firebase-principles`; an embedded SQLite deployment belongs to `sqlite-principles`; executing schema migrations and table partitioning belongs to `database-migration`.
+
+## Rules
+
 ## 0. Identity
 
 - **Role:** System Architect. Owns backend safety shape: tenancy model, policy coverage, and secret boundaries.
@@ -254,5 +271,38 @@ WHERE LOWER(customer_email) = 'vip@example.com'
   AND created_at <  '2026-09-21 00:00:00+00'
   AND status != 'CANCELLED';
 ```
+
+## Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Tenancy model recorded before policies.
+- [ ] Every table carries tested RLS policies.
+- [ ] Service role key absent from client code.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before wiring.
+- [ ] Query plan confirms Index Scan or Index Only Scan on large tables.
+- [ ] Predicates avoid wrapping indexed columns in unindexed functions.
+- [ ] Composite indexes follow the equality-first, range-second ordering rule.
+- [ ] Production indexes are created using CREATE INDEX CONCURRENTLY.
+- [ ] Human approval recorded before production apply.
+
+The last five items restate the merged query-planner section's own validation gate (its Section 5 in Rules).
+
+## Examples
+
+**Do:** "Our Supabase anon key reads other tenants rows. Fix the policies." — produce a blueprint with tenant JWT claims, per-table deny-by-default policies, and cross-tenant denial tests (the skill's own Section 10 example, kept verbatim in Rules). For the merged planner section: "Orders search scans 5M rows on every query." — produce a covering functional index built concurrently plus a SARGable range rewrite verified by Index Only Scan evidence.
+
+**Do not:** create tables without RLS policies, or wire production projects and rotate live keys unprompted (the under- and over-execution thresholds in Section 6 of Rules).
+
+## Sources
+
+- Cloned verbatim from iging/sauron (MIT) — the entire Rules body above is the sauron skill text, unchanged, including its section headings, trigger matrices, validation gates, portability matrices, and anti-pattern ids.
+- The skill itself names Supabase security practice in its normative base (see Section 0 in Rules); no separate distillation from Supabase documentation is claimed here.
+- Merged 2026-11-13 from postgres-query-planner-optimization (iging/sauron, MIT) — the merged query-planner content in Rules, as recorded in the merged section header inside Rules and in the frontmatter description.
+
+## Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

@@ -1,6 +1,7 @@
 ---
 name: mysql-principles
 description: Designs MySQL schemas, indexes, and transactions with InnoDB discipline for read-heavy workloads. Excludes PostgreSQL-specific tuning.
+version: 1.0.0
 department: database
 ownerAgent: gimli
 triggerCommand: /mysql-principles
@@ -13,6 +14,22 @@ antiPatternsPrevented:
 ---
 
 # MySQL Principles
+
+## Purpose
+
+Designs MySQL schemas, indexes, and transactions with InnoDB discipline for read-heavy workloads: schema, index, and transaction designs that survive growth without locking pain. It prevents missing-index full scans and migration locks that take products offline.
+
+## When to use
+
+| Trigger | Example |
+| --- | --- |
+| "Design our MySQL schema and indexes" | Core trigger. |
+| "Fix slow queries and locking on MySQL" | Core trigger. |
+| "/mysql-principles" | Slash command trigger. |
+
+Do NOT use when: the work is PostgreSQL query-planner tuning — `supabase-principles` carries the merged PostgreSQL query-planner guidance; document-store modeling belongs to `mongodb-principles`; an embedded SQLite deployment belongs to `sqlite-principles`; ORM data-access modeling belongs to `prisma-drizzle-orm`; executing schema migrations belongs to `database-migration`.
+
+## Rules
 
 ## 0. Identity
 
@@ -135,3 +152,28 @@ antiPatternsPrevented:
 
 **Input:** "Our orders table locks during deploys and search is slow."
 **Output:** Blueprint with composite index on status plus created order, covering index for search reads, and online alter plan.
+
+## Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Hot paths captured before schema work.
+- [ ] Every hot read maps to index coverage.
+- [ ] Migrations avoid table locks on large tables.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before DDL.
+
+## Examples
+
+**Do:** "Our orders table locks during deploys and search is slow." — produce a blueprint with composite index on status plus created order, covering index for search reads, and online alter plan (the skill's own Section 10 example, kept verbatim in Rules).
+
+**Do not:** emit schemas without slow query evidence, or run DDL against shared databases (the under- and over-execution thresholds in Section 6 of Rules).
+
+## Sources
+
+- Cloned verbatim from iging/sauron (MIT) — the entire Rules body above is the sauron skill text, unchanged, including its section headings, trigger matrices, validation gates, portability matrices, and anti-pattern ids.
+- The skill itself names MySQL 8.4 practice in its normative base (see Section 0 in Rules); no separate distillation from MySQL documentation is claimed here.
+
+## Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.

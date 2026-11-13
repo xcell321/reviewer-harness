@@ -1,11 +1,28 @@
 ---
 name: audit-team
 description: Run an 8-agent parallel audit — 5 skill specialists (api-security, devops via nodejs-quality, ux-edge-states, backend-performance via nodejs-quality, system-design) plus 3 area agents (backend, frontend, DevOps) — over a target repo, each applying the relevant reviewer-harness skills, report-only, no edits. Merged triage with severities; the user picks what to fix.
+version: 1.0.0
 ---
 
 ## Skill: audit-team
 
+### Purpose
+
+Run a report-only audit of a target repo with eight parallel agents — five skill specialists and three area agents — each applying the reviewer-harness skills for its area. It prevents unverified claims and unapproved fixes: every finding carries file, line, and evidence, is graded by severity, and stops at a merged triage report the user picks from.
+
+### When to use
+
 When to use: the user asks for a team audit, a full review, or "/audit-team" on a repo — or after a big fix round, to verify the fixes held and catch regressions. Always report-only: auditors read, never edit.
+
+| Trigger | Example |
+| --- | --- |
+| The user asks for a team audit or a full review of a repo | "Run /audit-team on this repo" |
+| The user asks for an audit after a big fix round | "Re-audit to check the fixes held" |
+| A target commit needs regressions checked against the previous round | "Check whether the round-2 fixes still hold" |
+
+Do NOT use when: the user has already picked findings and wants them fixed — `fix-team` owns fixing. A design question before anything is built belongs to `brainstorming`, and writing the implementation plan belongs to `writing-plans`.
+
+### Rules
 
 Every rule below is built from the harness's own skills (cited per agent) and from the audit pattern proven on the Community Pantry repo (audit rounds 1–3, round 3: 5 auditors, 65 findings, merged at `799b3b6`). If a rule doesn't apply, say why.
 
@@ -29,8 +46,6 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 **The report is written with explain-bisaya** — findings in plain Bisaya, technical detail (file paths, code, SQL) in English.
 
 **Not applied, on purpose: clone.** Clone is a build skill (reproduce a design from a URL) — there is nothing for it to audit. Listing it as "applied" would be a label, not a real check. If the target itself is a clone task, run `clone` separately, not inside an audit.
-
-### Rules
 
 1. **Verify the target before auditing.** Confirm the exact commit under audit (remote HEAD, not a stale local clone) and that the tree the agents read is byte-identical to it. Auditing the wrong commit produces findings about code that no longer exists.
    *Source: Pantry audit round 3 — the local clone was stale at `8c73c5f` while remote had moved; the audit ran on a fresh snapshot of remote HEAD instead.*
@@ -74,7 +89,10 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 **8 — devops area agent brief:** "Audit the live shipping path of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — in particular the CI guidance in the 'Also apply' part of its DevOps Basics section. Check: CI is green on this exact commit (read the Actions/runs page, not the workflow file — a workflow file is not proof); tests really pass (pass count AND exit code AND the 'Errors' line); build, lint, and typecheck clean; migrations are idempotent and re-runnable (every CREATE has DROP IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE); deploy config matches the live target; no secrets in the repo. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line or run URL, evidence, and what breaks in real use."
 
-### Quick check before reporting
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
 - [ ] Target commit verified against the remote (agents read the right code)
 - [ ] All eight agents ran in parallel, each read its skills first
 - [ ] Every finding has file:line (or run URL) + evidence + severity
@@ -82,7 +100,14 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 - [ ] Merged report triaged (Blockers / Warnings / Suggestions), overlaps deduped, no fix started
 - [ ] Report in Bisaya, technical detail in English
 
-### Learn more (sources for the skills this team applies)
+### Examples
+
+**Do:** report a finding as severity, file:line, and the evidence of what breaks in real use — then stop and let the user pick what to fix.
+
+**Do not:** edit, fix, migrate, or push anything during the audit, or inflate a Suggestion into a Blocker to make the report look serious.
+
+### Sources
+
 - OWASP Top 10 (owasp-top10, api-security): https://owasp.org/www-project-top-ten/
 - Node.js best practices (nodejs-quality, incl. its merged backend-performance and devops-basics sections): https://github.com/goldbergyoni/nodebestpractices
 - System Design Primer (system-design): https://github.com/donnemartin/system-design-primer
@@ -91,3 +116,7 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 - 12 API security rules reel (api-security): Code Crack — "12 API Security Rules"
 - 10 UX states reel (ux-edge-states): Strategy Fox — "10 UX States"
 - Clean Code (safe-editing, ub-mode): Robert Martin — *Clean Code*
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.

@@ -1,6 +1,7 @@
 ---
 name: database-migration
 description: Safely plans and executes database schema changes and migration scripts, enforcing zero-downtime and type-sync discipline. Execute this skill when the user needs to add a table, alter a column, change the data model, or sync dependent types. Do NOT execute for read-only queries, application business logic, or schema design from scratch (use define-foundation).
+version: 1.0.0
 department: database
 ownerAgent: aragorn
 triggerCommand: /database-migration
@@ -11,6 +12,23 @@ antiPatternsPrevented:
 ---
 
 # Database Migration
+
+### Purpose
+
+Safely plans and executes database schema changes and migration scripts, enforcing zero-downtime and type-sync discipline: it converts a schema-change request into a safe migration plan and execution, with dependent type sync. It prevents data loss, downtime, and type-sync drift in production databases. It also covers converting high-volume monolithic tables into partitioned architectures with zero downtime.
+
+### When to use
+
+| Trigger | Example |
+| --- | --- |
+| Add a column, table, or index | "Add a column / table / index" |
+| Change the data model or run a migration | "Change the data model / run a migration" |
+| Alter, drop, or backfill data | "Alter, drop, or backfill data" (fires, but executes only after approval) |
+| Table size exceeds 20 million rows or vacuum causes I/O spikes, and queries predominantly filter by date ranges or tenant ID | "Audit log table passed 40M rows and vacuum spikes I/O weekly." |
+
+Do NOT use when: the work is a read-only SQL query or report, or application business logic — neither is a migration. Schema design from scratch and ORM configuration specifics are also outside this skill. General SQL query optimization and EXPLAIN ANALYZE tuning routes to `supabase-principles` (its merged query-planner section), per the merged partitioning trigger matrix below in Rules.
+
+### Rules
 
 ## 0. Identity
 
@@ -286,3 +304,29 @@ ALTER TABLE legacy_audit_logs RENAME TO legacy_audit_logs_retired;
 ALTER TABLE audit_logs_partitioned RENAME TO audit_logs;
 COMMIT;
 ```
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Schema diff presented and matches the approved draft.
+- [ ] Destructive operations carried the explicit, highlighted approval gate.
+- [ ] New columns on populated tables have defaults or are nullable.
+- [ ] Migration commands generated; no unapproved destructive command included.
+- [ ] Dependent frontend types and Zod schemas synced; zero stale references.
+- [ ] For partitioning work: lock timeout is explicitly set to 2 seconds or less for cutover transactions, the partition key is included in all primary keys and unique indexes, a default partition exists, backfill scripts use bounded batches with sleep intervals, and human approval is recorded before production cutover.
+
+### Examples
+
+**Do:** the skill's own example — Input: "Add a bio column to the User table." Output: schema diff updates the ORM schema with `bio` nullable or defaulted; migration commands generated per its output specification; dependent TypeScript/Zod types synced; approval status NOT APPLICABLE (non-destructive). No production push command is run against production.
+
+**Do not:** the skill's own failure case — the user says "just drop the old column and run it". Refuse: the destructive operation requires the explicit highlighted approval gate; run the safety analysis and present the multi-phase plan first.
+
+### Sources
+
+- Cloned verbatim from iging/sauron (MIT) — the entire Rules body above is the sauron skill text, unchanged, including its own normative-base references.
+- Merged 2026-11-13 from zero-downtime-table-partitioning (iging/sauron, MIT), as recorded in the merged section inside Rules; it is no longer a separate skill.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.

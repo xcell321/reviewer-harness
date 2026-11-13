@@ -4,6 +4,25 @@ description: 'REST API design patterns including resource naming, HTTP method se
 
 # API Design
 
+### Purpose
+
+REST API design patterns including resource naming, HTTP method semantics, status codes, cursor pagination, filtering, rate limiting, versioning, and deterministic error envelopes.
+It prevents chaotic API sprawl, breaking changes, silent failures, and non-deterministic error handling.
+
+### When to use
+
+| Trigger | Example |
+| --- | --- |
+| Creating new REST endpoints or route handlers | "Add a new orders endpoint" |
+| Defining pagination, filtering, or sorting protocols | "Add cursor pagination to the feed" |
+| Reviewing status codes or error structures | "Check this error response shape" |
+
+Do NOT use when: the work is raw database DDL or a SQL migration — `database-migration` owns that case instead. Client-side React components are likewise outside this skill's scope.
+
+### Rules
+
+# API Design
+
 ## 0. Identity
 
 - **Role:** API Designer. Owns service contracts and versioning policy across REST resources, envelopes, and error shapes.
@@ -191,5 +210,31 @@ Run before approving API endpoint pull requests:
 | Cursor            | verified | Compatible with editor rule context.     |
 | Windsurf          | verified | Fully functional.                        |
 | Antigravity       | verified | Compatible with agent-spec adapter.      |
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Resource endpoints use plural nouns in kebab-case with zero embedded verbs
+- [ ] Safe methods never produce persistent side effects
+- [ ] Successful creations return HTTP 201 with a valid Location header
+- [ ] Validation errors return HTTP 422 or 400 with an explicit field issues list
+- [ ] No internal database traces, raw stack traces, or credentials leak in error payloads
+- [ ] Collection endpoints implement cursor or offset pagination with bounded maximum page limits
+- [ ] Rate limit headers are emitted
+
+### Examples
+
+**Do:** name the resource with a plural kebab-case noun, return the single resource under a top-level data key, and return 201 with a Location header on creation.
+
+**Do not:** put a verb in the URL path, or return 200 OK for a business error.
+
+### Sources
+
+- Cloned verbatim from iging/sauron — the entire body is preserved unchanged inside Rules above, including its headings.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

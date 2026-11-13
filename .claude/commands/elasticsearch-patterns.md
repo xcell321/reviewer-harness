@@ -4,6 +4,22 @@ description: 'Designs Elasticsearch mappings, analyzers, and search queries with
 
 # Elasticsearch Patterns
 
+### Purpose
+
+Designs Elasticsearch mappings, analyzers, and search queries with relevance tuning discipline: it produces index mappings, analyzers, and queries tuned for relevance and latency. It prevents dynamic-mapping explosions and scoring queries that ignore relevance signals.
+
+### When to use
+
+| Trigger | Example |
+| --- | --- |
+| Design an Elasticsearch index and its queries | "Design our Elasticsearch index and queries" |
+| Fix irrelevant search results and slow facets | "Fix irrelevant search results and slow facets" |
+| The slash command is invoked | "/elasticsearch-patterns" |
+
+Do NOT use when: the work is administering a logging cluster or log shipping pipelines, or picking a vector database — both are out of scope in this skill's own Identity and trigger matrix. Document-database schema and index design belongs to `mongodb-principles`, and relational schema changes belong to `database-migration`.
+
+### Rules
+
 ## 0. Identity
 
 - **Role:** Retrieval Architect. Owns search index topology and relevance routing with measured recall.
@@ -125,5 +141,29 @@ description: 'Designs Elasticsearch mappings, analyzers, and search queries with
 
 **Input:** "Product search returns wrong items and facets take seconds."
 **Output:** Blueprint with keyword subfields, filter-context facets, and boosted multi-match query graded on samples.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Queries classified before mapping work.
+- [ ] Mappings explicit with zero dynamic fields.
+- [ ] Filters used for exact cuts, queries for scoring.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before indexing.
+
+### Examples
+
+**Do:** the skill's own example — Input: "Product search returns wrong items and facets take seconds." Output: blueprint with keyword subfields, filter-context facets, and boosted multi-match query graded on samples.
+
+**Do not:** emit queries without explicit mappings, or reindex production clusters unprompted — the skill's own anti-trigger calibration names both as failures.
+
+### Sources
+
+- Cloned verbatim from iging/sauron (MIT) — the entire Rules body above is the sauron skill text, unchanged. Its own normative base also names Elasticsearch relevance practice, as recorded inside Rules.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

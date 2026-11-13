@@ -320,170 +320,6 @@ The OWASP Top 10 is the industry-standard list of the most critical web security
 - Test your app: https://github.com/OWASP/wstg
 - Practice: https://github.com/juice-shop/juice-shop
 
-## Skill: backend-performance
-
-When to use: building or reviewing any backend — API endpoints, database queries, or background jobs. Apply when the app feels slow, hangs, or breaks under repeated requests.
-
-Every rule below is distilled from a reputable open-source repo (cited per rule). If a rule doesn't apply, say why.
-
-### Don't block the machine
-1. **Never block the event loop.** Node runs your code on a single thread — one slow synchronous operation (huge JSON parse, giant loop, unsafe regex) stalls every request behind it. Keep per-request work small; offload CPU-heavy jobs to a worker or separate service.
-*Source: goldbergyoni/nodebestpractices — `sections/performance/block-loop.md`*
-
-2. **Prefer native methods over utility libraries.** Native V8 methods (Array.map, String.indexOf) run roughly 50% faster than Lodash/Underscore equivalents — benchmarks show Lodash averaging ~146% more time per operation. If the platform already does it, drop the dependency. Enforce with `eslint-plugin-you-dont-need-lodash-underscore`.
-*Source: goldbergyoni/nodebestpractices — `sections/performance/nativeoverutil.md`*
-
-### Cache deliberately
-3. **Put a cache in front of the database.** RAM reads take ~100ns; an SSD random read ~150µs; an HDD seek ~10ms. An in-memory cache (Redis, Memcached) absorbs traffic spikes so the database doesn't take the hit directly. Use an eviction policy like LRU to keep hot entries and drop cold ones.
-*Source: donnemartin/system-design-primer — `README.md`, "Cache" section*
-
-4. **Use cache-aside with a TTL — and know its tradeoffs.** Simplest pattern: check cache first; on miss, load from DB, store, return (lazy loading — only requested data gets cached). Every miss costs three trips, and cached data goes stale — mitigate with a time-to-live that forces refresh. Alternatives: write-through (never stale, slow writes) and write-behind (fast writes, data loss if cache dies).
-*Source: donnemartin/system-design-primer — `README.md`, "Cache-aside" sections*
-
-### Design for failure
-5. **Build retries on idempotent operations.** GET, PUT, and DELETE can be repeated safely; POST and PATCH cannot — a retried POST creates duplicates. Any write endpoint that might be retried (network replay, double-click) needs an explicit idempotency mechanism such as idempotency keys. The protocol won't save you on POST.
-*Source: donnemartin/system-design-primer — `README.md`, HTTP verb table*
-
-6. **Apply backpressure; retry with exponential backoff.** When a work queue outgrows memory, throughput collapses — cap the queue, reject overflow with HTTP 503, and let clients retry later. Retries must use growing delays (not immediate hammering), or the retry storm finishes off the struggling server.
-*Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" section*
-
-7. **Pool expensive connections.** Opening a TCP connection per request (app → database, server → cache) burns memory and setup cost each time. Reuse a bounded pool instead. Size it deliberately — too small starves throughput, too large wastes memory.
-*Source: donnemartin/system-design-primer — `README.md`, "Communication" section*
-
-### Measure, don't guess
-8. **Know your latency numbers.** L1 cache ~0.5ns, RAM ~100ns, SSD ~150µs, datacenter round trip ~500µs, HDD seek ~10ms, cross-continent ~150ms. "The database is slow" usually means "we're doing disk or network round trips we could avoid." Measure first, then attack the biggest number.
-*Source: donnemartin/system-design-primer — `README.md`, "Latency numbers every programmer should know"*
-
-9. **Distinguish performance from scalability problems.** Slow for a single user = performance problem (fix the code/queries). Fast for one user but slow under load = scalability problem (add caching, pooling, capacity). The fix differs — diagnose before prescribing. Target: maximal throughput with acceptable latency.
-*Source: donnemartin/system-design-primer — `README.md`, "Performance vs scalability"*
-
-10. **Watch the four golden signals.** Error rate (users feel it immediately), latency (directly affects business), throughput (gives context to the other two), and saturation (90% CPU = no headroom). Node-specific: keep process RAM under ~1.4GB, track errors per minute and restarts.
-*Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`*
-
-### Survive concurrent requests
-11. **Treat every check-then-act as a race.** Any operation that reads a value, decides, then writes — check balance then debit, check the coupon is unused then redeem it, check the slot is free then book it — lets two concurrent requests both read the old value, both pass the check, and both write. Loyalty points get drained, balances go negative, single-use coupons get redeemed many times. If two requests can race, assume they will; the check and the act must be one atomic operation. (Idempotency keys, rule 5, cover retries — this rule covers simultaneous first attempts.)
-*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, "Prevent Race Conditions on Sensitive Operations"*
-
-12. **Lock the row when you read-then-write it.** In PostgreSQL, `SELECT ... FOR UPDATE` inside a transaction locks the row until commit — other writers and lockers wait, then see the updated row. Use `FOR NO KEY UPDATE` when you don't change key columns (weaker, blocks less). A plain `SELECT` takes no such lock: under MVCC it reads a snapshot and stops nobody.
-*Source: PostgreSQL documentation — Chapter 13 "Concurrency Control", §13.3.2 "Row-Level Locks"*
-
-13. **Prefer a conditional update over read-modify-write.** `UPDATE ... SET stock = stock - 1 WHERE stock > 0` makes the predicate part of the write itself — there is no window between check and act. Check the affected-row count: 0 rows means the condition no longer held at write time, so return the conflict error instead of writing.
-*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, pattern reference (conditional decrement)*
-
-14. **Back "exactly once" with a unique constraint.** One claim per donation, one redemption per coupon, one bonus per user: put a UNIQUE constraint on the natural key (e.g. `(user_id, bonus_type)`) and let the database reject the loser of the race. Application-level checks alone always leave a window — the constraint is the last line of defense.
-*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, pattern reference (one-per-user bonus)*
-
-15. **Know your isolation level — the default is weaker than you think.** PostgreSQL defaults to Read Committed: every statement sees a fresh snapshot, so invariants that span rows or statements can break under concurrency even though each statement looks correct. Repeatable Read gives one stable snapshot per transaction; Serializable additionally detects dangerous read/write patterns and aborts one side. Choose per invariant, not by habit.
-*Source: PostgreSQL documentation — Chapter 13 "Concurrency Control", §13.2 "Transaction Isolation"*
-
-16. **Retry serialization failures and deadlocks — they are normal outcomes, not bugs.** Repeatable Read and Serializable transactions can abort with SQLSTATE 40001 ("could not serialize access…"), and PostgreSQL automatically detects deadlocks and aborts one transaction to let the others finish. Wrap the whole transaction in a bounded retry loop; never surface a 40001 or a deadlock abort to the user as a 500.
-*Source: PostgreSQL documentation — Chapter 13, §13.2.2–13.2.3 (SQLSTATE 40001) and §13.3.4 "Deadlocks"*
-
-17. **Lock rows in a consistent order to prevent deadlocks.** When every transaction that touches multiple rows or tables locks them in the same order, circular waits mostly disappear. PostgreSQL detects the deadlocks that remain and aborts one side — which is why rule 16's retry loop must exist wherever explicit locking is used.
-*Source: PostgreSQL documentation — Chapter 13, §13.3.4 "Deadlocks"*
-
-18. **Use advisory locks when the resource isn't a row.** `pg_advisory_xact_lock` gives an application-defined lock for resources MVCC doesn't model — a job name, an external system, a whole workflow — and releases it automatically at transaction end. Advisory locks are cooperative: every code path that touches the resource must take the same lock, or it protects nothing.
-*Source: PostgreSQL documentation — Chapter 13, §13.3.5 "Advisory Locks"*
-
-19. **Write a test that races.** If two requests can race, a sequential test suite will never see the bug. Fire the same request concurrently (parallel calls against the real database) and assert the end state: the balance never goes negative, the coupon is redeemed exactly once, exactly one claim wins. The test documents the invariant as much as it verifies it.
-*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, "Test Concurrency"*
-
-### Also apply (general practice, beyond these repos)
-- **Kill N+1 queries** — never query inside a loop; fetch related data with JOIN or `IN (...)`.
-- **Index hot columns** — foreign keys, `WHERE` and `ORDER BY` columns; verify with `EXPLAIN`.
-- **Set timeouts on every external call** — fail fast instead of hanging forever.
-- **Paginate large lists** — never return "all rows"; cap page size.
-
-### Quick check before shipping
-- [ ] No synchronous heavy work on the request path (event loop stays free)
-- [ ] No Lodash where a native method does the job
-- [ ] Repeated reads are cached with a TTL and an invalidation plan
-- [ ] Write endpoints are idempotent or carry idempotency keys
-- [ ] Check-then-act operations are atomic — row lock, conditional update, or unique constraint, never a bare read-then-write
-- [ ] Serialization failures (40001) and deadlocks are retried with a bounded loop, not surfaced as 500s
-- [ ] Retries use backoff; queues have caps with 503 on overflow
-- [ ] Connections come from a sized pool, released on every path
-- [ ] Slowest path measured against the latency scale — biggest number attacked first
-- [ ] Four golden signals are tracked (errors, latency, throughput, saturation)
-
-### Learn more (official sources)
-- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
-- System design primer: https://github.com/donnemartin/system-design-primer
-- Don't block the event loop (Node.js docs): https://nodejs.org/en/docs/guides/dont-block-the-event-loop/
-- Latency numbers: https://github.com/donnemartin/system-design-primer#latency-numbers-every-programmer-should-know
-- PostgreSQL concurrency control (official docs, Ch. 13): https://www.postgresql.org/docs/current/mvcc.html
-- OWASP Business Logic Security Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html
-
-## Skill: devops-basics
-
-When to use: containerizing an app, setting up deployment, adding observability, or reviewing anything that ships to production. Apply when deploys are manual, scary, or "works on my machine" only.
-
-Every rule below is distilled from a reputable open-source repo (cited per rule). If a rule doesn't apply, say why.
-
-### Build lean images
-1. **Ship small base images.** A full Node.js image (~345MB) is roughly 10× the weight of its Alpine variant (~39MB); Slim is similarly tiny (~38MB). Smaller images pull faster, start faster, use less storage, and shrink the attack surface — fewer packages, fewer vulnerabilities. If the minimal image lacks build tools, install them in a separate build stage.
-*Source: goldbergyoni/nodebestpractices — `sections/docker/smaller_base_images.md`*
-
-2. **Prefer COPY over ADD; keep builds reproducible.** COPY only copies local files; ADD can silently fetch remote binaries — a supply-chain risk. Never run `apt-get update` inside the build: it produces a different image every time and needs elevated privileges. Use base images that their maintainers update frequently instead.
-*Source: goldbergyoni/nodebestpractices — `sections/docker/generic-tips.md`*
-
-3. **Run unprivileged and inspect what you ship.** Privileged containers have root-equivalent power over the host — almost never needed; use the `node` user baked into official Node images. Builds leak secrets and bloat (leftover files, dev dependencies) — inspect the final image with a tool like Dive to catch both.
-*Source: goldbergyoni/nodebestpractices — `sections/docker/generic-tips.md`*
-
-### Shut down like a professional
-4. **Handle SIGTERM gracefully — don't let npm swallow it.** Orchestrators kill containers constantly (deploys, rescheduling, scaling) with SIGTERM and a ~30-second grace period. The app must: stop accepting new requests, finish in-flight ones, release resources, log, then exit. Anti-pattern: `CMD ["npm", "start"]` — npm sits between the signal and Node, so Node never receives it. Fix: `CMD ["node", "index.js"]` or run under Tini.
-*Source: goldbergyoni/nodebestpractices — `sections/docker/graceful-shutdown.md`*
-
-5. **Expose health checks so the platform routes around sickness.** The load balancer needs to know "don't send me traffic" during shutdown and "I'm broken, restart me" during failures. A `/health` (liveness) endpoint answers "am I alive?"; a readiness check answers "am I ready to serve?" Keep them lightweight — a health check that does heavy work becomes the outage.
-*Source: goldbergyoni/nodebestpractices — `sections/docker/graceful-shutdown.md`*
-
-6. **Keep a private ops endpoint — locked to admins.** Some diagnostics are app-specific (heap dumps, memory reports) and generic monitoring tools can't reach them. Expose them on a dedicated maintenance endpoint, but restrict it to admins — it can become a DDoS target. Use professional monitoring for the standard stuff; the custom endpoint is for the rest.
-*Source: goldbergyoni/nodebestpractices — `sections/production/createmaintenanceendpoint.md`*
-
-### Log so you can debug later
-7. **Tag every log line with a request ID.** A production log is thousands of interleaved requests — without a shared ID you can't reconstruct one user's flow from the noise. Assign a unique transaction ID per request, attach it to every log statement, and propagate it downstream via an `x-transaction-id` header. In Node this needs AsyncLocalStorage (v14+) or a helper like cls-rtracer.
-*Source: goldbergyoni/nodebestpractices — `sections/production/assigntransactionid.md`*
-
-8. **Log structured, with context.** Format logs as JSON with timestamps, request IDs, user IDs, and operation types — readable by humans and machines. Log at transaction start and end so you can trace errors and spot the slowest endpoints. Never log secrets. If you can't reconstruct what happened from the logs, they're decoration.
-*Source: goldbergyoni/nodebestpractices — `sections/production/smartlogging.md`*
-
-### Guard the runtime
-9. **Cap memory and hunt leaks.** Node's default heap target is ~1.5GB — on smaller machines cap it explicitly (e.g. `node --max_old_space_size=400 server.js`), because V8's stop-the-world garbage collector gets expensive near the limit. Prevent leaks: avoid globals, stream data instead of buffering it, scope with let/const. Find leaks by diffing heap dumps taken apart in time.
-*Source: goldbergyoni/nodebestpractices — `sections/production/measurememory.md`*
-
-10. **Monitor the four golden signals; save APM for scale.** Track error rate, latency, throughput, and saturation — plus Node specifics (process RAM, errors per minute, restarts). Full APM suites trace transactions end-to-end but carry a price tag: justified for large complex systems, overkill for a small app where the four signals plus good logs suffice.
-*Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`, `sections/production/apmproducts.md`*
-**Checkable criteria (general practice — thresholds are starting points, tune per product):** error rate — alert if 5xx > 1% of requests over 5 min; latency — p95 < 500ms on key routes; throughput — requests/min tracked, alert on a sudden drop vs the same hour last week; saturation — CPU or memory > 80% sustained 10 min. If a signal has no number and no alert, it isn't monitored.
-
-11. **Pin the base image — never `FROM x:latest`.** `latest` is a moving pointer: the same Dockerfile builds a different image tomorrow, and a breaking upstream change ships silently. Pin a specific version (`FROM node:20.11.0-alpine`) — or a digest (`FROM node:20.11.0-alpine@sha256:…`) for production — and bump it intentionally after testing.
-*Source: Docker best practices (docs.docker.com/build/building/best-practices); nodebestpractices examples pin versions (`FROM node:14.8.0-alpine`, `sections/docker/install-for-production.md`).*
-
-12. **Cache dependencies in CI — don't reinstall the world on every push (general practice).** Cache `node_modules` keyed on the lockfile and Docker layers (BuildKit cache) so a green build takes minutes, not a full reinstall. A cache miss must still produce a correct build — never depend on the cache for correctness. (Note: nodebestpractices has no CI-caching rule — its `sections/docker/clean-cache.md` is about removing the cache from images, the opposite direction.)
-
-### Also apply (general practice, beyond these repos)
-- **Automate build + test on every push (CI)** — red build blocks the merge; nobody merges without green checks.
-- **Version your API explicitly** (`/v1`, `/v2`) with semantic versioning; deprecate with a sunset date, never silently change shapes.
-- **Migrate the database, don't hand-edit it** — versioned migration files, tested before production, reversible where possible.
-- **Back up on a schedule and test the restore** — an untested backup is a hope, not a backup.
-
-### Quick check before shipping
-- [ ] Base image is Alpine/Slim (~40MB), built with COPY, no `apt-get update` inside
-- [ ] Container runs as non-root user; final image inspected (no secrets, no bloat)
-- [ ] App handles SIGTERM: drains requests, releases resources, exits cleanly
-- [ ] `/health` endpoint exists, is lightweight, and is wired to the platform
-- [ ] Every log line carries a request/transaction ID, propagated downstream
-- [ ] Logs are JSON with timestamps and context; no secrets logged
-- [ ] Memory is capped for the machine size; leak-hunting path is known
-- [ ] Four golden signals are monitored with alerts on user-facing symptoms
-- [ ] Base image pinned to a specific version/digest, never `latest`
-- [ ] CI caches dependencies (lockfile-keyed) and Docker layers; a cache miss still builds correctly
-
-### Learn more (official sources)
-- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
-- Docker best practices: https://docs.docker.com/build/building/best-practices/
-- Graceful shutdown in Node: https://github.com/goldbergyoni/nodebestpractices/tree/master/sections/docker
-- Semantic versioning: https://semver.org/
-
 ## Skill: motion-design
 
 *Distilled from [GSAP (GreenSock Animation Platform)](https://github.com/greensock/GSAP) — the industry-standard JavaScript animation library (90k+ stars, used on 12M+ sites). Every rule below cites its GSAP source.*
@@ -727,7 +563,7 @@ document.querySelector('#chat-button').addEventListener('click', async () => {
 
 When to use: designing or reviewing a system's architecture — a new app, a growing service, or any time the question is "how do the pieces fit and scale?" rather than "why is this endpoint slow?" Apply when choosing databases, splitting services, adding caching layers, or planning for traffic growth.
 
-Every rule below is distilled from donnemartin/system-design-primer (cited per rule). Nothing here is invented — if the primer doesn't cover a topic, it is labeled "general practice" instead. Pairs with `backend-performance` (caching patterns, latency numbers, backpressure, golden signals) — this skill covers the architecture around it.
+Every rule below is distilled from donnemartin/system-design-primer (cited per rule). Nothing here is invented — if the primer doesn't cover a topic, it is labeled "general practice" instead. Pairs with `nodejs-quality` (its Backend Performance section: caching patterns, latency numbers, backpressure, golden signals) — this skill covers the architecture around it.
 
 ### Start with the problem, not the stack
 1. **Scope first.** Before designing anything, pin down users, use cases, inputs/outputs, expected data volume, requests/second, and read-to-write ratio. A design without constraints is guesswork.
@@ -893,7 +729,7 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 52. **Choose SQL when:** structured data, strict schema, relational data, complex joins, transactions, clear scaling patterns, established tooling, fast index lookups. **Choose NoSQL when:** semi-structured/flexible schema, non-relational, no complex joins, TB–PB scale, data-intensive workloads, very high IOPS (clickstream/log ingest, leaderboards, shopping carts, hot tables, metadata tables).
 *Source: donnemartin/system-design-primer — `README.md`, "Database" (SQL or NoSQL)*
 
-### Caching layers (patterns live in backend-performance)
+### Caching layers (patterns live in nodejs-quality's Backend Performance section)
 53. **Cache at every layer:** client (OS/browser), CDN, web server/reverse proxy (e.g. Varnish — serves static and dynamic content without contacting app servers), database (tune built-in defaults), and application (in-memory Redis/Memcached between app and storage — RAM is faster than disk).
 *Source: donnemartin/system-design-primer — `README.md`, "Cache" (client/CDN/web server/database/application caching)*
 
@@ -903,8 +739,8 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 55. **Cache by query or by object:** hashing the query as the key suffers expiration problems (one cell change invalidates many cached queries); object-level caching lets the app assemble datasets into objects, evict on underlying change, and use workers to assemble asynchronously. Good candidates: user sessions, fully rendered pages, activity streams, user-graph data.
 *Source: donnemartin/system-design-primer — `README.md`, "Cache" (query level / object level)*
 
-56. **Cache-aside, write-through, write-behind, refresh-ahead** — the four patterns, their staleness and failure tradeoffs, live in `backend-performance` rules 3–4. Use this skill for *where* to cache; use that skill for *how* each pattern behaves.
-*Source: donnemartin/system-design-primer — `README.md`, "Cache" (cache-aside, write-through, write-behind, refresh-ahead); see also `backend-performance`*
+56. **Cache-aside, write-through, write-behind, refresh-ahead** — the four patterns, their staleness and failure tradeoffs, live in `nodejs-quality`'s Backend Performance section, rules 3–4. Use this skill for *where* to cache; use that skill for *how* each pattern behaves.
+*Source: donnemartin/system-design-primer — `README.md`, "Cache" (cache-aside, write-through, write-behind, refresh-ahead); see also `nodejs-quality` (Backend Performance section)*
 
 ### Asynchronism — work off the request path
 57. **Move expensive work off the request path:** async workflows reduce request times for slow operations and let you pre-compute (e.g. periodic aggregation) in advance.
@@ -916,7 +752,7 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 59. **Task queues** receive tasks + data, run them, deliver results; they support scheduling and run compute-intensive jobs in the background (e.g. Celery, mainly Python).
 *Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" (task queues)*
 
-60. **Do not queue what should be synchronous:** cheap calculations and real-time workflows are better inline — queues add delay and complexity. (Backpressure and 503-on-overflow live in `backend-performance` rule 6.)
+60. **Do not queue what should be synchronous:** cheap calculations and real-time workflows are better inline — queues add delay and complexity. (Backpressure and 503-on-overflow live in `nodejs-quality`'s Backend Performance section, rule 6.)
 *Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" (disadvantages)*
 
 ### Communication — how services talk
@@ -943,7 +779,7 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 67. **Sequential throughput rules of thumb:** HDD ~30 MB/s, 1 Gbps Ethernet ~100 MB/s, SSD ~1 GB/s, main memory ~4 GB/s.
 *Source: donnemartin/system-design-primer — `README.md`, "Appendix" (latency numbers, handy metrics)*
 
-68. **Round-trip budget:** ~6–7 world-wide round trips per second, ~2,000 round trips per second within a data center — design chatty protocols accordingly. (The full latency table — L1 ~0.5ns, RAM ~100ns, SSD ~150µs, HDD ~10ms — lives in `backend-performance` rule 8.)
+68. **Round-trip budget:** ~6–7 world-wide round trips per second, ~2,000 round trips per second within a data center — design chatty protocols accordingly. (The full latency table — L1 ~0.5ns, RAM ~100ns, SSD ~150µs, HDD ~10ms — lives in `nodejs-quality`'s Backend Performance section, rule 8.)
 *Source: donnemartin/system-design-primer — `README.md`, "Appendix" (latency numbers, handy metrics)*
 
 ### Also apply (general practice — NOT in the primer, labeled honestly)
@@ -971,9 +807,9 @@ Every rule below is distilled from donnemartin/system-design-primer (cited per r
 
 ## Skill: nodejs-quality
 
-When to use: writing or reviewing Node.js code — a new endpoint, a new service, a refactor, or any time the question is "is this code correct, testable, and shippable?" rather than "is it fast?" (that's `backend-performance`) or "does it deploy?" (that's `devops-basics`). Apply when errors are swallowed, tests are thin, files are spaghetti, or production surprises keep happening.
+When to use: writing or reviewing Node.js code — a new endpoint, a new service, a refactor, or any time the question is "is this code correct, testable, and shippable?" — performance and deployment questions are covered by this skill's own merged sections (Backend Performance, DevOps Basics) below. Apply when errors are swallowed, tests are thin, files are spaghetti, or production surprises keep happening.
 
-Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rule: the `sections/` file and the README section). Nothing here is invented — if the repo doesn't cover a topic, it is labeled "general practice" instead. Rules already covered by `backend-performance`, `devops-basics`, `system-design`, `api-security`, or `owasp-top10` are NOT repeated here; the skill points to them instead.
+Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rule: the `sections/` file and the README section). Nothing here is invented — if the repo doesn't cover a topic, it is labeled "general practice" instead. Rules covered by `system-design`, `api-security`, or `owasp-top10` are NOT repeated here; the skill points to them instead. (`backend-performance` and `devops-basics` were merged into this skill on 2026-11-13 — their rules are the two Merged sections at the end.)
 
 ### Error handling — the biggest gap
 1. **Use async/await (or promises) for async errors — never callbacks.** Callbacks force error checks everywhere, nest deeply, and break try/catch flow. Async/await gives one try/catch for the whole chain plus `finally` for cleanup.
@@ -1196,6 +1032,174 @@ Every rule below is distilled from goldbergyoni/nodebestpractices (cited per rul
 - Twelve-factor app: https://12factor.net/
 - Semantic versioning: https://semver.org/
 
+## Merged: backend-performance (2026-11-13)
+
+The standalone `backend-performance` skill (19 rules) was merged into this skill on 2026-11-13; it is no longer a separate skill. Its full text follows, unchanged — cross-references to "backend-performance rules N" now mean the rules in this section.
+
+When to use: building or reviewing any backend — API endpoints, database queries, or background jobs. Apply when the app feels slow, hangs, or breaks under repeated requests.
+
+Every rule below is distilled from a reputable open-source repo (cited per rule). If a rule doesn't apply, say why.
+
+### Don't block the machine
+1. **Never block the event loop.** Node runs your code on a single thread — one slow synchronous operation (huge JSON parse, giant loop, unsafe regex) stalls every request behind it. Keep per-request work small; offload CPU-heavy jobs to a worker or separate service.
+*Source: goldbergyoni/nodebestpractices — `sections/performance/block-loop.md`*
+
+2. **Prefer native methods over utility libraries.** Native V8 methods (Array.map, String.indexOf) run roughly 50% faster than Lodash/Underscore equivalents — benchmarks show Lodash averaging ~146% more time per operation. If the platform already does it, drop the dependency. Enforce with `eslint-plugin-you-dont-need-lodash-underscore`.
+*Source: goldbergyoni/nodebestpractices — `sections/performance/nativeoverutil.md`*
+
+### Cache deliberately
+3. **Put a cache in front of the database.** RAM reads take ~100ns; an SSD random read ~150µs; an HDD seek ~10ms. An in-memory cache (Redis, Memcached) absorbs traffic spikes so the database doesn't take the hit directly. Use an eviction policy like LRU to keep hot entries and drop cold ones.
+*Source: donnemartin/system-design-primer — `README.md`, "Cache" section*
+
+4. **Use cache-aside with a TTL — and know its tradeoffs.** Simplest pattern: check cache first; on miss, load from DB, store, return (lazy loading — only requested data gets cached). Every miss costs three trips, and cached data goes stale — mitigate with a time-to-live that forces refresh. Alternatives: write-through (never stale, slow writes) and write-behind (fast writes, data loss if cache dies).
+*Source: donnemartin/system-design-primer — `README.md`, "Cache-aside" sections*
+
+### Design for failure
+5. **Build retries on idempotent operations.** GET, PUT, and DELETE can be repeated safely; POST and PATCH cannot — a retried POST creates duplicates. Any write endpoint that might be retried (network replay, double-click) needs an explicit idempotency mechanism such as idempotency keys. The protocol won't save you on POST.
+*Source: donnemartin/system-design-primer — `README.md`, HTTP verb table*
+
+6. **Apply backpressure; retry with exponential backoff.** When a work queue outgrows memory, throughput collapses — cap the queue, reject overflow with HTTP 503, and let clients retry later. Retries must use growing delays (not immediate hammering), or the retry storm finishes off the struggling server.
+*Source: donnemartin/system-design-primer — `README.md`, "Asynchronism" section*
+
+7. **Pool expensive connections.** Opening a TCP connection per request (app → database, server → cache) burns memory and setup cost each time. Reuse a bounded pool instead. Size it deliberately — too small starves throughput, too large wastes memory.
+*Source: donnemartin/system-design-primer — `README.md`, "Communication" section*
+
+### Measure, don't guess
+8. **Know your latency numbers.** L1 cache ~0.5ns, RAM ~100ns, SSD ~150µs, datacenter round trip ~500µs, HDD seek ~10ms, cross-continent ~150ms. "The database is slow" usually means "we're doing disk or network round trips we could avoid." Measure first, then attack the biggest number.
+*Source: donnemartin/system-design-primer — `README.md`, "Latency numbers every programmer should know"*
+
+9. **Distinguish performance from scalability problems.** Slow for a single user = performance problem (fix the code/queries). Fast for one user but slow under load = scalability problem (add caching, pooling, capacity). The fix differs — diagnose before prescribing. Target: maximal throughput with acceptable latency.
+*Source: donnemartin/system-design-primer — `README.md`, "Performance vs scalability"*
+
+10. **Watch the four golden signals.** Error rate (users feel it immediately), latency (directly affects business), throughput (gives context to the other two), and saturation (90% CPU = no headroom). Node-specific: keep process RAM under ~1.4GB, track errors per minute and restarts.
+*Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`*
+
+### Survive concurrent requests
+11. **Treat every check-then-act as a race.** Any operation that reads a value, decides, then writes — check balance then debit, check the coupon is unused then redeem it, check the slot is free then book it — lets two concurrent requests both read the old value, both pass the check, and both write. Loyalty points get drained, balances go negative, single-use coupons get redeemed many times. If two requests can race, assume they will; the check and the act must be one atomic operation. (Idempotency keys, rule 5, cover retries — this rule covers simultaneous first attempts.)
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, "Prevent Race Conditions on Sensitive Operations"*
+
+12. **Lock the row when you read-then-write it.** In PostgreSQL, `SELECT ... FOR UPDATE` inside a transaction locks the row until commit — other writers and lockers wait, then see the updated row. Use `FOR NO KEY UPDATE` when you don't change key columns (weaker, blocks less). A plain `SELECT` takes no such lock: under MVCC it reads a snapshot and stops nobody.
+*Source: PostgreSQL documentation — Chapter 13 "Concurrency Control", §13.3.2 "Row-Level Locks"*
+
+13. **Prefer a conditional update over read-modify-write.** `UPDATE ... SET stock = stock - 1 WHERE stock > 0` makes the predicate part of the write itself — there is no window between check and act. Check the affected-row count: 0 rows means the condition no longer held at write time, so return the conflict error instead of writing.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, pattern reference (conditional decrement)*
+
+14. **Back "exactly once" with a unique constraint.** One claim per donation, one redemption per coupon, one bonus per user: put a UNIQUE constraint on the natural key (e.g. `(user_id, bonus_type)`) and let the database reject the loser of the race. Application-level checks alone always leave a window — the constraint is the last line of defense.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, pattern reference (one-per-user bonus)*
+
+15. **Know your isolation level — the default is weaker than you think.** PostgreSQL defaults to Read Committed: every statement sees a fresh snapshot, so invariants that span rows or statements can break under concurrency even though each statement looks correct. Repeatable Read gives one stable snapshot per transaction; Serializable additionally detects dangerous read/write patterns and aborts one side. Choose per invariant, not by habit.
+*Source: PostgreSQL documentation — Chapter 13 "Concurrency Control", §13.2 "Transaction Isolation"*
+
+16. **Retry serialization failures and deadlocks — they are normal outcomes, not bugs.** Repeatable Read and Serializable transactions can abort with SQLSTATE 40001 ("could not serialize access…"), and PostgreSQL automatically detects deadlocks and aborts one transaction to let the others finish. Wrap the whole transaction in a bounded retry loop; never surface a 40001 or a deadlock abort to the user as a 500.
+*Source: PostgreSQL documentation — Chapter 13, §13.2.2–13.2.3 (SQLSTATE 40001) and §13.3.4 "Deadlocks"*
+
+17. **Lock rows in a consistent order to prevent deadlocks.** When every transaction that touches multiple rows or tables locks them in the same order, circular waits mostly disappear. PostgreSQL detects the deadlocks that remain and aborts one side — which is why rule 16's retry loop must exist wherever explicit locking is used.
+*Source: PostgreSQL documentation — Chapter 13, §13.3.4 "Deadlocks"*
+
+18. **Use advisory locks when the resource isn't a row.** `pg_advisory_xact_lock` gives an application-defined lock for resources MVCC doesn't model — a job name, an external system, a whole workflow — and releases it automatically at transaction end. Advisory locks are cooperative: every code path that touches the resource must take the same lock, or it protects nothing.
+*Source: PostgreSQL documentation — Chapter 13, §13.3.5 "Advisory Locks"*
+
+19. **Write a test that races.** If two requests can race, a sequential test suite will never see the bug. Fire the same request concurrently (parallel calls against the real database) and assert the end state: the balance never goes negative, the coupon is redeemed exactly once, exactly one claim wins. The test documents the invariant as much as it verifies it.
+*Source: OWASP Cheat Sheet Series — `Business_Logic_Security_Cheat_Sheet.md`, "Test Concurrency"*
+
+### Also apply (general practice, beyond these repos)
+- **Kill N+1 queries** — never query inside a loop; fetch related data with JOIN or `IN (...)`.
+- **Index hot columns** — foreign keys, `WHERE` and `ORDER BY` columns; verify with `EXPLAIN`.
+- **Set timeouts on every external call** — fail fast instead of hanging forever.
+- **Paginate large lists** — never return "all rows"; cap page size.
+
+### Quick check before shipping
+- [ ] No synchronous heavy work on the request path (event loop stays free)
+- [ ] No Lodash where a native method does the job
+- [ ] Repeated reads are cached with a TTL and an invalidation plan
+- [ ] Write endpoints are idempotent or carry idempotency keys
+- [ ] Check-then-act operations are atomic — row lock, conditional update, or unique constraint, never a bare read-then-write
+- [ ] Serialization failures (40001) and deadlocks are retried with a bounded loop, not surfaced as 500s
+- [ ] Retries use backoff; queues have caps with 503 on overflow
+- [ ] Connections come from a sized pool, released on every path
+- [ ] Slowest path measured against the latency scale — biggest number attacked first
+- [ ] Four golden signals are tracked (errors, latency, throughput, saturation)
+
+### Learn more (official sources)
+- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
+- System design primer: https://github.com/donnemartin/system-design-primer
+- Don't block the event loop (Node.js docs): https://nodejs.org/en/docs/guides/dont-block-the-event-loop/
+- Latency numbers: https://github.com/donnemartin/system-design-primer#latency-numbers-every-programmer-should-know
+- PostgreSQL concurrency control (official docs, Ch. 13): https://www.postgresql.org/docs/current/mvcc.html
+- OWASP Business Logic Security Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html
+
+## Merged: devops-basics (2026-11-13)
+
+The standalone `devops-basics` skill (12 rules) was merged into this skill on 2026-11-13; it is no longer a separate skill. Its full text follows, unchanged.
+
+When to use: containerizing an app, setting up deployment, adding observability, or reviewing anything that ships to production. Apply when deploys are manual, scary, or "works on my machine" only.
+
+Every rule below is distilled from a reputable open-source repo (cited per rule). If a rule doesn't apply, say why.
+
+### Build lean images
+1. **Ship small base images.** A full Node.js image (~345MB) is roughly 10× the weight of its Alpine variant (~39MB); Slim is similarly tiny (~38MB). Smaller images pull faster, start faster, use less storage, and shrink the attack surface — fewer packages, fewer vulnerabilities. If the minimal image lacks build tools, install them in a separate build stage.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/smaller_base_images.md`*
+
+2. **Prefer COPY over ADD; keep builds reproducible.** COPY only copies local files; ADD can silently fetch remote binaries — a supply-chain risk. Never run `apt-get update` inside the build: it produces a different image every time and needs elevated privileges. Use base images that their maintainers update frequently instead.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/generic-tips.md`*
+
+3. **Run unprivileged and inspect what you ship.** Privileged containers have root-equivalent power over the host — almost never needed; use the `node` user baked into official Node images. Builds leak secrets and bloat (leftover files, dev dependencies) — inspect the final image with a tool like Dive to catch both.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/generic-tips.md`*
+
+### Shut down like a professional
+4. **Handle SIGTERM gracefully — don't let npm swallow it.** Orchestrators kill containers constantly (deploys, rescheduling, scaling) with SIGTERM and a ~30-second grace period. The app must: stop accepting new requests, finish in-flight ones, release resources, log, then exit. Anti-pattern: `CMD ["npm", "start"]` — npm sits between the signal and Node, so Node never receives it. Fix: `CMD ["node", "index.js"]` or run under Tini.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/graceful-shutdown.md`*
+
+5. **Expose health checks so the platform routes around sickness.** The load balancer needs to know "don't send me traffic" during shutdown and "I'm broken, restart me" during failures. A `/health` (liveness) endpoint answers "am I alive?"; a readiness check answers "am I ready to serve?" Keep them lightweight — a health check that does heavy work becomes the outage.
+*Source: goldbergyoni/nodebestpractices — `sections/docker/graceful-shutdown.md`*
+
+6. **Keep a private ops endpoint — locked to admins.** Some diagnostics are app-specific (heap dumps, memory reports) and generic monitoring tools can't reach them. Expose them on a dedicated maintenance endpoint, but restrict it to admins — it can become a DDoS target. Use professional monitoring for the standard stuff; the custom endpoint is for the rest.
+*Source: goldbergyoni/nodebestpractices — `sections/production/createmaintenanceendpoint.md`*
+
+### Log so you can debug later
+7. **Tag every log line with a request ID.** A production log is thousands of interleaved requests — without a shared ID you can't reconstruct one user's flow from the noise. Assign a unique transaction ID per request, attach it to every log statement, and propagate it downstream via an `x-transaction-id` header. In Node this needs AsyncLocalStorage (v14+) or a helper like cls-rtracer.
+*Source: goldbergyoni/nodebestpractices — `sections/production/assigntransactionid.md`*
+
+8. **Log structured, with context.** Format logs as JSON with timestamps, request IDs, user IDs, and operation types — readable by humans and machines. Log at transaction start and end so you can trace errors and spot the slowest endpoints. Never log secrets. If you can't reconstruct what happened from the logs, they're decoration.
+*Source: goldbergyoni/nodebestpractices — `sections/production/smartlogging.md`*
+
+### Guard the runtime
+9. **Cap memory and hunt leaks.** Node's default heap target is ~1.5GB — on smaller machines cap it explicitly (e.g. `node --max_old_space_size=400 server.js`), because V8's stop-the-world garbage collector gets expensive near the limit. Prevent leaks: avoid globals, stream data instead of buffering it, scope with let/const. Find leaks by diffing heap dumps taken apart in time.
+*Source: goldbergyoni/nodebestpractices — `sections/production/measurememory.md`*
+
+10. **Monitor the four golden signals; save APM for scale.** Track error rate, latency, throughput, and saturation — plus Node specifics (process RAM, errors per minute, restarts). Full APM suites trace transactions end-to-end but carry a price tag: justified for large complex systems, overkill for a small app where the four signals plus good logs suffice.
+*Source: goldbergyoni/nodebestpractices — `sections/production/monitoring.md`, `sections/production/apmproducts.md`*
+**Checkable criteria (general practice — thresholds are starting points, tune per product):** error rate — alert if 5xx > 1% of requests over 5 min; latency — p95 < 500ms on key routes; throughput — requests/min tracked, alert on a sudden drop vs the same hour last week; saturation — CPU or memory > 80% sustained 10 min. If a signal has no number and no alert, it isn't monitored.
+
+11. **Pin the base image — never `FROM x:latest`.** `latest` is a moving pointer: the same Dockerfile builds a different image tomorrow, and a breaking upstream change ships silently. Pin a specific version (`FROM node:20.11.0-alpine`) — or a digest (`FROM node:20.11.0-alpine@sha256:…`) for production — and bump it intentionally after testing.
+*Source: Docker best practices (docs.docker.com/build/building/best-practices); nodebestpractices examples pin versions (`FROM node:14.8.0-alpine`, `sections/docker/install-for-production.md`).*
+
+12. **Cache dependencies in CI — don't reinstall the world on every push (general practice).** Cache `node_modules` keyed on the lockfile and Docker layers (BuildKit cache) so a green build takes minutes, not a full reinstall. A cache miss must still produce a correct build — never depend on the cache for correctness. (Note: nodebestpractices has no CI-caching rule — its `sections/docker/clean-cache.md` is about removing the cache from images, the opposite direction.)
+
+### Also apply (general practice, beyond these repos)
+- **Automate build + test on every push (CI)** — red build blocks the merge; nobody merges without green checks.
+- **Version your API explicitly** (`/v1`, `/v2`) with semantic versioning; deprecate with a sunset date, never silently change shapes.
+- **Migrate the database, don't hand-edit it** — versioned migration files, tested before production, reversible where possible.
+- **Back up on a schedule and test the restore** — an untested backup is a hope, not a backup.
+
+### Quick check before shipping
+- [ ] Base image is Alpine/Slim (~40MB), built with COPY, no `apt-get update` inside
+- [ ] Container runs as non-root user; final image inspected (no secrets, no bloat)
+- [ ] App handles SIGTERM: drains requests, releases resources, exits cleanly
+- [ ] `/health` endpoint exists, is lightweight, and is wired to the platform
+- [ ] Every log line carries a request/transaction ID, propagated downstream
+- [ ] Logs are JSON with timestamps and context; no secrets logged
+- [ ] Memory is capped for the machine size; leak-hunting path is known
+- [ ] Four golden signals are monitored with alerts on user-facing symptoms
+- [ ] Base image pinned to a specific version/digest, never `latest`
+- [ ] CI caches dependencies (lockfile-keyed) and Docker layers; a cache miss still builds correctly
+
+### Learn more (official sources)
+- Node.js best practices (105k stars): https://github.com/goldbergyoni/nodebestpractices
+- Docker best practices: https://docs.docker.com/build/building/best-practices/
+- Graceful shutdown in Node: https://github.com/goldbergyoni/nodebestpractices/tree/master/sections/docker
+- Semantic versioning: https://semver.org/
+
 ## Skill: audit-team
 
 When to use: the user asks for a team audit, a full review, or "/audit-team" on a repo — or after a big fix round, to verify the fixes held and catch regressions. Always report-only: auditors read, never edit.
@@ -1209,13 +1213,13 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 | # | Agent | Harness skills it applies | What it checks |
 |---|---|---|---|
 | 1 | **api-security** | api-security | Auth, RLS, RPCs, Edge Functions — who can read/write what, via the app AND via direct API calls |
-| 2 | **devops** | devops-basics | Docker images, graceful shutdown, health checks, logging, memory guards |
+| 2 | **devops** | nodejs-quality (DevOps Basics section) | Docker images, graceful shutdown, health checks, logging, memory guards |
 | 3 | **ux-edge-states** | ux-edge-states | Loading / empty / error / offline states, keyboard + screen-reader access, dark mode |
-| 4 | **backend-performance** | backend-performance | Queries, N+1, missing indexes, re-renders, Edge Function cost |
+| 4 | **backend-performance** | nodejs-quality (Backend Performance section) | Queries, N+1, missing indexes, re-renders, Edge Function cost |
 | 5 | **system-design** | system-design | Status transitions, trust boundaries, scale (pilot city → bigger) |
 | 6 | **backend** (area) | safe-editing, debug-first, owasp-top10, nodejs-quality, rea | Code correctness and quality: surgical edits, error handling, OWASP Top 10, Node quality rules, tracing unfamiliar flows |
 | 7 | **frontend** (area) | motion-design, frontend-performance, playwright-cli | Real animations (not static visuals), render performance, visual quality, runtime behavior in a real browser |
-| 8 | **devops** (area) | devops-basics (the CI guidance in its "Also apply" section) | The live shipping path: CI green on this exact commit, tests (pass count AND exit code AND the "Errors" line), build, lint, typecheck, migrations idempotent + re-runnable, deploy config, no secrets in the repo |
+| 8 | **devops** (area) | nodejs-quality (the CI guidance in its DevOps Basics section) | The live shipping path: CI green on this exact commit, tests (pass count AND exit code AND the "Errors" line), build, lint, typecheck, migrations idempotent + re-runnable, deploy config, no secrets in the repo |
 
 **Every agent also applies no-hallucination** — every finding cites a real file and line, and every claim about what runs or passes is backed by evidence the agent actually saw.
 
@@ -1253,11 +1257,11 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 **1 — api-security agent brief:** "Audit the API security of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: api-security. Check: auth (who is the caller, really?); RLS policies (what can a stranger read/write via direct API calls, not just through the app?); RPCs and Edge Functions (auth gates, input validation, PII in prompts/logs); rate limits and abuse paths. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
-**2 — devops agent brief:** "Audit the DevOps rules of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics. Check: Docker images (lean base, COPY not ADD, non-root user, no secrets in the image); graceful shutdown (SIGTERM drains, doesn't drop in-flight work); health checks (liveness + readiness, lightweight); logging (structured, request IDs, no secrets); memory (caps, leak paths); the four golden signals. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
+**2 — devops agent brief:** "Audit the DevOps rules of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — its DevOps Basics section. Check: Docker images (lean base, COPY not ADD, non-root user, no secrets in the image); graceful shutdown (SIGTERM drains, doesn't drop in-flight work); health checks (liveness + readiness, lightweight); logging (structured, request IDs, no secrets); memory (caps, leak paths); the four golden signals. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
 **3 — ux-edge-states agent brief:** "Audit the UX edge states of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: ux-edge-states. Check: every screen's loading / empty / error / offline states (no blank screens, no whole-page error cards where an inline banner fits); keyboard operability and screen-reader labels on every interactive element; dark mode (no unreadable text, no invisible controls); focus management on navigation. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
-**4 — backend-performance agent brief:** "Audit the backend performance of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: backend-performance. Check: queries (N+1, missing indexes on hot filters, unbounded selects); re-renders and fetch loops (effect deps on object identity, token-refresh refetch storms); Edge Function cost (per-invocation work, timeouts, retries); caching where it matters. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
+**4 — backend-performance agent brief:** "Audit the backend performance of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — its Backend Performance section. Check: queries (N+1, missing indexes on hot filters, unbounded selects); re-renders and fetch loops (effect deps on object identity, token-refresh refetch storms); Edge Function cost (per-invocation work, timeouts, retries); caching where it matters. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
 **5 — system-design agent brief:** "Audit the system design of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: system-design. Check: status transitions (can a client force an illegal state?); trust boundaries (what does the client control that the server must not trust?); race conditions and idempotency (double-submit, re-invocation); scale (what breaks when the pilot grows 10× — one city today, more tomorrow?). Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
@@ -1265,7 +1269,7 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 **7 — frontend area agent brief:** "Audit the frontend of <repo> at <commit> as a whole. Read these skills first and apply them genuinely, not as labels: motion-design, frontend-performance, playwright-cli. Check: animations are real motion, not static visuals; render performance (no infinite fetch loops, no jank from layout-triggering animations — transform/opacity only); visual quality (no generic purple-blue gradients, no floating orbs, no identical glass cards); contrast (WCAG AA on text over gradients). When the target is a web app that can be run (dev server or deployed URL), also drive its key flows with playwright-cli — open, snapshot, walk the primary journeys — and report runtime failures (console errors, dead buttons, broken states) as findings with screenshot or snapshot evidence; if it cannot be run, say so and label the findings code-only. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line, evidence, and what breaks in real use."
 
-**8 — devops area agent brief:** "Audit the live shipping path of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics — in particular the CI guidance in its 'Also apply' section. Check: CI is green on this exact commit (read the Actions/runs page, not the workflow file — a workflow file is not proof); tests really pass (pass count AND exit code AND the 'Errors' line); build, lint, and typecheck clean; migrations are idempotent and re-runnable (every CREATE has DROP IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE); deploy config matches the live target; no secrets in the repo. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line or run URL, evidence, and what breaks in real use."
+**8 — devops area agent brief:** "Audit the live shipping path of <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — in particular the CI guidance in the 'Also apply' part of its DevOps Basics section. Check: CI is green on this exact commit (read the Actions/runs page, not the workflow file — a workflow file is not proof); tests really pass (pass count AND exit code AND the 'Errors' line); build, lint, and typecheck clean; migrations are idempotent and re-runnable (every CREATE has DROP IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE); deploy config matches the live target; no secrets in the repo. Report-only — do not edit anything. Every finding: severity (Blocker/Warning/Suggestion), file:line or run URL, evidence, and what breaks in real use."
 
 ### Quick check before reporting
 - [ ] Target commit verified against the remote (agents read the right code)
@@ -1277,7 +1281,7 @@ Spawn all eight at once. The first five are skill specialists (one skill each, d
 
 ### Learn more (sources for the skills this team applies)
 - OWASP Top 10 (owasp-top10, api-security): https://owasp.org/www-project-top-ten/
-- Node.js best practices (backend-performance, devops-basics, nodejs-quality): https://github.com/goldbergyoni/nodebestpractices
+- Node.js best practices (nodejs-quality, incl. its merged backend-performance and devops-basics sections): https://github.com/goldbergyoni/nodebestpractices
 - System Design Primer (system-design): https://github.com/donnemartin/system-design-primer
 - Front-End Checklist (frontend-performance): https://github.com/thedaviddias/Front-End-Checklist
 - GSAP / GreenSock (motion-design): https://gsap.com/
@@ -1496,6 +1500,16 @@ When to use: build, design, redesign, restyle, polish, or review a landing page,
 57. **Check in a real browser over HTTP** (never `file://`), at widths 1440, 1024, 820, 768, 390 (layout check also 1440×900, 1024×768, 820×1180, 768×1024, 390×844; gate walks the page at 320 for overflow/collide/tap-size). Fix every FAIL (and every copy-lint WARN, or say why it stays).
 58. **The gate holds the finish until no fixable FAIL is left, three rounds at most.** Last line must be `GATE: PASS` or `GATE: OPEN`. A FAIL judged false is waived with its reason — never fixed by gaming the check.
 59. **Tap targets:** every link/control outside running text ≥44px tall; a FAIL when another target is under 8px away. Nothing past the screen at 320.
+
+### Design tokens — the 3-tier system
+*Source: token architecture merged 2026-11-13 from [iging/sauron](https://github.com/iging/sauron) `design-tokens` (MIT), adapted to this skill's checkable style. The dealt values still come from rules 26–33 and the library; this section governs how they are named, tiered, and consumed.*
+
+60. **Three tiers, always.** Primitive tokens hold raw values (`--blue-600`, `--space-4`); semantic tokens name the job (`--accent`, `--g-main`, `--m-in`); component tokens name the part (`--btn-bg`, `--card-pad`). A component consumes semantic and component tokens only — a primitive or a raw value inside a component is a FAIL.
+61. **Semantic names, never literal ones.** A token is named for what it does, not what it looks like: `--ink`, not `--slate-900`; `--accent`, not `--orange`. One change at the semantic tier re-skins the whole page; a literal name forces a hex hunt.
+62. **Colour ramps are OKLCH, built once per hue.** Each ramp steps lightness evenly in OKLCH so the steps look even; hex values are exported from the ramp, never picked ad hoc per component. The violet ban (rule 28) applies at ramp level.
+63. **Scales are the tokens.** Spacing on the 4px scale (rule 49), type on the rule-22 scale, radius on the rule-24 scale, motion on the rule-51 tokens — each value exists exactly once, as a named token, before any component uses it. An arbitrary value with no token mapping is a FAIL.
+64. **Six states per interactive component, as tokens:** default, hover, focus, active, disabled, and loading/error where the part has them — each state a token assignment, never an ad-hoc override. A component with an undocumented state is unfinished. (State *behaviour* lives in `ux-edge-states`; the state *values* live here.)
+65. **One icon size scale:** icon sizes come from a fixed tier set tied to the type scale (16/20/24), one icon set per page (rule 11), rendered in `currentColor` so icons inherit the semantic ink token.
 
 ### Edsiel's rules (local — not from the source)
 - **No green by default (2026-11-07):** never default to green or jade accents — Edsiel finds them ugly. The accent comes from the client or product (rule 27); a dealt palette that lands green-dominant with no client basis is dealt again. (A client's own green brand colour is his call, not a default.)
@@ -1975,13 +1989,13 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 | # | Agent | Harness skills it applies | What it fixes |
 |---|---|---|---|
 | 1 | **api-security** | api-security | Auth, RLS, RPCs, Edge Functions — fix per the 14 rules |
-| 2 | **devops** | devops-basics | Docker images, graceful shutdown, health checks, logging, memory guards |
+| 2 | **devops** | nodejs-quality (DevOps Basics section) | Docker images, graceful shutdown, health checks, logging, memory guards |
 | 3 | **ux-edge-states** | ux-edge-states | Loading / empty / error / offline states, keyboard + screen-reader access, dark mode |
-| 4 | **backend-performance** | backend-performance | Queries, N+1, missing indexes, re-renders, Edge Function cost |
+| 4 | **backend-performance** | nodejs-quality (Backend Performance section) | Queries, N+1, missing indexes, re-renders, Edge Function cost |
 | 5 | **system-design** | system-design | Status transitions, trust boundaries, races, idempotency |
 | 6 | **backend** (area) | safe-editing, debug-first, owasp-top10, nodejs-quality, rea, ub-mode | Code correctness and quality across the whole backend |
 | 7 | **frontend** (area) | motion-design, frontend-performance, design-taste-frontend, ui-ux-pro-max, vengeance-ui | Real animations, render performance, visual quality, anti-slop |
-| 8 | **devops** (area) | devops-basics (the CI guidance in its "Also apply" section) | The live shipping path: tests, build, lint, typecheck, migrations, deploy config |
+| 8 | **devops** (area) | nodejs-quality (the CI guidance in its DevOps Basics section) | The live shipping path: tests, build, lint, typecheck, migrations, deploy config |
 | 9 | **ub-mode** | ub-mode | Clean Code organization across the whole fix: TDD first, smallest edit, CRAP < 10, duplication ≥ 0.8 out, small ordered commits + log |
 | 10 | **superpowers** | writing-plans, brainstorming | The fix plan first (file map, rollback anchor, bite-sized TDD tasks, each ending in a commit) + the hard gate (no fix until the user approves the plan) |
 | 11 | **verification** | verify_before_done, instruction_registers, verify_provider_claims, verify_publish_install_surface, playwright-cli | The fixer at the last: re-checks every fix (defined AND called, remote evidence, publish/install surfaces) and fixes what verification catches. For fixes touching a runnable web UI, it also drives the real app with playwright-cli — a UI fix is not verified by reading code alone |
@@ -2028,11 +2042,11 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 **1 — api-security fixer brief:** "Fix the api-security findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: api-security. Fix: auth, RLS policies, RPCs and Edge Functions, rate limits — per the skill's 14 rules. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
-**2 — devops fixer brief:** "Fix the devops findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics. Fix: Docker images, graceful shutdown, health checks, logging, memory guards — per the skill's 12 rules. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
+**2 — devops fixer brief:** "Fix the devops findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — its DevOps Basics section. Fix: Docker images, graceful shutdown, health checks, logging, memory guards — per the skill's 12 rules. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
 **3 — ux-edge-states fixer brief:** "Fix the ux-edge-states findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: ux-edge-states. Fix: loading / empty / error / offline states, keyboard operability, screen-reader labels, dark mode. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
-**4 — backend-performance fixer brief:** "Fix the backend-performance findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: backend-performance. Fix: queries (N+1, missing indexes, unbounded selects), re-renders and fetch loops, Edge Function cost, caching. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
+**4 — backend-performance fixer brief:** "Fix the backend-performance findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — its Backend Performance section. Fix: queries (N+1, missing indexes, unbounded selects), re-renders and fetch loops, Edge Function cost, caching. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
 **5 — system-design fixer brief:** "Fix the system-design findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: system-design. Fix: status transitions, trust boundaries, races and idempotency, scale. Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
@@ -2040,7 +2054,7 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 **7 — frontend area fixer brief:** "Fix the frontend findings in <audit report> on <repo> at <commit> as a whole. Read these skills first and apply them genuinely, not as labels: motion-design, frontend-performance, design-taste-frontend, ui-ux-pro-max, vengeance-ui. Fix: animations are real motion, not static visuals; render performance; visual quality (no generic purple-blue gradients, no floating orbs, no identical glass cards); contrast (WCAG AA on text over gradients). Fix-only — fix what the audit found, nothing more. TDD first: failing test, smallest fix, tests pass. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
-**8 — devops area fixer brief:** "Fix the shipping-path findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: devops-basics — in particular the CI guidance in its 'Also apply' section. Fix: CI green on this exact commit, tests really passing (pass count AND exit code AND the 'Errors' line), build, lint, and typecheck clean, migrations idempotent and re-runnable, deploy config matching the live target, no secrets in the repo. Fix-only — fix what the audit found, nothing more. Every fix: finding file:line or run URL, what you changed, and the command output proving it."
+**8 — devops area fixer brief:** "Fix the shipping-path findings in <audit report> on <repo> at <commit>. Read this skill first and apply it genuinely, not as a label: nodejs-quality — in particular the CI guidance in the 'Also apply' part of its DevOps Basics section. Fix: CI green on this exact commit, tests really passing (pass count AND exit code AND the 'Errors' line), build, lint, and typecheck clean, migrations idempotent and re-runnable, deploy config matching the live target, no secrets in the repo. Fix-only — fix what the audit found, nothing more. Every fix: finding file:line or run URL, what you changed, and the command output proving it."
 
 **9 — ub-mode fixer brief:** "Make the fixes in <fix run> on <repo> at <commit> clean and organized. Read this skill first and apply it genuinely, not as a label: ub-mode. Enforce across the whole fix: TDD first (failing test before the change); smallest edit that solves the problem (one decision lives in one place); sequence the work into verifiable units (finish one small unit and check it, then start the next); fix root causes, not symptoms; every function under CRAP 10; duplication ≥ 0.8 eliminated; small ordered commits, each saying why, what changed, and how it was proved; a log of every action and the reason. Where the crapper/dryer/mutator tools are not installed, apply the same thresholds by manual review and say so. Fix-only — organize what the audit found, nothing more. Every fix: finding file:line, what you changed, and the test/build output proving it."
 
@@ -2060,7 +2074,7 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 ### Learn more (sources for the skills this team applies)
 - OWASP Top 10 (owasp-top10, api-security): https://owasp.org/www-project-top-ten/
-- Node.js best practices (backend-performance, devops-basics, nodejs-quality): https://github.com/goldbergyoni/nodebestpractices
+- Node.js best practices (nodejs-quality, incl. its merged backend-performance and devops-basics sections): https://github.com/goldbergyoni/nodebestpractices
 - System Design Primer (system-design): https://github.com/donnemartin/system-design-primer
 - Front-End Checklist (frontend-performance): https://github.com/thedaviddias/Front-End-Checklist
 - GSAP / GreenSock (motion-design): https://gsap.com/
@@ -2126,41 +2140,9 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 - Save the checkable evidence, such as the SHA, the test command, or the screenshot, with the report so a later turn can re-verify without redoing the work.
 
-## Skill: instruction_registers
+## Merged: verify_provider_claims (2026-11-13)
 
-### Name the target register
-
-- Treat "sa imoha" or "imoha" as the agent's own workspace (its local skills and memory), never the reviewer-harness repo.
-
-- Treat phrasing like "buhata ug kaugalingon nako nga skills adto sa reviewer harness" as the reviewer-harness repo, the reverse of "sa imoha".
-
-- State the target in your working notes before any build, skill install, or push, so the register is explicit.
-
-### Name the action register
-
-- Treat "plan ra", "plan mode", or "plan sa" as present the plan and wait, and never implement from a plan-mode turn.
-
-- Treat "buhata", "paganaha", or "code" as build directly without a plan round.
-
-- Treat standing "always allow" as skipping agent confirmation rounds on assigned tasks, while a runtime-level approval prompt is outside your control, so explain it as such instead of treating it as you asking.
-
-### Ask once when unsure
-
-- Ask exactly one clarifying question before building or pushing when the target or the action is ambiguous.
-
-- Prefer the question over a guess, since a wrong-repo push cannot be undone and no force-push is available in your tools.
-
-### Available connectors
-
-- Use the runtime's own search and setup to find other connectors and related skills.
-
-- If nothing here fits, look on the web for a maintained API or MCP server and set it up through the runtime's own connector/MCP setup, or build a custom connector.
-
-### Alternatives for better results
-
-- Confirm the corrected register back and update memory when the user corrects a register, so the next turn starts from the right target.
-
-## Skill: verify_provider_claims
+The standalone `verify_provider_claims` skill was merged into this skill on 2026-11-13. Its rules follow, unchanged.
 
 ### Spot the claims that go stale
 
@@ -2200,7 +2182,9 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 
 - Check the provider's changelog or release notes when a claim worked recently and now fails, since a quiet retirement or migration is the usual cause.
 
-## Skill: verify_publish_install_surface
+## Merged: verify_publish_install_surface (2026-11-13)
+
+The standalone `verify_publish_install_surface` skill was merged into this skill on 2026-11-13. Its rules follow, unchanged.
 
 ### Identify the surface the user is looking at
 
@@ -2243,6 +2227,40 @@ The superpowers agent runs FIRST (it writes the fix plan). The nine fixers run i
 - Ask the user to paste the exact version line from the installed file when a screenshot is cropped or unclear, since that line settles the local surface faster than another restart.
 
 - Batch related changes into one publish when the user must run the full update chain, so one verification round covers all of them.
+
+## Skill: instruction_registers
+
+### Name the target register
+
+- Treat "sa imoha" or "imoha" as the agent's own workspace (its local skills and memory), never the reviewer-harness repo.
+
+- Treat phrasing like "buhata ug kaugalingon nako nga skills adto sa reviewer harness" as the reviewer-harness repo, the reverse of "sa imoha".
+
+- State the target in your working notes before any build, skill install, or push, so the register is explicit.
+
+### Name the action register
+
+- Treat "plan ra", "plan mode", or "plan sa" as present the plan and wait, and never implement from a plan-mode turn.
+
+- Treat "buhata", "paganaha", or "code" as build directly without a plan round.
+
+- Treat standing "always allow" as skipping agent confirmation rounds on assigned tasks, while a runtime-level approval prompt is outside your control, so explain it as such instead of treating it as you asking.
+
+### Ask once when unsure
+
+- Ask exactly one clarifying question before building or pushing when the target or the action is ambiguous.
+
+- Prefer the question over a guess, since a wrong-repo push cannot be undone and no force-push is available in your tools.
+
+### Available connectors
+
+- Use the runtime's own search and setup to find other connectors and related skills.
+
+- If nothing here fits, look on the web for a maintained API or MCP server and set it up through the runtime's own connector/MCP setup, or build a custom connector.
+
+### Alternatives for better results
+
+- Confirm the corrected register back and update memory when the user corrects a register, so the next turn starts from the right target.
 
 # Browser Automation with playwright-cli
 
@@ -2879,6 +2897,138 @@ Run before declaring completion:
 
 **Failure case:** The user says "just drop the old column and run it". Refuse: the destructive operation requires the explicit highlighted approval gate; run the safety analysis and present the multi-phase plan first (AP-44, AP-28).
 
+## Merged: zero-downtime-table-partitioning (2026-11-13)
+
+The standalone `zero-downtime-table-partitioning` skill (iging/sauron, MIT) was merged into this skill on 2026-11-13; it is no longer a separate skill. Its content follows from its §1 (its §0 Identity boilerplate was dropped in the merge). Section numbering is the source's own.
+
+## 1. Intent (9 Dimensions)
+
+| #   | Dimension        | Value                                                                                                 |
+| --- | ---------------- | ----------------------------------------------------------------------------------------------------- |
+| 1   | Task             | Convert high-volume monolithic database tables into partitioned architectures with zero downtime.     |
+| 2   | Target Tool      | PostgreSQL declarative range/hash partitioning, pg_partman, temporal partition automation.            |
+| 3   | Output Format    | Four-phase DDL scripts, low-impact batch backfill procedures, and atomic swap transactions.           |
+| 4   | Constraints      | Prohibit long-running exclusive locks (`ACCESS EXCLUSIVE`). Maximum 2-second lock timeout. Yield I/O. |
+| 5   | Input            | High-volume table schema, growth projections, query filter access patterns.                           |
+| 6   | Context          | Prevents database connection pool exhaustion and application downtime during schema refactoring.      |
+| 7   | Audience         | Principal database engineers, site reliability engineers, infrastructure platform leads.              |
+| 8   | Success Criteria | Zero connection timeout errors; sub-2-second cutover lock; transparent query partition pruning.       |
+| 9   | Examples         | See Section 10.                                                                                        |
+
+## 2. Trigger Matrix
+
+| Trigger Condition                                              | Fire? | Action / Route                                                   |
+| -------------------------------------------------------------- | ----- | ---------------------------------------------------------------- |
+| Table size exceeds 20 million rows or vacuum causes I/O spikes | YES   | Initiate four-phase zero-downtime partitioning workflow.         |
+| Table queries predominantly filter by date ranges or tenant ID | YES   | Design declarative range or hash partitioned schema.             |
+| Small table under 500,000 records                              | NO    | Reject partitioning; optimize composite indexes instead.         |
+| General SQL query optimization and EXPLAIN ANALYZE tuning      | NO    | Route to `skills/database/postgres-query-planner-optimization/`. |
+
+## 3. Execution Workflow
+
+### Step 1: Create Shadow Structure
+
+- **Action:** Create the partitioned parent with `PARTITION BY RANGE`, monthly child partitions, a DEFAULT partition for out-of-range rows, and composite primary keys including the partition key.
+- **Input:** Table schema and growth projections.
+- **Stop Condition:** Halt when primary keys exclude the partition key; require composite keys.
+- **Validation:** Parent declares range partitioning with default partition attached.
+
+### Step 2: Dual-Write and Backfill Safely
+
+- **Action:** Attach replication triggers for live mutations, then backfill history in 2,000 to 5,000 row batches with sleep intervals to protect disk I/O.
+- **Input:** Write load and backfill window.
+- **Stop Condition:** Halt on replication lag spikes; pause backfill before proceeding.
+- **Validation:** Live mutations replicate in real time with zero lag spikes.
+
+### Step 3: Cut Over Atomically
+
+- **Action:** Rename legacy and shadow tables inside one transaction wrapped in a 2-second lock timeout, rehearsed first in staging under simulated load.
+- **Input:** Cutover window and staging evidence.
+- **Stop Condition:** Halt when staging rehearsal is missing; require it.
+- **Validation:** Swap completes in under 200 milliseconds.
+
+### Step 4: Handoff and Human Review
+
+- **Action:** Present the migration pack with staging evidence and request approval before production cutover.
+- **Input:** Completed migration pack.
+- **Stop Condition:** Await user approval.
+- **Validation:** Approval recorded; zero production DDL run by this skill.
+
+## 4. Output Specification
+
+```markdown
+# Partitioning Migration Pack
+
+- **Schema:** [Parent with partitions and keys]
+- **Backfill:** [Batched procedure with yields]
+- **Cutover:** [Atomic swap with lock timeout]
+- **Evidence:** [Staging rehearsal results]
+```
+
+## 5. Validation Gate
+
+- [ ] Lock timeout is explicitly set to 2 seconds or less for cutover transactions.
+- [ ] Partition key is included in all primary keys and unique indexes.
+- [ ] Default partition exists to prevent insertion errors.
+- [ ] Backfill scripts use bounded batches with sleep intervals to protect disk I/O.
+- [ ] Human approval recorded before production cutover.
+
+## 6. Anti-Triggers and Calibration
+
+- **Under-execution threshold:** Planning partitions without growth and filter analysis.
+- **Over-execution threshold:** Running DDL against production without staging rehearsal.
+- **Calibration default:** Partition past 20M rows; index below it.
+
+## 7. Anti-Pattern Compliance
+
+| Step | Prevents AP            | Mechanism                                           |
+| ---- | ---------------------- | --------------------------------------------------- |
+| 1    | AP-1 (vague task)      | Requires schema and growth inputs first.            |
+| 2    | AP-18 (stale state)    | Yields I/O between bounded batches.                 |
+| 3    | AP-28 (no stop)        | Demands staging rehearsal before cutover.           |
+| 4    | AP-45 (no human review)| Halts for approval before production cutover.       |
+
+## 8. Versioning & Changelog
+
+- **Version:** 3.0.0
+- **Changelog:**
+  - `3.0.0` (2026-09-26) - Full Tier-5 template conformance with Data Modeler role, role source, and seniority bar.
+  - `2.0.0` (2026-09-20) - Elevated to Sauron Tier-5 specification with non-blocking backfill and atomic cutover patterns.
+
+## 9. Portability Matrix
+
+| Runtime     | Status   | Notes                                    |
+| ----------- | -------- | ---------------------------------------- |
+| Claude Code | verified | Fully supported via command integration. |
+| Cursor      | verified | Compatible with editor rule context.     |
+| Windsurf    | verified | Fully functional.                        |
+| Antigravity | verified | Certified.                               |
+| Kiro        | verified | Skill path linking.                      |
+| Cline       | verified | Executed in current workspace.           |
+| Raw API     | verified | Model-agnostic execution.                |
+
+## 10. Examples
+
+**Input:** "Audit log table passed 40M rows and vacuum spikes I/O weekly."
+**Output:** Four-phase migration pack with monthly partitions, 5,000-row backfill batches, and sub-200ms atomic cutover.
+
+```sql
+CREATE TABLE IF NOT EXISTS audit_logs_partitioned (
+  id UUID NOT NULL,
+  tenant_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  action VARCHAR(64) NOT NULL,
+  payload JSONB,
+  PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
+
+BEGIN;
+SET LOCAL lock_timeout = '2s';
+ALTER TABLE legacy_audit_logs RENAME TO legacy_audit_logs_retired;
+ALTER TABLE audit_logs_partitioned RENAME TO audit_logs;
+COMMIT;
+```
+
 # Elasticsearch Patterns
 
 ## 0. Identity
@@ -3374,143 +3524,6 @@ Run before declaring completion:
 **Input:** "Our orders table locks during deploys and search is slow."
 **Output:** Blueprint with composite index on status plus created order, covering index for search reads, and online alter plan.
 
-# PostgreSQL Query Planner Optimization
-
-## 0. Identity
-
-- **Role:** Data Modeler. Owns index shapes and query plans with measured buffer evidence.
-- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
-- **Seniority bar:** Staff (Appendix B). Records why SARGable predicates beat function-wrapped filters (index use versus full scans, rejected convenience wrapping) and why covering indexes beat heap-chasing reads on hot paths.
-- **Authority:** Tier-5 normative skill for `skills/database/postgres-query-planner-optimization/`. Owns plan inspection and index guidance.
-- **Must not define:** Application UI state or API route handlers.
-- **Normative base:** `core/fellowship/aragorn.md`, `rules/engineering/architecture-boundaries.md`, `rules/common/code-style-standards.md`, `references/anti-patterns.md`.
-- **Anti-pattern gate:** Blocks AP-1 (unindexed query predicates), AP-18 (full table scan queries on large tables), and AP-28 (unbounded query join cascades).
-
-## 1. Intent (9 Dimensions)
-
-| #   | Dimension        | Value                                                                                                                      |
-| --- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Task             | Inspect, benchmark, and optimize slow PostgreSQL queries and execution plans.                                              |
-| 2   | Target Tool      | PostgreSQL 15+, pg_stat_statements, EXPLAIN (ANALYZE, BUFFERS), pghero, pganalyze.                                         |
-| 3   | Output Format    | Rewritten SARGable SQL queries, composite/partial index DDL, and execution cost reports.                                   |
-| 4   | Constraints      | Prohibit non-SARGable WHERE predicates. Banish unindexed multi-table JOINs on large tables.                                |
-| 5   | Input            | Slow query logs, execution plan JSON/text, table schemas, column cardinality stats.                                        |
-| 6   | Context          | Prevents CPU saturation, buffer pool thrashing, lock contention, and degraded p99 latencies.                               |
-| 7   | Audience         | Database administrators, backend engineers, performance engineering specialists.                                           |
-| 8   | Success Criteria | p99 query latency under 5 milliseconds; 100 percent index coverage on filter columns; zero sequential scans over 10k rows. |
-| 9   | Examples         | See Section 10.                                                                                                             |
-
-## 2. Trigger Matrix
-
-| Trigger Condition                                                    | Fire? | Action / Route                                                 |
-| -------------------------------------------------------------------- | ----- | -------------------------------------------------------------- |
-| Diagnosing slow queries with execution times exceeding 100ms         | YES   | Run EXPLAIN (ANALYZE, BUFFERS) and inspect plan tree.          |
-| Eliminating full table scans (Seq Scan) on tables exceeding 10k rows | YES   | Design covering or composite index matching filter predicates. |
-| Fixing query planner row misestimates caused by stale statistics     | YES   | Trigger ANALYZE and inspect column n_distinct values.          |
-| Migrating table schemas or executing structural partitioning         | NO    | Route to `skills/database/database-migration/`.                |
-
-## 3. Execution Workflow
-
-### Step 1: Capture Plans with Buffer Evidence
-
-- **Action:** Run `EXPLAIN (ANALYZE, BUFFERS, SETTINGS, TIMING)` on the slow query. Focus on shared hit versus read counts to price disk I/O, and compare estimated rows against actuals to spot stale statistics.
-- **Input:** Slow query logs and plan output.
-- **Stop Condition:** Halt when plan output is unavailable; no diagnosis proceeds on timing alone.
-- **Validation:** Buffer evidence recorded with estimate-versus-actual deltas.
-
-### Step 2: Refactor Predicates and Align Indexes
-
-- **Action:** Rewrite function-wrapped filters into SARGable range bounds or add functional indexes. Order composites equality-first with range and sort columns last. Cover hot reads with INCLUDE payloads and partial indexes for status subsets. Create production indexes with CONCURRENTLY only.
-- **Input:** Plan evidence from Step 1.
-- **Stop Condition:** Halt when a hot predicate cannot use any index; record as schema finding.
-- **Validation:** Index DDL drafted with SARGable rewrites per query.
-
-### Step 3: Re-verify Against Cost Targets
-
-- **Action:** Re-run EXPLAIN to confirm Index Scan or Index Only Scan replaces Seq Scan with buffer reads reduced by over 90 percent.
-- **Input:** Applied indexes and rewritten queries.
-- **Stop Condition:** Halt when targets miss; iterate Step 2 instead of accepting.
-- **Validation:** Cost report shows p99 under target with zero large-table seq scans.
-
-### Step 4: Handoff and Human Review
-
-- **Action:** Present the cost report with DDL and rewrites for approval before production apply.
-- **Input:** Completed optimization pack.
-- **Stop Condition:** Await user approval.
-- **Validation:** Approval recorded; zero production DDL run by this skill.
-
-## 4. Output Specification
-
-```markdown
-# Planner Optimization Report
-
-- **Plans:** [Before and after EXPLAIN evidence]
-- **Indexes:** [DDL with CONCURRENTLY discipline]
-- **Rewrites:** [SARGable SQL per query]
-- **Costs:** [Buffer and latency deltas]
-```
-
-## 5. Validation Gate
-
-- [ ] Query plan confirms Index Scan or Index Only Scan on large tables.
-- [ ] Predicates avoid wrapping indexed columns in unindexed functions.
-- [ ] Composite indexes follow the equality-first, range-second ordering rule.
-- [ ] Production indexes are created using CREATE INDEX CONCURRENTLY.
-- [ ] Human approval recorded before production apply.
-
-## 6. Anti-Triggers and Calibration
-
-- **Under-execution threshold:** Recommending indexes without EXPLAIN buffer evidence.
-- **Over-execution threshold:** Applying DDL to production without approval.
-- **Calibration default:** Measure buffers first; index second; rewrite third.
-
-## 7. Anti-Pattern Compliance
-
-| Step | Prevents AP            | Mechanism                                           |
-| ---- | ---------------------- | --------------------------------------------------- |
-| 1    | AP-1 (vague task)      | Requires plan evidence before diagnosis.            |
-| 2    | AP-26 (no scope)       | Bounds rewrites to SARGable forms.                  |
-| 3    | AP-28 (no stop)        | Demands cost targets before acceptance.             |
-| 4    | AP-45 (no human review)| Halts for approval before production apply.         |
-
-## 8. Versioning & Changelog
-
-- **Version:** 3.0.0
-- **Changelog:**
-  - `3.0.0` (2026-09-26) - Full Tier-5 template conformance with Data Modeler role, role source, and seniority bar.
-  - `2.0.0` (2026-09-20) - Elevated to Sauron Tier-5 specification with EXPLAIN BUFFERS analysis and SARGable refactoring patterns.
-
-## 9. Portability Matrix
-
-| Runtime     | Status   | Notes                                    |
-| ----------- | -------- | ---------------------------------------- |
-| Claude Code | verified | Fully supported via command integration. |
-| Cursor      | verified | Compatible with editor rule context.     |
-| Windsurf    | verified | Fully functional.                        |
-| Antigravity | verified | Certified.                               |
-| Kiro        | verified | Skill path linking.                      |
-| Cline       | verified | Executed in current workspace.           |
-| Raw API     | verified | Model-agnostic execution.                |
-
-## 10. Examples
-
-**Input:** "Orders search scans 5M rows on every query."
-**Output:** Covering functional index built concurrently plus SARGable range rewrite verified by Index Only Scan evidence.
-
-```sql
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_email_lower_covering
-ON orders (LOWER(customer_email), created_at)
-INCLUDE (total_cents, status)
-WHERE status != 'CANCELLED';
-
-SELECT id, total_cents
-FROM orders
-WHERE LOWER(customer_email) = 'vip@example.com'
-  AND created_at >= '2026-09-20 00:00:00+00'
-  AND created_at <  '2026-09-21 00:00:00+00'
-  AND status != 'CANCELLED';
-```
-
 # Prisma Drizzle ORM
 
 ## 0. Identity
@@ -3882,111 +3895,103 @@ WHERE LOWER(customer_email) = 'vip@example.com'
 **Input:** "Our Supabase anon key reads other tenants rows. Fix the policies."
 **Output:** Blueprint with tenant JWT claims, per-table deny-by-default policies, and cross-tenant denial tests.
 
-# Zero-Downtime Table Partitioning
+## Merged: postgres-query-planner-optimization (2026-11-13)
 
-## 0. Identity
-
-- **Role:** Data Modeler. Owns partition shapes and cutover plans with lock-bounded guarantees.
-- **Role source:** Appendix A of `skills/_template/skill-name/SKILL.md` (Data Modeler).
-- **Seniority bar:** Staff (Appendix B). Records why four-phase shadow migration beats in-place repartitioning (traffic never blocks, rejected ACCESS EXCLUSIVE windows) and why partition keys join primary keys (constraint validity demands it, rejected keyless partitions).
-- **Authority:** Tier-5 normative skill for `skills/database/zero-downtime-table-partitioning/`. Owns partitioning plans and cutover guidance.
-- **Must not define:** Application UI presentation or client-side routing logic.
-- **Normative base:** `core/fellowship/aragorn.md`, `rules/engineering/architecture-boundaries.md`, `rules/common/code-style-standards.md`, `references/anti-patterns.md`.
-- **Anti-pattern gate:** Blocks AP-1 (unbounded exclusive table locks), AP-18 (I/O starvation during backfills), and AP-28 (unbounded migration loops).
+The standalone `postgres-query-planner-optimization` skill (iging/sauron, MIT) was merged into this skill on 2026-11-13; it is no longer a separate skill. Its content follows from its §1 (its §0 Identity boilerplate was dropped in the merge). Section numbering is the source's own.
 
 ## 1. Intent (9 Dimensions)
 
-| #   | Dimension        | Value                                                                                                 |
-| --- | ---------------- | ----------------------------------------------------------------------------------------------------- |
-| 1   | Task             | Convert high-volume monolithic database tables into partitioned architectures with zero downtime.     |
-| 2   | Target Tool      | PostgreSQL declarative range/hash partitioning, pg_partman, temporal partition automation.            |
-| 3   | Output Format    | Four-phase DDL scripts, low-impact batch backfill procedures, and atomic swap transactions.           |
-| 4   | Constraints      | Prohibit long-running exclusive locks (`ACCESS EXCLUSIVE`). Maximum 2-second lock timeout. Yield I/O. |
-| 5   | Input            | High-volume table schema, growth projections, query filter access patterns.                           |
-| 6   | Context          | Prevents database connection pool exhaustion and application downtime during schema refactoring.      |
-| 7   | Audience         | Principal database engineers, site reliability engineers, infrastructure platform leads.              |
-| 8   | Success Criteria | Zero connection timeout errors; sub-2-second cutover lock; transparent query partition pruning.       |
-| 9   | Examples         | See Section 10.                                                                                        |
+| #   | Dimension        | Value                                                                                                                      |
+| --- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Task             | Inspect, benchmark, and optimize slow PostgreSQL queries and execution plans.                                              |
+| 2   | Target Tool      | PostgreSQL 15+, pg_stat_statements, EXPLAIN (ANALYZE, BUFFERS), pghero, pganalyze.                                         |
+| 3   | Output Format    | Rewritten SARGable SQL queries, composite/partial index DDL, and execution cost reports.                                   |
+| 4   | Constraints      | Prohibit non-SARGable WHERE predicates. Banish unindexed multi-table JOINs on large tables.                                |
+| 5   | Input            | Slow query logs, execution plan JSON/text, table schemas, column cardinality stats.                                        |
+| 6   | Context          | Prevents CPU saturation, buffer pool thrashing, lock contention, and degraded p99 latencies.                               |
+| 7   | Audience         | Database administrators, backend engineers, performance engineering specialists.                                           |
+| 8   | Success Criteria | p99 query latency under 5 milliseconds; 100 percent index coverage on filter columns; zero sequential scans over 10k rows. |
+| 9   | Examples         | See Section 10.                                                                                                             |
 
 ## 2. Trigger Matrix
 
-| Trigger Condition                                              | Fire? | Action / Route                                                   |
-| -------------------------------------------------------------- | ----- | ---------------------------------------------------------------- |
-| Table size exceeds 20 million rows or vacuum causes I/O spikes | YES   | Initiate four-phase zero-downtime partitioning workflow.         |
-| Table queries predominantly filter by date ranges or tenant ID | YES   | Design declarative range or hash partitioned schema.             |
-| Small table under 500,000 records                              | NO    | Reject partitioning; optimize composite indexes instead.         |
-| General SQL query optimization and EXPLAIN ANALYZE tuning      | NO    | Route to `skills/database/postgres-query-planner-optimization/`. |
+| Trigger Condition                                                    | Fire? | Action / Route                                                 |
+| -------------------------------------------------------------------- | ----- | -------------------------------------------------------------- |
+| Diagnosing slow queries with execution times exceeding 100ms         | YES   | Run EXPLAIN (ANALYZE, BUFFERS) and inspect plan tree.          |
+| Eliminating full table scans (Seq Scan) on tables exceeding 10k rows | YES   | Design covering or composite index matching filter predicates. |
+| Fixing query planner row misestimates caused by stale statistics     | YES   | Trigger ANALYZE and inspect column n_distinct values.          |
+| Migrating table schemas or executing structural partitioning         | NO    | Route to `skills/database/database-migration/`.                |
 
 ## 3. Execution Workflow
 
-### Step 1: Create Shadow Structure
+### Step 1: Capture Plans with Buffer Evidence
 
-- **Action:** Create the partitioned parent with `PARTITION BY RANGE`, monthly child partitions, a DEFAULT partition for out-of-range rows, and composite primary keys including the partition key.
-- **Input:** Table schema and growth projections.
-- **Stop Condition:** Halt when primary keys exclude the partition key; require composite keys.
-- **Validation:** Parent declares range partitioning with default partition attached.
+- **Action:** Run `EXPLAIN (ANALYZE, BUFFERS, SETTINGS, TIMING)` on the slow query. Focus on shared hit versus read counts to price disk I/O, and compare estimated rows against actuals to spot stale statistics.
+- **Input:** Slow query logs and plan output.
+- **Stop Condition:** Halt when plan output is unavailable; no diagnosis proceeds on timing alone.
+- **Validation:** Buffer evidence recorded with estimate-versus-actual deltas.
 
-### Step 2: Dual-Write and Backfill Safely
+### Step 2: Refactor Predicates and Align Indexes
 
-- **Action:** Attach replication triggers for live mutations, then backfill history in 2,000 to 5,000 row batches with sleep intervals to protect disk I/O.
-- **Input:** Write load and backfill window.
-- **Stop Condition:** Halt on replication lag spikes; pause backfill before proceeding.
-- **Validation:** Live mutations replicate in real time with zero lag spikes.
+- **Action:** Rewrite function-wrapped filters into SARGable range bounds or add functional indexes. Order composites equality-first with range and sort columns last. Cover hot reads with INCLUDE payloads and partial indexes for status subsets. Create production indexes with CONCURRENTLY only.
+- **Input:** Plan evidence from Step 1.
+- **Stop Condition:** Halt when a hot predicate cannot use any index; record as schema finding.
+- **Validation:** Index DDL drafted with SARGable rewrites per query.
 
-### Step 3: Cut Over Atomically
+### Step 3: Re-verify Against Cost Targets
 
-- **Action:** Rename legacy and shadow tables inside one transaction wrapped in a 2-second lock timeout, rehearsed first in staging under simulated load.
-- **Input:** Cutover window and staging evidence.
-- **Stop Condition:** Halt when staging rehearsal is missing; require it.
-- **Validation:** Swap completes in under 200 milliseconds.
+- **Action:** Re-run EXPLAIN to confirm Index Scan or Index Only Scan replaces Seq Scan with buffer reads reduced by over 90 percent.
+- **Input:** Applied indexes and rewritten queries.
+- **Stop Condition:** Halt when targets miss; iterate Step 2 instead of accepting.
+- **Validation:** Cost report shows p99 under target with zero large-table seq scans.
 
 ### Step 4: Handoff and Human Review
 
-- **Action:** Present the migration pack with staging evidence and request approval before production cutover.
-- **Input:** Completed migration pack.
+- **Action:** Present the cost report with DDL and rewrites for approval before production apply.
+- **Input:** Completed optimization pack.
 - **Stop Condition:** Await user approval.
 - **Validation:** Approval recorded; zero production DDL run by this skill.
 
 ## 4. Output Specification
 
 ```markdown
-# Partitioning Migration Pack
+# Planner Optimization Report
 
-- **Schema:** [Parent with partitions and keys]
-- **Backfill:** [Batched procedure with yields]
-- **Cutover:** [Atomic swap with lock timeout]
-- **Evidence:** [Staging rehearsal results]
+- **Plans:** [Before and after EXPLAIN evidence]
+- **Indexes:** [DDL with CONCURRENTLY discipline]
+- **Rewrites:** [SARGable SQL per query]
+- **Costs:** [Buffer and latency deltas]
 ```
 
 ## 5. Validation Gate
 
-- [ ] Lock timeout is explicitly set to 2 seconds or less for cutover transactions.
-- [ ] Partition key is included in all primary keys and unique indexes.
-- [ ] Default partition exists to prevent insertion errors.
-- [ ] Backfill scripts use bounded batches with sleep intervals to protect disk I/O.
-- [ ] Human approval recorded before production cutover.
+- [ ] Query plan confirms Index Scan or Index Only Scan on large tables.
+- [ ] Predicates avoid wrapping indexed columns in unindexed functions.
+- [ ] Composite indexes follow the equality-first, range-second ordering rule.
+- [ ] Production indexes are created using CREATE INDEX CONCURRENTLY.
+- [ ] Human approval recorded before production apply.
 
 ## 6. Anti-Triggers and Calibration
 
-- **Under-execution threshold:** Planning partitions without growth and filter analysis.
-- **Over-execution threshold:** Running DDL against production without staging rehearsal.
-- **Calibration default:** Partition past 20M rows; index below it.
+- **Under-execution threshold:** Recommending indexes without EXPLAIN buffer evidence.
+- **Over-execution threshold:** Applying DDL to production without approval.
+- **Calibration default:** Measure buffers first; index second; rewrite third.
 
 ## 7. Anti-Pattern Compliance
 
 | Step | Prevents AP            | Mechanism                                           |
 | ---- | ---------------------- | --------------------------------------------------- |
-| 1    | AP-1 (vague task)      | Requires schema and growth inputs first.            |
-| 2    | AP-18 (stale state)    | Yields I/O between bounded batches.                 |
-| 3    | AP-28 (no stop)        | Demands staging rehearsal before cutover.           |
-| 4    | AP-45 (no human review)| Halts for approval before production cutover.       |
+| 1    | AP-1 (vague task)      | Requires plan evidence before diagnosis.            |
+| 2    | AP-26 (no scope)       | Bounds rewrites to SARGable forms.                  |
+| 3    | AP-28 (no stop)        | Demands cost targets before acceptance.             |
+| 4    | AP-45 (no human review)| Halts for approval before production apply.         |
 
 ## 8. Versioning & Changelog
 
 - **Version:** 3.0.0
 - **Changelog:**
   - `3.0.0` (2026-09-26) - Full Tier-5 template conformance with Data Modeler role, role source, and seniority bar.
-  - `2.0.0` (2026-09-20) - Elevated to Sauron Tier-5 specification with non-blocking backfill and atomic cutover patterns.
+  - `2.0.0` (2026-09-20) - Elevated to Sauron Tier-5 specification with EXPLAIN BUFFERS analysis and SARGable refactoring patterns.
 
 ## 9. Portability Matrix
 
@@ -4002,24 +4007,21 @@ WHERE LOWER(customer_email) = 'vip@example.com'
 
 ## 10. Examples
 
-**Input:** "Audit log table passed 40M rows and vacuum spikes I/O weekly."
-**Output:** Four-phase migration pack with monthly partitions, 5,000-row backfill batches, and sub-200ms atomic cutover.
+**Input:** "Orders search scans 5M rows on every query."
+**Output:** Covering functional index built concurrently plus SARGable range rewrite verified by Index Only Scan evidence.
 
 ```sql
-CREATE TABLE IF NOT EXISTS audit_logs_partitioned (
-  id UUID NOT NULL,
-  tenant_id UUID NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  action VARCHAR(64) NOT NULL,
-  payload JSONB,
-  PRIMARY KEY (id, created_at)
-) PARTITION BY RANGE (created_at);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_email_lower_covering
+ON orders (LOWER(customer_email), created_at)
+INCLUDE (total_cents, status)
+WHERE status != 'CANCELLED';
 
-BEGIN;
-SET LOCAL lock_timeout = '2s';
-ALTER TABLE legacy_audit_logs RENAME TO legacy_audit_logs_retired;
-ALTER TABLE audit_logs_partitioned RENAME TO audit_logs;
-COMMIT;
+SELECT id, total_cents
+FROM orders
+WHERE LOWER(customer_email) = 'vip@example.com'
+  AND created_at >= '2026-09-20 00:00:00+00'
+  AND created_at <  '2026-09-21 00:00:00+00'
+  AND status != 'CANCELLED';
 ```
 
 # PHP Principles

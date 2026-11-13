@@ -4,6 +4,22 @@ description: 'Designs MongoDB schemas, indexes, and aggregation pipelines with d
 
 # MongoDB Principles
 
+### Purpose
+
+Designs MongoDB schemas, indexes, and aggregation pipelines with document modeling discipline: it produces schema, index, and aggregation designs driven by access patterns. It prevents relational habits that create join-heavy pipelines on document stores.
+
+### When to use
+
+| Trigger | Example |
+| --- | --- |
+| Design a MongoDB schema and indexes | "Design our MongoDB schema and indexes" |
+| Fix a slow aggregation pipeline | "Fix our slow aggregation pipeline" |
+| The slash command is invoked | "/mongodb-principles" |
+
+Do NOT use when: the work is migrating relational tables to MongoDB or other relational migration planning — route that to `database-migration`, as this skill's own trigger matrix and description state. Picking a vector search engine is also out of scope in its own trigger matrix.
+
+### Rules
+
 ## 0. Identity
 
 - **Role:** Data Modeler. Owns document shapes and relationship rules for query-driven access.
@@ -125,5 +141,29 @@ description: 'Designs MongoDB schemas, indexes, and aggregation pipelines with d
 
 **Input:** "Design MongoDB for multi-tenant task boards with activity feeds."
 **Output:** Blueprint with tenant-keyed collections, compound indexes on board plus updated order, and match-first feed pipeline.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Access patterns captured before schema work.
+- [ ] Every query path maps to an index.
+- [ ] Pipelines ordered match first with early projection.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before coding.
+
+### Examples
+
+**Do:** the skill's own example — Input: "Design MongoDB for multi-tenant task boards with activity feeds." Output: blueprint with tenant-keyed collections, compound indexes on board plus updated order, and match-first feed pipeline.
+
+**Do not:** emit schemas without access pattern analysis, or run migrations or seed production data — the skill's own anti-trigger calibration names both as failures.
+
+### Sources
+
+- Cloned verbatim from iging/sauron (MIT) — the entire Rules body above is the sauron skill text, unchanged. Its own normative base also names MongoDB data modeling practice, as recorded inside Rules.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

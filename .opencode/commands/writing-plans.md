@@ -4,7 +4,23 @@ description: 'Turn an approved spec or design doc into an implementation plan fo
 
 ## Skill: writing-plans
 
+### Purpose
+
+Turn an approved spec or design doc into an implementation plan an engineer who has not seen the codebase can execute: file structure first, then bite-sized TDD tasks, each ending in a testable deliverable and a commit. It prevents plans that are either transcripts of the program or too vague to build from — the plan holds exactly the decisions the implementer cannot make alone.
+
+### When to use
+
 When to use: when you have a spec or requirements (usually an approved design doc from brainstorming) for a multi-step task, before touching code. Announce at the start: "I'm using the writing-plans skill to create the implementation plan."
+
+| Trigger | Example |
+| --- | --- |
+| An approved design doc from brainstorming is ready to become a plan | "Write the plan for the approved design" |
+| A spec or requirements exist for a multi-step task, before touching code | "Turn this spec into tasks" |
+| brainstorming hands off after design approval | "The design is approved — plan it" |
+
+Do NOT use when: the design is not approved yet — `brainstorming` owns the design conversation and its hard gate. Fixing an audit report's findings is run by `fix-team`, whose superpowers agent writes its own fix plan.
+
+### Rules
 
 Every rule below is distilled from obra/superpowers — `skills/writing-plans/SKILL.md` (cited per rule). Nothing here is invented — anything the source doesn't cover is labeled "general practice". Rules marked [Edsiel] are adaptations from his standing preferences, not from the source.
 
@@ -105,5 +121,31 @@ Every rule below is distilled from obra/superpowers — `skills/writing-plans/SK
 
 19. **[Edsiel] The plan is written in English; the conversation around it is in Bisaya.** Keep the chat short and simple.
 *Source: general practice — Edsiel's standing preference (chat in Bisaya, technical content in English)*
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] The file structure is mapped before any task is defined, one clear responsibility per file (rules 2–4)
+- [ ] The plan starts with the full header: Goal, Architecture, Tech Stack, Spec, Rollback anchor, Global Constraints, Review Focus (rule 8)
+- [ ] Global Constraints copy the spec's exact values verbatim (rule 9)
+- [ ] Every task names its files exactly, declares Consumes and Produces interfaces, and uses checkbox steps (rules 12–14)
+- [ ] Every task ends with an independently testable deliverable and a commit (rules 5–6)
+- [ ] The self-review ran: spec coverage, step scan, type consistency, Review Focus, proportion — gaps fixed inline (rule 16)
+- [ ] The plan was linked for Edsiel to read and an execution method offered, with a recommendation, before implementation (rules 17–18)
+
+### Examples
+
+**Do:** write one task that creates one focused file, with its failing test first, the minimal code step, the passing run, and a commit — the smallest unit a fresh reviewer could accept or reject on its own.
+
+**Do not:** write a step that decides nothing — "TBD", "handle edge cases", "add appropriate validation" — or paste function bodies the signature and tests already determine, until the plan is longer than the code it describes.
+
+### Sources
+
+- Distilled from obra/superpowers — `skills/writing-plans/SKILL.md` (cited per rule in the Rules section). Rules marked [Edsiel] are adaptations from his standing preferences, not from the source.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

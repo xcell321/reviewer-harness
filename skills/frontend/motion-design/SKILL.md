@@ -1,13 +1,29 @@
 ---
 name: motion-design
 description: Animation principles distilled from GSAP (GreenSock) — easing, sequencing, stagger, and performance. Make UI motion feel premium, not flashy. For any task involving CSS/JS animations, transitions, or micro-interactions.
+version: 1.0.0
 ---
 
 ## Skill: motion-design
 
-*Distilled from [GSAP (GreenSock Animation Platform)](https://github.com/greensock/GSAP) — the industry-standard JavaScript animation library (90k+ stars, used on 12M+ sites). Every rule below cites its GSAP source.*
+### Purpose
+
+Animation principles — easing, sequencing, stagger, and performance — that make UI motion feel premium, not flashy.
+It prevents robotic linear motion, fragile delay chains, and layout-thrashing animations.
+
+### When to use
 
 When to use: adding animations, transitions, loading states, or micro-interactions to any UI.
+
+| Trigger | Example |
+| --- | --- |
+| Adding animations or transitions to a UI | "Add a fade-in when this panel opens" |
+| Building loading states or micro-interactions | "Make this button feel responsive on press" |
+| Reviewing motion that feels cheap or janky | "These animations feel robotic — fix them" |
+
+Do NOT use when: the job is ready-made animated React components — `vengeance-ui` owns those; page-load performance budgets are `frontend-performance`.
+
+### Rules
 
 ### 1. Easing is 80% of good animation
 Source: [GSAP Eases docs](https://gsap.com/docs/v3/Eases) — `src/EasePack.js`
@@ -74,3 +90,27 @@ Source: general practice (GSAP community conventions)
 - 1-second+ durations on buttons or toggles (feels broken).
 - Ignoring `prefers-reduced-motion` (accessibility failure).
 - Bounce/elastic easings on serious UI (save for playful contexts only).
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Easing is a deliberate curve, not linear or default `ease`
+- [ ] Lists are staggered (30–80ms per item), not simultaneous
+- [ ] Only transform and opacity are animated
+- [ ] Durations hold: hover ≤200ms, entrance ≤350ms, exit ≤250ms
+- [ ] `prefers-reduced-motion` is respected via media query
+
+### Examples
+
+**Do:** an entrance with ease-out at 250–350ms, with list items staggered by 30–80ms.
+
+**Do not:** linear easing on a UI element, or a 1-second duration on a button toggle.
+
+### Sources
+
+*Distilled from [GSAP (GreenSock Animation Platform)](https://github.com/greensock/GSAP) — the industry-standard JavaScript animation library (90k+ stars, used on 12M+ sites). Every rule below cites its GSAP source.*
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.

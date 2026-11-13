@@ -1,6 +1,7 @@
 ---
 name: sqlite-principles
 description: SQLite production rules covering WAL pragmas, single-writer discipline, Litestream backup, Turso edge replicas, and Postgres graduation criteria. Excludes multi-writer cluster design.
+version: 1.0.0
 department: database
 ownerAgent: gimli
 triggerCommand: /sqlite-principles
@@ -13,6 +14,22 @@ antiPatternsPrevented:
 ---
 
 # SQLite Principles
+
+## Purpose
+
+SQLite production rules covering WAL pragmas, single-writer discipline, Litestream backup, Turso edge replicas, and Postgres graduation criteria: deployments with tuned pragmas, safe backups, and honest scale limits. It prevents locked-database errors, silent corruption on network mounts, and unbacked single files.
+
+## When to use
+
+| Trigger | Example |
+| --- | --- |
+| "Run this service on SQLite" | Core trigger. |
+| "Fix database-is-locked errors" | Core trigger. |
+| "/sqlite-principles" | Slash command trigger. |
+
+Do NOT use when: the work needs multi-writer clusters or a Postgres fleet — Postgres graduation and planner guidance belong to `supabase-principles`; MySQL schema and index design belongs to `mysql-principles`; MongoDB collection modeling belongs to `mongodb-principles`; executing schema migrations belongs to `database-migration`.
+
+## Rules
 
 ## 0. Identity
 
@@ -134,3 +151,27 @@ antiPatternsPrevented:
 
 **Input:** "Our edge API hammers Postgres for cacheable reads."
 **Output:** Plan with WAL-tuned SQLite, Litestream backups, embedded read replicas, and Postgres graduation triggers.
+
+## Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] WAL plus timeout pragmas set.
+- [ ] Backups stream with rehearsed restore.
+- [ ] File lives on local disk.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before deploy.
+
+## Examples
+
+**Do:** "Our edge API hammers Postgres for cacheable reads." — produce a plan with WAL-tuned SQLite, Litestream backups, embedded read replicas, and Postgres graduation triggers (the skill's own Section 10 example, kept verbatim in Rules).
+
+**Do not:** ship default pragmas without backup paths, or cluster writes unprompted (the under- and over-execution thresholds in Section 6 of Rules).
+
+## Sources
+
+- Cloned verbatim from iging/sauron (MIT) — the entire Rules body above is the sauron skill text, unchanged, including its section headings, trigger matrices, validation gates, portability matrices, and anti-pattern ids.
+
+## Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.

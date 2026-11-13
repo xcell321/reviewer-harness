@@ -1,11 +1,29 @@
 ---
 name: api-security
 description: 14 API security rules — apply to every backend endpoint you build or review. No anonymous backdoors, no leaked secrets.
+version: 1.0.0
 ---
 
 ## Skill: api-security
 
+### Purpose
+
+14 API security rules for every backend endpoint, covering authentication and access, input and transport, tokens and sessions, observability, configuration, and queries.
+It prevents anonymous backdoors and leaked secrets.
+
+### When to use
+
 When to use: building or reviewing any API — REST, GraphQL, or internal endpoints.
+
+| Trigger | Example |
+| --- | --- |
+| Building any API | "Add a REST endpoint for orders" |
+| Reviewing any API | "Review this GraphQL endpoint for security" |
+| Adding an internal endpoint | "Add an internal endpoint for sync jobs" |
+
+Do NOT use when: the job is a full web-application risk audit (`owasp-top10`), API design and shape (`api-design`), or general Node.js code quality (`nodejs-quality`) — those skills own those cases instead.
+
+### Rules
 
 Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
 
@@ -35,7 +53,10 @@ Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
 14. **Use parameterized queries — never build queries by string concatenation.** Concatenating user input into a query string lets an attacker inject SQL (or NoSQL/OS/LDAP commands) as code. Use prepared statements / parameterized queries for every database call so input is always data, never syntax. The same ban covers ORM raw-query escape hatches (`sequelize.query()`, `.raw()`, `find_by_sql`) that accept a plain string.
 *Source: OWASP Top 10 2021, A03:2021 Injection — parameterized queries (prepared statements) are the primary prevention for injection.*
 
-### Quick check before shipping
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
 - [ ] Every route has auth (or a documented reason it doesn't)
 - [ ] IDs in requests are ownership-checked
 - [ ] Inputs are schema-validated
@@ -44,10 +65,21 @@ Apply these 14 rules to every endpoint. If a rule doesn't apply, say why.
 - [ ] CORS names exact origins (no `*`, no `*` + credentials)
 - [ ] Every query is parameterized (no string concatenation into SQL)
 
-### Learn more (official sources)
+### Examples
+
+**Do:** Require a valid credential on every endpoint, check that the caller owns the requested ID, and put the token in a header over HTTPS.
+
+**Do not:** Leave an internal or debug route open without auth, trust an ID from the request without checking ownership, or put a token in a query string.
+
+### Sources
+
 - Rules 1–12 originate from the "12 API Security Rules" reel by Code Crack — the reel is their origin; their detailed wording in this file is general practice. Rules 13–14 cite their OWASP sources inline.
 - OWASP API Security Top 10: https://owasp.org/API-Security/
 - OWASP Cheat Sheet Series (API Security): https://cheatsheetseries.owasp.org/
 - OWASP Web Security Testing Guide: https://github.com/OWASP/wstg
 - Practice on a vulnerable API: https://github.com/OWASP/crAPI
 - Prevent committing secrets: https://github.com/awslabs/git-secrets
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.

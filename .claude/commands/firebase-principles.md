@@ -4,6 +4,22 @@ description: 'Firebase production rules covering Firestore modeling, cheap secur
 
 # Firebase Principles
 
+### Purpose
+
+Firebase production rules covering Firestore modeling, cheap security rules, triple-layer security, cost-aware reads, and Cloud Function boundaries: it produces Firebase backends with read-shaped models, locked rules, and billed-operation budgets. It prevents open databases, bill shocks, and N-plus-one hydration on serverless backends.
+
+### When to use
+
+| Trigger | Example |
+| --- | --- |
+| Build a backend on Firebase | "Build our backend on Firebase" |
+| Fix Firestore rules and bill spikes | "Fix our Firestore rules and bill spikes" |
+| The slash command is invoked | "/firebase-principles" |
+
+Do NOT use when: the work is building native mobile screens or running custom auth servers — both are out of scope in this skill's own Identity and trigger matrix (use Firebase Auth). A Supabase backend belongs to `supabase-principles` instead.
+
+### Rules
+
 ## 0. Identity
 
 - **Role:** System Architect. Owns serverless backend shape: data model, rule coverage, and cost boundaries.
@@ -124,5 +140,29 @@ description: 'Firebase production rules covering Firestore modeling, cheap secur
 
 **Input:** "Our social feed costs a fortune and anyone can list users."
 **Output:** Blueprint with denormalized feed docs, locked per-collection rules, App Check enforcement, and per-screen read budget.
+
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Screens modeled with read budgets.
+- [ ] Rules deny by default per collection.
+- [ ] Triple layer complete.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before wiring.
+
+### Examples
+
+**Do:** the skill's own example — Input: "Our social feed costs a fortune and anyone can list users." Output: blueprint with denormalized feed docs, locked per-collection rules, App Check enforcement, and per-screen read budget.
+
+**Do not:** ship collections without rules or budgets, or wire production projects unprompted — the skill's own anti-trigger calibration names both as failures.
+
+### Sources
+
+- Cloned verbatim from iging/sauron (MIT) — the entire Rules body above is the sauron skill text, unchanged, including its own normative-base references.
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
 
 Apply this playbook to the following: $ARGUMENTS

@@ -12,7 +12,7 @@ import { adapters, supportedRuntimes } from "../lib/adapters/index.js";
 import { sync, writeSafe } from "../lib/sync.js";
 import { initProject, initFull } from "../lib/init.js";
 import { initMemory, buildIndex, readNotes, memoryDir } from "../lib/memory.js";
-import { validateConfig } from "../lib/validate.js";
+import { validateConfig, validateBundledSkills } from "../lib/validate.js";
 import { listBundledSkills, addSkill, removeSkill, loadBundledSkills, skillCommandContent, skillBundleContent } from "../lib/skills.js";
 import { listBundledAgents, addAgent } from "../lib/agents.js";
 import { listBundledCommands, addCommand } from "../lib/commands.js";
@@ -235,12 +235,22 @@ function cmdValidate() {
   const { errors, warnings, ok } = validateConfig(config, {
     knownRuntimes: supportedRuntimes,
   });
-  for (const e of errors) console.log(`✗ ${e}`);
+  // Bundled-store template gate (sauron-grade roadmap, Phase 2): the
+  // skills the harness ships must follow the house template, independent
+  // of the project config being validated.
+  const bundled = loadBundledSkills();
+  const skillGate = validateBundledSkills(bundled);
+  const allErrors = [...errors, ...skillGate.errors];
+  for (const e of allErrors) console.log(`✗ ${e}`);
   for (const w of warnings) console.log(`⚠ ${w}`);
-  if (ok && !warnings.length) console.log(`✓ Config is clean — no problems, no secrets.`);
-  else if (ok) console.log(`✓ No errors (${warnings.length} warning(s)).`);
+  const allOk = ok && skillGate.ok;
+  if (allOk && !warnings.length)
+    console.log(
+      `✓ Config is clean — no problems, no secrets. Bundled skills: ${bundled.length}/${bundled.length} template-compliant.`
+    );
+  else if (allOk) console.log(`✓ No errors (${warnings.length} warning(s)).`);
   else {
-    console.log(`\n✗ ${errors.length} error(s) — fix them before syncing.`);
+    console.log(`\n✗ ${allErrors.length} error(s) — fix them before syncing.`);
     process.exitCode = 1;
   }
 }

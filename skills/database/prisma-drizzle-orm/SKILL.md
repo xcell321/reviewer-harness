@@ -1,6 +1,7 @@
 ---
 name: prisma-drizzle-orm
 description: Models type-safe data access with Prisma or Drizzle schemas, migrations, and query patterns. Excludes raw database administration.
+version: 1.0.0
 department: database
 ownerAgent: gimli
 triggerCommand: /prisma-drizzle-orm
@@ -13,6 +14,22 @@ antiPatternsPrevented:
 ---
 
 # Prisma Drizzle ORM
+
+## Purpose
+
+Models type-safe data access with Prisma or Drizzle: ORM schemas, migrations, and query patterns with N-plus-one eliminated. It prevents schema drift where code models and database truth diverge silently.
+
+## When to use
+
+| Trigger | Example |
+| --- | --- |
+| "Model our data layer with Prisma" | Core trigger. |
+| "Fix N-plus-one queries in Drizzle" | Core trigger. |
+| "/prisma-drizzle-orm" | Slash command trigger. |
+
+Do NOT use when: the work is database server administration (out of scope in the skill itself; a DBA runbook is needed); MongoDB collection modeling belongs to `mongodb-principles`; MySQL schema and index design belongs to `mysql-principles`; a Supabase backend with Row Level Security belongs to `supabase-principles`; an embedded SQLite deployment belongs to `sqlite-principles`.
+
+## Rules
 
 ## 0. Identity
 
@@ -135,3 +152,28 @@ antiPatternsPrevented:
 
 **Input:** "Our Drizzle feed endpoint fires 200 queries per request."
 **Output:** Blueprint with relational batch query, cursor pagination, and bounded statement log.
+
+## Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] ORM choice recorded with reason.
+- [ ] Relations explicit with cardinality.
+- [ ] N-plus-one eliminated on hot paths.
+- [ ] Zero em dashes in deliverable.
+- [ ] Human approval recorded before migrations.
+
+## Examples
+
+**Do:** "Our Drizzle feed endpoint fires 200 queries per request." — produce a blueprint with relational batch query, cursor pagination, and bounded statement log (the skill's own Section 10 example, kept verbatim in Rules).
+
+**Do not:** emit models without migration review, or apply migrations to shared databases (the under- and over-execution thresholds in Section 6 of Rules).
+
+## Sources
+
+- Cloned verbatim from iging/sauron (MIT) — the entire Rules body above is the sauron skill text, unchanged, including its section headings, trigger matrices, validation gates, portability matrices, and anti-pattern ids.
+- The skill itself names TypeScript ORM practice in its normative base (see Section 0 in Rules); no separate distillation from Prisma or Drizzle documentation is claimed here.
+
+## Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.

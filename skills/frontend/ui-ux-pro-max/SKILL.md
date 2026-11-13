@@ -1,13 +1,29 @@
 ---
 name: ui-ux-pro-max
 description: Full UI/UX audit and fix planning distilled from nextlevelbuilder/ui-ux-pro-max-skill — 222 checkable UX guidelines across 10 priority categories, plus the design-system workflow and pre-delivery checklist. Use when auditing a UI systematically, planning prioritized fixes, or building a new page/project design system.
+version: 1.0.0
 ---
 
 ## Skill: ui-ux-pro-max
 
-Distilled from [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT) — SKILL.md + references/quick-reference.md (all 120 UX guidelines) + references/pro-rules.md. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
+### Purpose
+
+A full UI/UX audit and fix-planning system: 222 checkable guidelines across 10 priority categories, plus a design-system workflow and a pre-delivery checklist.
+It prevents unsystematic, priority-blind UI reviews that miss critical accessibility and interaction failures.
+
+### When to use
 
 When to use: a full UI/UX audit, a fix plan for an existing UI, or a new page/project design system. **Scope boundary (source): skip for pure backend/API/DB/infra work. The pro-rules tables are native/mobile-app UI only — their touch-target and safe-area numbers do not transfer 1:1 to desktop web.**
+
+| Trigger | Example |
+| --- | --- |
+| A full UI/UX audit of an existing interface | "Audit this app's UI and tell me what to fix first" |
+| A prioritized fix plan for an existing UI | "Plan the fixes for this dashboard's UX problems" |
+| A design system for a new page or project | "Set up the design system for this new project" |
+
+Do NOT use when: the job is anti-slop visual taste for a marketing page — `design-taste-frontend` owns that; designing the 10 non-happy-path screen states is `ux-edge-states`.
+
+### Rules
 
 Includes the family: ui-ux-pro-max, design, design-system, ui-styling, brand, banner-design, slides.
 
@@ -78,8 +94,31 @@ Pre-delivery checklist: process (relevant searches only; re-read quick-reference
 - Triage principle: "ayaw ayoha ang dili guba" — present what's real, what's polish, what's not worth fixing; let him pick (he rejected a full 15-fix plan and trusted the 3-fix subset).
 - First full DevPilotAI audit scored 8.4/10 (history, not a source rule).
 
-### Learn more
+### Validation gate
+
+Before reporting the task done, check each line against the actual work:
+
+- [ ] Categories were audited in priority order 1→10, and every failed guideline is named by its ID
+- [ ] For new pages/projects, the design system was generated (Step 2) before building
+- [ ] The stack was detected from project files, never assumed
+- [ ] Before delivering app UI, the pro-rules Pre-Delivery Checklist was run
+- [ ] No unverified search output was presented as data or persisted
+
+### Examples
+
+**Do:** audit category 1 (Accessibility) first and name each finding by its guideline ID — a 3.2:1 text pair fails color-contrast.
+
+**Do not:** start with charts and data (category 10) while contrast and touch targets (categories 1–2) still fail.
+
+### Sources
+
+Distilled from [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT) — SKILL.md + references/quick-reference.md (all 120 UX guidelines) + references/pro-rules.md. Every rule below cites its source file. Anything the source does not cover is labeled "general practice".
+
 - ui-ux-pro-max skill (source): https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
 - Skill file: https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude/skills/ui-ux-pro-max/SKILL.md
 - Quick reference (120 guidelines): https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude/skills/ui-ux-pro-max/references/quick-reference.md
 - Pro rules + checklist: https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude/skills/ui-ux-pro-max/references/pro-rules.md
+
+### Changelog
+
+- 1.0.0 — 2026-11-13 — Template retrofit; rules unchanged.
