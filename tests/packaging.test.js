@@ -21,22 +21,23 @@ function jsFiles(dir) {
 }
 
 test("package has test and check scripts", () => {
-  // Shell-expanded glob, NOT "node --test tests/": a directory argument
-  // is not walked by the runner — Node 24.22.1 treats it as a module
-  // path and fails with MODULE_NOT_FOUND (npm test exit 1). The glob
-  // expands in sh on every supported Node (18/20/22/24). The test script
-  // itself is NOT executed here: running it would re-run this test file
-  // and recurse; the agent's own `npm test` run is the evidence.
-  assert.equal(pkg.scripts?.test, "node --test tests/*.test.js");
+  // Cross-platform launchers, NOT a shell glob: npm runs package.json
+  // scripts via cmd.exe on Windows no matter what shell the CI step
+  // uses, and cmd.exe expands no globs — that is why Windows CI died on
+  // `node --test tests/*.test.js` (runs #171-172) before ever reaching
+  // the check step. The launcher enumerates the files in Node instead,
+  // so the exact same test set runs on every OS. The test script itself
+  // is NOT executed here: running it would re-run this test file and
+  // recurse; the agent's own `npm test` run is the evidence.
+  assert.equal(pkg.scripts?.test, "node scripts/run-tests.mjs");
   // Minimal block: nothing else, no new dependencies, no build step.
   assert.deepEqual(Object.keys(pkg.scripts ?? {}).sort(), ["check", "test"]);
   const check = pkg.scripts.check;
-  assert.match(check, /node --check/);
-  assert.match(check, /bin\//);
-  assert.match(check, /lib\//);
+  assert.equal(check, "node scripts/check-syntax.mjs");
   // Prove the check script really covers every .js file under bin/ + lib/:
-  // run it as written and require exit 0.
-  execFileSync("sh", ["-c", check], { cwd: repoRoot, stdio: "pipe" });
+  // run it as written (a plain node command, no shell needed) and
+  // require exit 0.
+  execFileSync(process.execPath, ["scripts/check-syntax.mjs"], { cwd: repoRoot, stdio: "pipe" });
   const covered = [...jsFiles(join(repoRoot, "bin")), ...jsFiles(join(repoRoot, "lib"))];
   assert.ok(covered.length > 0, "expected .js files under bin/ + lib/");
 });
