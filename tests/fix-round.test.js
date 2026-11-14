@@ -172,12 +172,19 @@ function graphHtmlFor(dir) {
 }
 
 test("B-3: graph.html escapes scanned paths — no markup or </script> breakout in the payload", () => {
+  // NTFS forbids < and > in file names, so on Windows the payload rides
+  // on "&" instead: the graph escaper maps & to \u0026 through the same
+  // code path as < and > (lib/graph.js), so the escape is still proven
+  // against a real scanned path on every platform.
+  const onWindows = process.platform === "win32";
+  const payloadDir = onWindows ? "svg&onload=alert(1)" : "<svg onload=alert(1)>";
+  const escapedDir = onWindows ? "svg\\u0026onload=alert(1)" : "\\u003csvg onload=alert(1)\\u003e";
   const dir = tempDir("rh-graph-xss-");
-  write(dir, "<svg onload=alert(1)>/payload.ts", "export const payload = 1;\n");
+  write(dir, `${payloadDir}/payload.ts`, "export const payload = 1;\n");
   write(dir, "src/plain.ts", "export const plain = 1;\n");
   const html = graphHtmlFor(dir);
 
-  assert.ok(!html.includes("<svg onload=alert(1)>"), "the raw payload string never appears unescaped");
+  assert.ok(!html.includes(payloadDir), "the raw payload string never appears unescaped");
   // The inline data block: exactly the text of the `const payload = …;` line.
   const marker = "const payload = ";
   const start = html.indexOf(marker);
@@ -185,7 +192,7 @@ test("B-3: graph.html escapes scanned paths — no markup or </script> breakout 
   const payloadLine = html.slice(start + marker.length, html.indexOf("\n", start));
   assert.ok(!payloadLine.includes("</script>"), "no literal </script> inside the inline JSON block");
   assert.ok(
-    payloadLine.includes("\\u003csvg onload=alert(1)\\u003e"),
+    payloadLine.includes(escapedDir),
     "the directory name is present, script-escaped"
   );
 
