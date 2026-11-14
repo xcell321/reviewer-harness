@@ -32,6 +32,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm test
+        shell: bash
       - run: npm run check
         shell: bash
       # The bundled-skill template gate, run directly so it does not
