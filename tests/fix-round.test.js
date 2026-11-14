@@ -301,10 +301,11 @@ test("W-9: two processes writing the same file concurrently never collide on a s
       `const [target, tag, rounds] = process.argv.slice(2);\n` +
       `const content = tag + " " + "x".repeat(128 * 1024) + " " + tag;\n` +
       `let errors = 0;\n` +
+      `const seen = [];\n` +
       `for (let i = 0; i < Number(rounds); i++) {\n` +
-      `  try { writeSafe(target, content); } catch { errors++; }\n` +
+      `  try { writeSafe(target, content); } catch (e) { errors++; if (seen.length < 3) seen.push(String(e.code || e.message)); }\n` +
       `}\n` +
-      `console.log("errors=" + errors);\n`
+      `console.log("errors=" + errors + (seen.length ? " [" + seen.join(" | ") + "]" : ""));\n`
   );
 
   const runWriter = (tag) =>
