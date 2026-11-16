@@ -1,7 +1,7 @@
 # reviewer-harness
 
 <p align="center">
-  <img src="assets/bantay.png" alt="Bantay — the reviewer-harness mascot" width="200">
+  <img src="assets/bantay.svg" alt="Bantay — the reviewer-harness mascot" width="200">
 </p>
 
 ```
