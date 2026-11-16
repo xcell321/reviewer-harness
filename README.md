@@ -1,5 +1,9 @@
 # reviewer-harness
 
+<p align="center">
+  <img src="assets/bantay.png" alt="Bantay — the reviewer-harness mascot" width="200">
+</p>
+
 ```
 Eight runtimes in the editor, each with files of its own,
 Scattered rules in every corner, never quite in sync,
