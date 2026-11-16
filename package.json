@@ -1,6 +1,7 @@
 {
   "author": "Edsiel Ursal",
   "bin": {
+    "reviewer": "./bin/cli.js",
     "reviewer-harness": "./bin/cli.js"
   },
   "description": "Your own AI harness \u2014 one master config that syncs guardrail rules, skills, and a local memory to Claude, OpenCode, Gemini, Cline, Freebuff, Copilot CLI, Antigravity, and Qoder. No API key, no dependencies.",
@@ -31,7 +32,7 @@
     "test": "node scripts/run-tests.mjs"
   },
   "type": "module",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "files": [
     "bin",
     "lib",

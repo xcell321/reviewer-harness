@@ -41,6 +41,25 @@ try {
   console.error(helpText());
   process.exit(1);
 }
+// v1.22: short command aliases, normalized once here so every dispatch
+// below only ever sees the canonical names. Top level: `check` =
+// validate, `cmd` = commands. Inside the grouped commands (skills,
+// agents, commands, memory): `ls` = list, `rm` = remove. The long
+// forms keep working unchanged.
+const COMMAND_ALIASES = { check: "validate", cmd: "commands" };
+const SUB_ALIASES = { ls: "list", rm: "remove" };
+const GROUPED_COMMANDS = ["skills", "agents", "commands", "memory"];
+if (positionals[0] && COMMAND_ALIASES[positionals[0]]) {
+  positionals[0] = COMMAND_ALIASES[positionals[0]];
+}
+if (
+  positionals[0] &&
+  GROUPED_COMMANDS.includes(positionals[0]) &&
+  positionals[1] &&
+  SUB_ALIASES[positionals[1]]
+) {
+  positionals[1] = SUB_ALIASES[positionals[1]];
+}
 const [command, sub, arg] = positionals;
 const targetDir = values.target;
 const dryRun = values["dry-run"];
@@ -94,26 +113,28 @@ function helpText() {
   return `reviewer-harness — your own AI harness
 
 Usage (run inside your project):
-  reviewer-harness init [--goal <text>]     Set up EVERYTHING in this project in one command: detect the stack + goal, create the config, install all skills, agents and commands, start the memory, and sync every runtime (--minimal = config only, the old behavior; --dry-run = preview)
-  reviewer-harness validate                 Check the config: quality + secret scanning
-  reviewer-harness graph [path]             Generate a codebase knowledge graph (graph.json, graph-report.md, graph.html) into .reviewer-harness/graph/
-  reviewer-harness sync [--dry-run]         Sync the rules to every runtime (--dry-run = preview only)
-  reviewer-harness status                   Show the config + target files
+  reviewer init [--goal <text>]     Set up EVERYTHING in this project in one command: detect the stack + goal, create the config, install all skills, agents and commands, start the memory, and sync every runtime (--minimal = config only, the old behavior; --dry-run = preview)
+  reviewer validate                 Check the config: quality + secret scanning
+  reviewer graph [path]             Generate a codebase knowledge graph (graph.json, graph-report.md, graph.html) into .reviewer-harness/graph/
+  reviewer sync [--dry-run]         Sync the rules to every runtime (--dry-run = preview only)
+  reviewer status                   Show the config + target files
 
-  reviewer-harness skills list              List bundled skills (+ which are enabled)
-  reviewer-harness skills add <name>        Install + enable a skill in the project
-  reviewer-harness skills remove <name>     Disable + remove a skill
-  reviewer-harness agents list              List bundled sub-agents
-  reviewer-harness agents add <name>        Install a sub-agent (OpenCode + Claude)
-  reviewer-harness commands list            List bundled slash commands
-  reviewer-harness commands add <name>      Install a slash command (OpenCode + Claude)
+  reviewer skills list              List bundled skills (+ which are enabled)
+  reviewer skills add <name>        Install + enable a skill in the project
+  reviewer skills remove <name>     Disable + remove a skill
+  reviewer agents list              List bundled sub-agents
+  reviewer agents add <name>        Install a sub-agent (OpenCode + Claude)
+  reviewer commands list            List bundled slash commands
+  reviewer commands add <name>      Install a slash command (OpenCode + Claude)
 
-  reviewer-harness global [--dry-run]       Install EVERY bundled skill for ALL projects (OpenCode + Claude "/" menus; Freebuff, Copilot CLI, Antigravity, Qoder skill bundles)
+  reviewer global [--dry-run]       Install EVERY bundled skill for ALL projects (OpenCode + Claude "/" menus; Freebuff, Copilot CLI, Antigravity, Qoder skill bundles)
 
-  reviewer-harness memory init              Start the local memory (memory/ folder)
-  reviewer-harness memory index             Rebuild the memory INDEX.md + graph.json
-  reviewer-harness memory list              List memory notes + their links
+  reviewer memory init              Start the local memory (memory/ folder)
+  reviewer memory index             Rebuild the memory INDEX.md + graph.json
+  reviewer memory list              List memory notes + their links
 
+Short forms: check = validate, cmd = commands, ls = list, rm = remove.
+The long name reviewer-harness works as the command too.
 Every command accepts --target <dir> (default: the current directory).
 `;
 }
@@ -254,7 +275,7 @@ function cmdMemory() {
       console.log(`- [[${n.id}]] ${n.title}${n.links.length ? ` → ${n.links.join(", ")}` : ""}`);
     }
   } else {
-    console.error(`Usage: memory <init|index|list> [--target <dir>]`);
+    console.error(`Usage: memory <init|index|list|ls> [--target <dir>]`);
     process.exitCode = 1;
   }
 }
@@ -493,7 +514,7 @@ function cmdSkills() {
       }
     }
   } else {
-    console.error(`Usage: skills <list|add <name>|remove <name>> [--target <dir>]`);
+    console.error(`Usage: skills <list|ls|add <name>|remove|rm <name>> [--target <dir>]`);
     process.exitCode = 1;
   }
 }
@@ -509,7 +530,7 @@ function cmdAgents() {
     console.log(`Agent "${arg}" installed:`);
     for (const f of r.written) console.log(`  → ${f}`);
   } else {
-    console.error(`Usage: agents <list|add <name>> [--target <dir>]`);
+    console.error(`Usage: agents <list|ls|add <name>> [--target <dir>]`);
     process.exitCode = 1;
   }
 }
@@ -525,7 +546,7 @@ function cmdCommands() {
     console.log(`Command "/${arg}" installed:`);
     for (const f of r.written) console.log(`  → ${f}`);
   } else {
-    console.error(`Usage: commands <list|add <name>> [--target <dir>]`);
+    console.error(`Usage: commands <list|ls|add <name>> [--target <dir>]`);
     process.exitCode = 1;
   }
 }
