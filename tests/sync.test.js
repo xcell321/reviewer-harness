@@ -296,10 +296,10 @@ test("freebuff and antigravity do not write the same bundle dir twice", () => {
 test("the scale limit is documented with the measured numbers", () => {
   for (const doc of ["../README.md", "../CONTRIBUTING.md"]) {
     const text = readFileSync(new URL(doc, import.meta.url), "utf8");
-    assert.match(text, /266,198/, `${doc} states the measured skill source size`);
-    assert.match(text, /2,660,559/, `${doc} states the measured generated output`);
-    assert.match(text, /262,243/, `${doc} states the measured CLAUDE.md size`);
-    assert.match(text, /10×/, `${doc} states the 10x amplification`);
+    assert.match(text, /487,658/, `${doc} states the measured skill source size`);
+    assert.match(text, /4,380,205/, `${doc} states the measured generated output`);
+    assert.match(text, /478,654/, `${doc} states the measured CLAUDE.md size`);
+    assert.match(text, /9×/, `${doc} states the 9x amplification`);
     assert.match(text, /ceiling/i, `${doc} states the target ceiling`);
     assert.match(text, /out of scope/i, `${doc} says a re-architecture is out of scope`);
   }

@@ -334,9 +334,9 @@ Four guardrails run before any file is written:
 
 ### Scale limit — instruction files grow linearly with skills
 
-Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured at audit (22 skills): **266,198 bytes** of skill source → **2,660,559 bytes** of generated output across 124 files (**10×** amplification); `CLAUDE.md` alone is **262,243 bytes** today. Growth is linear: at 10× skills (220), each instruction file would be ≈ 2.6 MB and total output ≈ 26.6 MB. The binding constraint is the AI runtime's context window, not disk.
+Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured today (34 skills, full init): **487,658 bytes** of skill source → **4,380,205 bytes** of generated output across 188 files (**9×** amplification); `CLAUDE.md` alone is **478,654 bytes**. Growth is linear: at 2× the skills (68), each instruction file would be ≈ 1 MB. The binding constraint is the AI runtime's context window, not disk.
 
-**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 3× today's 34 skills (≈ 102 skills) at the current amplification. Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — at today's skill sizes, the 1 MB per-file ceiling binds first, at roughly 2× today's skills (≈ 68 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
 
 Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling.
 

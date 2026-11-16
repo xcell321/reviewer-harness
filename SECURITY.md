@@ -4,8 +4,8 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 1.0.x   | ✅        |
-| < 1.0   | ❌        |
+| 1.22.x  | ✅        |
+| < 1.22  | ❌        |
 
 ## Reporting a vulnerability
 
@@ -19,7 +19,7 @@ Include:
 
 - What the issue is and what it lets an attacker (or a careless config) do
 - Steps to reproduce, ideally with a minimal `harness.config.json`
-- The version of reviewer-harness and your Node.js version
+- The version of reviewer-harness (run `reviewer --version`) and your Node.js version
 
 You can expect an acknowledgment within a few days. Fixes for confirmed issues will be released as a patch version, and the reporter credited in the release notes (unless they prefer to stay anonymous).
 
@@ -31,6 +31,7 @@ reviewer-harness is designed to be safe by default:
 - **Secret scanning.** `validate` — and the gate inside `sync` — scans rules and other config text for common credential patterns (API keys, GitHub tokens, AWS keys, private key blocks, generic secret assignments). A config containing a likely secret **will not sync**, because synced instruction files are commonly committed to Git.
 - **Backup before overwrite.** If sync is about to overwrite an existing instruction file, it first writes a `.bak` copy.
 - **Writes stay in the target.** Sync writes only the known instruction files (and `memory/` index files, when memory is in use) inside the target directory you specify.
+- **No escapes, no collateral deletes.** Sync validates every write path before writing: a config or a symlink cannot steer a write outside the target directory, and sync never deletes files it did not generate — hand-written files are left alone.
 
 ## What counts as a vulnerability here
 
