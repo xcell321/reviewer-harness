@@ -11,7 +11,7 @@ import { loadConfig } from "../lib/config.js";
 import { adapters, supportedRuntimes } from "../lib/adapters/index.js";
 import { sync, writeSafe } from "../lib/sync.js";
 import { initProject, initFull } from "../lib/init.js";
-import { initMemory, buildIndex, readNotes, memoryDir } from "../lib/memory.js";
+import { initMemory, buildIndex, readNotes, memoryDir, queryContext } from "../lib/memory.js";
 import { validateConfig, validateBundledSkills } from "../lib/validate.js";
 import { listBundledSkills, addSkill, removeSkill, loadBundledSkills, skillCommandContent, skillBundleContent, assertValidName, assertInside } from "../lib/skills.js";
 import { listBundledAgents, addAgent } from "../lib/agents.js";
@@ -30,6 +30,8 @@ try {
       "dry-run": { type: "boolean", default: false },
       minimal: { type: "boolean", default: false },
       goal: { type: "string" },
+      budget: { type: "string" },
+      hops: { type: "string" },
       target: { type: "string", default: process.cwd() },
       help: { type: "boolean", short: "h", default: false },
       version: { type: "boolean", default: false },
@@ -132,6 +134,7 @@ Usage (run inside your project):
   reviewer memory init              Start the local memory (memory/ folder)
   reviewer memory index             Rebuild the memory INDEX.md + graph.json
   reviewer memory list              List memory notes + their links
+  reviewer context "<question>"     Retrieve only the memory notes relevant to a question — graph walk from the best matches, within a token budget [--budget <tokens>] [--hops <n>]
 
 Short forms: check = validate, cmd = commands, ls = list, rm = remove.
 The long name reviewer-harness works as the command too.
@@ -277,6 +280,59 @@ function cmdMemory() {
   } else {
     console.error(`Usage: memory <init|index|list|ls> [--target <dir>]`);
     process.exitCode = 1;
+  }
+}
+
+function cmdContext() {
+  const question = sub;
+  if (!question) {
+    console.error(`Usage: context "<question>" [--budget <tokens>] [--hops <n>] [--target <dir>]`);
+    process.exitCode = 1;
+    return;
+  }
+  if (!existsSync(memoryDir(targetDir)))
+    throw new Error(`No memory/ in ${targetDir} — run "memory init" first.`);
+  const parseCount = (raw, name) => {
+    if (raw === undefined) return undefined;
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isFinite(n) || n <= 0)
+      throw new Error(`--${name} must be a positive number, got "${raw}".`);
+    return n;
+  };
+  // Phase 5: a config vaultPath bridges retrieval into the user's
+  // Obsidian vault (read-only). No config, no vaultPath, or a path
+  // that does not exist → project memory only (with a warning in
+  // the last case, so a typo never fails the query silently).
+  let vaultDir;
+  try {
+    const cfg = loadConfig(targetDir);
+    if (typeof cfg.vaultPath === "string" && cfg.vaultPath.trim()) {
+      if (existsSync(cfg.vaultPath)) vaultDir = cfg.vaultPath;
+      else
+        console.error(
+          `Warning: config vaultPath "${cfg.vaultPath}" does not exist — searching the project memory only.`
+        );
+    }
+  } catch {
+    // No config in the target — project memory only.
+  }
+  const result = queryContext(targetDir, question, {
+    budget: parseCount(values.budget, "budget"),
+    hops: parseCount(values.hops, "hops"),
+    vaultDir,
+  });
+  console.log(`# Context for: "${question}"`);
+  console.log(
+    `${result.notes.length} note(s) · ~${result.totalTokens} tokens (budget ${result.budget}) · seeds: ${result.seeds.length ? result.seeds.join(", ") : "(none)"}`
+  );
+  if (!result.notes.length) {
+    console.log(`\nNo memory notes match that question yet.`);
+    return;
+  }
+  for (const n of result.notes) {
+    const origin =
+      n.source === "vault" ? ` · vault: ${n.path}` : n.stage ? ` · stage: ${n.stage}` : "";
+    console.log(`\n---\n\n## [[${n.id}]] — ${n.title} (hop ${n.hop}${origin})\n\n${n.text}`);
   }
 }
 
@@ -665,6 +721,7 @@ function maxPositionals() {
   const noPositional = ["status", "sync", "init", "validate", "global", "help"];
   if (!command || noPositional.includes(command)) return 1;
   if (command === "memory" || command === "graph") return 2;
+  if (command === "context") return 2;
   if (command === "skills" || command === "agents" || command === "commands") {
     if (sub === "list") return 2;
     if (sub === "add" || sub === "remove") return 3;
@@ -685,6 +742,7 @@ async function main() {
   else if (command === "init") cmdInit();
   else if (command === "validate") cmdValidate();
   else if (command === "memory") cmdMemory();
+  else if (command === "context") cmdContext();
   else if (command === "skills") cmdSkills();
   else if (command === "agents") cmdAgents();
   else if (command === "commands") cmdCommands();

@@ -16,7 +16,7 @@ One sync to bind them all,
 and in your codebase, protect them.
 ```
 
-![version](https://img.shields.io/badge/version-1.22.0-blue)
+![version](https://img.shields.io/badge/version-1.23.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellowgreen)
 ![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
@@ -143,7 +143,7 @@ reviewer status
 Expected output (version number varies):
 
 ```
-Harness : reviewer-harness v1.22.0
+Harness : reviewer-harness v1.23.0
 Target  : /path/to/your/project
 Runtimes:
   - opencode → .opencode/instructions.md
@@ -253,14 +253,14 @@ npx reviewer-harness skills add no-hallucination
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer skills list            # see all 34 bundled skills, grouped by category (+ which are enabled)
+reviewer skills list            # see all 36 bundled skills, grouped by category (+ which are enabled)
 reviewer skills add <name>      # install into the project and enable it in the config
 reviewer skills remove <name>   # disable it in the config and remove it
 ```
 
 The skills are organized into **8 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (7), `quality` (5), `backend` (2), `security` (2), `ai-engineering` (2), `architecture` (2), `database` (8). Every skill lives in its own folder as `skills/<category>/<name>/SKILL.md`, the layout used by iging/sauron.
 
-All 34 bundled skills:
+All 36 bundled skills:
 
 | Skill | What it does |
 |---|---|
@@ -281,11 +281,13 @@ All 34 bundled skills:
 | `php-principles` | Modern PHP 8.x engineering rules — strict typing, PSR architecture, security hardening, error discipline, static analysis gates. |
 | `audit-team` | Run an 8-agent parallel audit — 5 skill specialists plus 3 area agents — report-only, no edits. |
 | `ub-mode` | Uncle Bob mode — Clean Code discipline from Robert C. Martin: TDD first, CRAP < 10. |
+| `refactor` | Dedicated reorganization pass — split oversized files, separate mixed concerns, arrange folders by feature, behavior unchanged. Fowler-grounded, approval-gated, report = folder tree + moves table. |
 | `design-taste-frontend` | Anti-slop design taste from Leonxlnx/taste-skill — layout, palettes, type, heroes, copy ban lists. Includes a 3-tier design-token architecture (rules 60–65, merged from iging/sauron). |
 | `ui-ux-pro-max` | Full UI/UX audit from nextlevelbuilder/ui-ux-pro-max-skill — 222 checkable guidelines across 10 categories. |
 | `vengeance-ui` | Modern animated React components from VengeanceUI — 79 copy-paste components across 9 families. |
 | `brainstorming` | Find out what you actually want — and why — before anything gets built. Design doc first, approval first — then it hands off to writing-plans automatically, in the same session. |
 | `writing-plans` | Turn an approved spec into a bite-sized TDD implementation plan. (Brainstorming invokes it for you after approval.) |
+| `memory-inferred-edges` | Propose semantic INFERRED edges between memory notes — confidence + rationale in `memory/inferred.json`, validated and kept separate from the [[link]]-extracted graph. |
 | `fix-team` | Run an 11-agent fix over an audit report's findings — 8 domain fixers plus ub-mode, superpowers, and a verification agent that runs last. Fix plan first, user approves, verification re-checks every fix. |
 | `verify_before_done` | Check defined-and-called plus remote evidence before reporting done, pushed, fixed, or working — never present an untested guess as done. Also covers provider claims and publish/install surfaces (merged in). |
 | `instruction_registers` | Name the user's target and action registers before building, pushing, or planning, and ask one clarifying question when they are ambiguous. |
@@ -338,9 +340,9 @@ Four guardrails run before any file is written:
 
 ### Scale limit — instruction files grow linearly with skills
 
-Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured today (34 skills, full init): **487,658 bytes** of skill source → **4,380,205 bytes** of generated output across 188 files (**9×** amplification); `CLAUDE.md` alone is **478,654 bytes**. Growth is linear: at 2× the skills (68), each instruction file would be ≈ 1 MB. The binding constraint is the AI runtime's context window, not disk.
+Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured today (36 skills, full init): **504,136 bytes** of skill source → **5,037,710 bytes** of generated output across 243 files (**10×** amplification); `CLAUDE.md` alone is **494,661 bytes**. Growth is linear: at 2× the skills (72), each instruction file would be ≈ 1 MB. The binding constraint is the AI runtime's context window, not disk.
 
-**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — at today's skill sizes, the 1 MB per-file ceiling binds first, at roughly 2× today's skills (≈ 68 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — at today's skill sizes, the 1 MB per-file ceiling binds first, at roughly 2× today's skills (≈ 72 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
 
 Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling.
 
@@ -447,7 +449,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer skills list` | List all 34 bundled skills, grouped by category (+ which are enabled) |
+| `reviewer skills list` | List all 36 bundled skills, grouped by category (+ which are enabled) |
 | `reviewer skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer skills remove <name>` | Disable a skill and remove it |
 | `reviewer agents list` | List the bundled sub-agents |
@@ -525,6 +527,7 @@ Check that you edited the config in the same folder you are syncing (`--target` 
 16. ✅ v1.20.0 — audit fix edition: the harness audited itself (78 findings) and fixed every non-deferred one — sync can no longer delete hand-written files or escape the project through symlinks, removed skills stay removed, the graph visualizer is truly standalone (vis-network vendored, zero network requests) and XSS-safe, the import parser no longer hangs on minified files, and the sync↔skills import cycle is dissolved (the repo's own graph now reports 0 cycles); suite 106 tests
 17. ✅ v1.21.0 — client-trust edition: api-security grows from 14 to 17 rules (skill v1.1.0) with a "Never trust the client" section — public env-prefix secrets (`VITE_` / `NEXT_PUBLIC_`), mass assignment + server-side checkout pricing, and Row Level Security as the authorization layer — every rule source-cited (OWASP API3:2023/API8:2023, Vite, Supabase and PostgreSQL docs) and effect-tested baseline-vs-new against a seeded vulnerable sample
 18. ✅ v1.22.0 — short-command edition: the CLI answers to `reviewer` (a second bin name; `reviewer-harness` keeps working), and the long subcommands gain short forms — `check` for `validate`, `cmd` for `commands`, `ls` for `list`, `rm` for `remove` — so `reviewer memory init` replaces `reviewer-harness memory init`
+19. ✅ v1.23.0 — second-brain edition: the memory grows Graphify/ICM wings — frontmatter + EXTRACTED tags + REPORT.md audit (Phase 1), agent-proposed INFERRED edges with confidence, communities and surprising connections via the new `memory-inferred-edges` skill (Phase 2), a `reviewer context "<question>"` retrieval command that walks the graph within a token budget so the AI reads ~5 notes instead of the whole memory (Phase 3), ICM-lite stage folders (00-inbox → 01-active → 02-decisions → 03-archive) with CONTEXT.md contracts (Phase 4), and a read-only Obsidian bridge via config `vaultPath` (Phase 5). Plus the new `refactor` skill (36 bundled skills): a Fowler-grounded, approval-gated reorganization pass whose report is a folder tree + moves table
 
 ## Contributing & Security
 
