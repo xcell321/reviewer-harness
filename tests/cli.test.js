@@ -222,3 +222,55 @@ test("S-9: skills remove without sync state prints the next step and writes no r
   assert.doesNotMatch(r.stdout, /sync applied automatically/, "no auto-sync without sync state");
   assert.equal(existsSync(join(dir, ".claude")), false, "no runtime output was created");
 });
+
+// --- v1.22: short command names — the `reviewer` bin alias and the
+// check / cmd / ls / rm short forms. The long forms must keep working;
+// these tests pin that both spellings reach the same dispatch.
+
+test("package.json exposes both bin names", () => {
+  const pkg = JSON.parse(
+    readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8")
+  );
+  assert.equal(pkg.bin.reviewer, "./bin/cli.js", "the short `reviewer` command is installed");
+  assert.equal(pkg.bin["reviewer-harness"], "./bin/cli.js", "the long command keeps working");
+});
+
+test("check is an alias for validate", () => {
+  const dir = tempDir();
+  writeConfig(dir, { name: "t", rules: ["Do x."], runtimes: [], skills: [] });
+  const long = runCli(["validate"], dir);
+  const short = runCli(["check"], dir);
+  assert.equal(short.status, long.status, "check exits like validate");
+  assert.equal(short.stdout, long.stdout, "check prints exactly what validate prints");
+});
+
+test("cmd and ls aliases reach the grouped commands", () => {
+  const dir = tempDir();
+  writeConfig(dir, { name: "t", rules: ["Do x."], runtimes: [], skills: [] });
+  const cmds = runCli(["commands", "list"], dir);
+  const cmdAlias = runCli(["cmd", "ls"], dir);
+  assert.equal(cmdAlias.status, 0, `cmd ls should exit 0 (got ${cmdAlias.status}): ${cmdAlias.stderr}`);
+  assert.equal(cmdAlias.stdout, cmds.stdout, "cmd ls prints the commands list");
+  const skills = runCli(["skills", "list"], dir);
+  const skillsAlias = runCli(["skills", "ls"], dir);
+  assert.equal(skillsAlias.stdout, skills.stdout, "skills ls prints the skills list");
+  const agentsAlias = runCli(["agents", "ls"], dir);
+  assert.equal(agentsAlias.status, 0, "agents ls exits 0");
+});
+
+test("memory ls and skills rm aliases work", () => {
+  const dir = tempDir();
+  const minimal = runCli(["init", "--minimal"], dir);
+  assert.equal(minimal.status, 0, `init --minimal should exit 0 (got ${minimal.status}): ${minimal.stderr}`);
+  const mem = runCli(["memory", "init"], dir);
+  assert.equal(mem.status, 0, `memory init should exit 0 (got ${mem.status}): ${mem.stderr}`);
+  const list = runCli(["memory", "list"], dir);
+  const ls = runCli(["memory", "ls"], dir);
+  assert.equal(ls.status, list.status, "memory ls exits like memory list");
+  assert.equal(ls.stdout, list.stdout, "memory ls prints the memory list");
+  const add = runCli(["skills", "add", "debug-first"], dir);
+  assert.equal(add.status, 0, `skills add should exit 0 (got ${add.status}): ${add.stderr}`);
+  const rm = runCli(["skills", "rm", "debug-first"], dir);
+  assert.equal(rm.status, 0, `skills rm should exit 0 (got ${rm.status}): ${rm.stderr}`);
+  assert.match(rm.stdout, /Skill "debug-first" disabled/, "rm removes like remove");
+});

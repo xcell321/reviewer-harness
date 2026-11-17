@@ -20,6 +20,8 @@ cd reviewer-harness
 node bin/cli.js status
 ```
 
+From a source checkout, `node bin/cli.js <command>` is the form used in this guide. If you also have the harness installed globally (`npm install -g reviewer-harness`), the same commands work under the short name — `reviewer status`, `reviewer check`, `reviewer skills ls` — since v1.22.0 (`reviewer-harness` still works too, and `check` / `cmd` / `ls` / `rm` are short forms of `validate` / `commands` / `list` / `remove`).
+
 Try changes against a scratch project, never against a real one first:
 
 ```bash
@@ -51,17 +53,19 @@ description: One line — when should the AI use this?
 (the instructions / prompt body)
 ```
 
-- Skills → `skills/<name>.md` (body starts with a `## Skill: <name>` heading)
+- Skills → `skills/<category>/<name>/SKILL.md` — one folder per skill, grouped under one of the 8 category folders (`ai-engineering`, `architecture`, `backend`, `database`, `frontend`, `quality`, `security`, `workflow`). The body starts with a `## Skill: <name>` heading.
 - Agents → `agents/<name>.md`
 - Commands → `commands/<name>.md` (the body is a prompt; `$ARGUMENTS` is replaced by the runtime)
 
 No code changes needed — the CLI discovers files in these folders automatically.
 
+**Skills must follow the house template.** Every bundled skill has the same sections, in order: Purpose, When to use, Rules, Validation gate, Examples, Sources, Changelog — and a `version` in its frontmatter. `node bin/cli.js validate` (or `reviewer check` on a global install) enforces the template for every bundled skill, and CI runs the same gate — a skill that skips a section fails the build. Distill rules from a real, reputable source and cite it in Sources; do not invent rules.
+
 ## Scale limit — instruction files grow linearly with skills
 
-Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured at audit (22 skills): **266,198 bytes** of skill source → **2,660,559 bytes** of generated output across 124 files (**10×** amplification); `CLAUDE.md` alone is **262,243 bytes** today. Growth is linear: at 10× skills (220), each instruction file would be ≈ 2.6 MB and total output ≈ 26.6 MB. The binding constraint is the AI runtime's context window, not disk.
+Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured today (36 skills, full init): **504,136 bytes** of skill source → **5,037,710 bytes** of generated output across 243 files (**10×** amplification); `CLAUDE.md` alone is **494,661 bytes**. Growth is linear: at 2× the skills (72), each instruction file would be ≈ 1 MB. The binding constraint is the AI runtime's context window, not disk.
 
-**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — roughly 4× today's skills (≈ 80 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime (memoized in `lib/sync.js` — do not rebuild per-skill content in a loop over runtimes).
+**Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — at today's skill sizes, the 1 MB per-file ceiling binds first, at roughly 2× today's skills (≈ 68 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime (memoized in `lib/sync.js` — do not rebuild per-skill content in a loop over runtimes).
 
 Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skills on demand) — that is **out of scope** for this fix; nothing here shrinks the files, it only documents the limit and the ceiling. If you add a skill, remember: it grows every generated file, so keep skill bodies tight.
 
@@ -77,8 +81,9 @@ Beyond that ceiling, the fix is a re-architecture (summaries + lazy-loading skil
 
 1. Fork the repo and create a branch for your change.
 2. Test your change on a scratch project with the flow above (`init` → `validate` → `sync --dry-run` → `sync`).
-3. Describe in the PR: what changed, why, and what you tested.
-4. One focused change per PR is easier to review than five at once.
+3. Run the test suite — `npm test` — and make sure it is fully green, and run `node bin/cli.js validate` so the bundled-skill template gate passes.
+4. Describe in the PR: what changed, why, and what you tested.
+5. One focused change per PR is easier to review than five at once.
 
 ## Code of conduct
 
