@@ -63,7 +63,7 @@ No code changes needed — the CLI discovers files in these folders automaticall
 
 ## Scale limit — instruction files grow linearly with skills
 
-Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured today (36 skills, full init): **504,136 bytes** of skill source → **5,037,710 bytes** of generated output across 243 files (**10×** amplification); `CLAUDE.md` alone is **494,661 bytes**. Growth is linear: at 2× the skills (72), each instruction file would be ≈ 1 MB. The binding constraint is the AI runtime's context window, not disk.
+Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured today (38 skills, full init): **522,324 bytes** of skill source → **5,216,318 bytes** of generated output across 257 files (**10×** amplification); `CLAUDE.md` alone is **512,151 bytes**. Growth is linear: at 2× the skills (76), each instruction file would be ≈ 1 MB.. The binding constraint is the AI runtime's context window, not disk.
 
 **Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — at today's skill sizes, the 1 MB per-file ceiling binds first, at roughly 2× today's skills (≈ 68 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime (memoized in `lib/sync.js` — do not rebuild per-skill content in a loop over runtimes).
 
