@@ -210,7 +210,7 @@ function assertQuotedDescription(content, skill) {
 
 test("generated frontmatter parses as strict YAML", () => {
   const bundled = loadBundledSkills();
-  assert.equal(bundled.length, 36);
+  assert.equal(bundled.length, 38);
   // rea + ub-mode are the two the audit proved unparseable (their
   // descriptions contain ": " — rea col 73, ub-mode col 97).
   for (const name of ["rea", "ub-mode"]) {

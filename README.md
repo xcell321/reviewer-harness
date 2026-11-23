@@ -253,14 +253,14 @@ npx reviewer-harness skills add no-hallucination
 A skill is a playbook: a short, checkable set of rules for one job (safe editing, API security, UI taste, debugging, and so on), distilled from real, reputable sources — not generic advice. Every rule cites its source.
 
 ```bash
-reviewer skills list            # see all 36 bundled skills, grouped by category (+ which are enabled)
+reviewer skills list            # see all 38 bundled skills, grouped by category (+ which are enabled)
 reviewer skills add <name>      # install into the project and enable it in the config
 reviewer skills remove <name>   # disable it in the config and remove it
 ```
 
-The skills are organized into **8 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (7), `quality` (5), `backend` (2), `security` (2), `ai-engineering` (2), `architecture` (2), `database` (8). Every skill lives in its own folder as `skills/<category>/<name>/SKILL.md`, the layout used by iging/sauron.
+The skills are organized into **8 categories** — in the harness and, mirrored, in your project's `skills/` folder: `workflow` (6), `frontend` (9), `quality` (5), `backend` (2), `security` (2), `ai-engineering` (2), `architecture` (2), `database` (8). Every skill lives in its own folder as `skills/<category>/<name>/SKILL.md`, the layout used by iging/sauron.
 
-All 36 bundled skills:
+All 38 bundled skills:
 
 | Skill | What it does |
 |---|---|
@@ -275,6 +275,8 @@ All 36 bundled skills:
 | `owasp-top10` | OWASP Top 10 web security risks — the industry standard check before shipping. |
 | `motion-design` | Animation principles from GSAP (GreenSock) — easing, sequencing, stagger, performance. |
 | `frontend-performance` | Frontend performance rules from the Front-End Checklist — animations, resource hints, budgets, lazy loading. |
+| `flutter-principles` | Flutter apps with widget composition, Riverpod or Bloc state, and platform channel discipline (cloned from iging/sauron). |
+| `nextjs-principles` | Next.js App Router and React 19 architecture — Server Components by default, explicit caching, Server Actions security, Turbopack optimization (cloned from iging/sauron). |
 | `system-design` | 68 system design rules from system-design-primer — CAP tradeoffs, load balancing, scaling. |
 | `api-design` | REST API design patterns — resource naming, HTTP method semantics, status codes, cursor pagination, filtering, rate limiting, versioning, deterministic error envelopes. |
 | `nodejs-quality` | 93 Node.js backend rules from nodebestpractices — errors, structure, testing, production, security, plus the merged backend-performance (19) and devops-basics (12) rule sets. |
@@ -340,7 +342,7 @@ Four guardrails run before any file is written:
 
 ### Scale limit — instruction files grow linearly with skills
 
-Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured today (36 skills, full init): **504,136 bytes** of skill source → **5,037,710 bytes** of generated output across 243 files (**10×** amplification); `CLAUDE.md` alone is **494,661 bytes**. Growth is linear: at 2× the skills (72), each instruction file would be ≈ 1 MB. The binding constraint is the AI runtime's context window, not disk.
+Every enabled skill is inlined in full into every instruction file, bundle, and slash command. Measured today (38 skills, full init): **522,324 bytes** of skill source → **5,216,318 bytes** of generated output across 257 files (**10×** amplification); `CLAUDE.md` alone is **512,151 bytes**. Growth is linear: at 2× the skills (76), each instruction file would be ≈ 1 MB.. The binding constraint is the AI runtime's context window, not disk.
 
 **Target ceiling the project accepts: total generated output ≤ 10 MB, and no single instruction file larger than 1 MB** — at today's skill sizes, the 1 MB per-file ceiling binds first, at roughly 2× today's skills (≈ 72 skills). Two cheap wins already reduce the amplification: shared bundle directories are written once (Freebuff + Antigravity share `.agents/skills`), and each skill's content is built once per `sync` run instead of once per runtime.
 
@@ -449,7 +451,7 @@ Requires Node.js 18+ (no dependencies). Run these inside your project — every 
 
 | Command | What it does |
 |---|---|
-| `reviewer skills list` | List all 36 bundled skills, grouped by category (+ which are enabled) |
+| `reviewer skills list` | List all 38 bundled skills, grouped by category (+ which are enabled) |
 | `reviewer skills add <name>` | Install a skill into the project and enable it in the config |
 | `reviewer skills remove <name>` | Disable a skill and remove it |
 | `reviewer agents list` | List the bundled sub-agents |
